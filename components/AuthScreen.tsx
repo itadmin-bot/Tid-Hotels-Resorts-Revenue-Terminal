@@ -7,8 +7,7 @@ import {
   sendEmailVerification,
   reload,
   sendPasswordResetEmail,
-  signInWithPopup,
-  fetchSignInMethodsForEmail
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
@@ -104,7 +103,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           createdAt: Date.now()
         });
         await sendEmailVerification(userCredential.user);
-        setInfo('Verification email sent! Please check your inbox.');
+        setInfo('Verification link sent! Check your inbox.');
         setView('SIGN_IN');
       }
     } catch (err: any) {
@@ -128,33 +127,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
       setLoading(false);
     }
   };
-
-  if (isRestricted) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#0B1C2D] px-4 font-inter">
-        <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-gray-700/40 shadow-2xl backdrop-blur-md text-center">
-          <h1 className="text-4xl font-bold text-[#C8A862] italic mb-4">ACCESS DENIED</h1>
-          <p className="text-gray-400 mb-8">Access is restricted to authorized {BRAND.domain} accounts only.</p>
-          <button onClick={() => signOut(auth)} className="w-full py-4 bg-red-600 text-white font-bold rounded-lg uppercase tracking-widest hover:bg-red-700 transition-all">Sign Out</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (needsVerification && auth.currentUser) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#0B1C2D] px-4 font-inter">
-        <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-gray-700/40 shadow-2xl backdrop-blur-md text-center">
-          <h1 className="text-4xl font-bold text-[#C8A862] italic mb-4">VERIFY EMAIL</h1>
-          <p className="text-gray-400 mb-8">Please check your inbox ({auth.currentUser.email}) and click the verification link.</p>
-          <div className="space-y-4">
-            <button onClick={() => window.location.reload()} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-bold rounded-lg uppercase tracking-widest hover:bg-[#B69651] transition-all">I have verified</button>
-            <button onClick={() => signOut(auth)} className="w-full py-2 text-gray-500 hover:text-white transition-all">Cancel</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#0B1C2D] px-4 font-inter">

@@ -8,13 +8,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0B1C2D;
             color: white;
             margin: 0;
+            -webkit-print-color-adjust: exact;
         }
         @keyframes progress {
             0% { transform: translateX(-100%); }
@@ -40,6 +41,24 @@
                 color: black !important;
                 height: auto !important;
             }
+            
+            /* Docket 80mm Print Rules */
+            .docket-container {
+                width: 80mm !important;
+                margin: 0 auto !important;
+                padding: 5mm !important;
+                background: white !important;
+            }
+
+            /* A4 Invoice Print Rules */
+            .invoice-container {
+                width: 210mm !important;
+                min-height: 297mm !important;
+                margin: 0 auto !important;
+                padding: 20mm !important;
+                background: white !important;
+            }
+
             @page {
                 margin: 0;
             }
@@ -64,7 +83,6 @@
 </head>
 <body>
     <div id="root"></div>
-    <!-- Load the application entry point -->
     <script type="module" src="index.tsx"></script>
 </body>
 </html>

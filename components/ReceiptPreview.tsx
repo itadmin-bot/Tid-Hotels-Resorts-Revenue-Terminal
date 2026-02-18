@@ -13,7 +13,7 @@ interface ReceiptPreviewProps {
 const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose }) => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   
-  // Strict Logic: POS transactions use Docket (80mm), FOLIO transactions use A4 Invoice (210mm).
+  // Logic: POS transactions use Docket (80mm), FOLIO transactions use A4 Invoice (210mm).
   const isPos = transaction.type === 'POS';
 
   useEffect(() => {
@@ -35,7 +35,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         <div className="flex justify-between items-center mb-6 no-print">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-[#C8A862] rounded-full"></div>
-            <h3 className="text-white font-bold tracking-widest uppercase text-sm">Revenue Authority - Receipt Hub</h3>
+            <h3 className="text-white font-bold tracking-widest uppercase text-sm">Revenue Authority Documentation</h3>
           </div>
           <div className="flex gap-4">
             <button onClick={handlePrint} className="px-8 py-2 bg-[#C8A862] text-black font-bold rounded shadow-lg transition-transform hover:scale-105 active:scale-95">Print {isPos ? '80mm Docket' : 'A4 Invoice'}</button>
@@ -46,14 +46,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         <div className="flex-1 bg-gray-300 p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center">
           {isPos ? (
             /* 80mm DOCKET - Specialized for Walk-in POS transactions */
-            <div className="w-[80mm] text-black bg-white p-6 font-mono text-[10px] leading-tight shadow-xl">
+            <div className="docket-container text-black bg-white p-6 font-mono text-[10px] leading-tight shadow-xl">
               <div className="text-center border-b border-black/10 pb-4 mb-4">
                 <h1 className="text-xl font-bold tracking-tighter">{BRAND.name}</h1>
                 <p className="text-[8px] font-sans opacity-70">{BRAND.address}</p>
               </div>
 
               <div className="mb-4 space-y-0.5 uppercase">
-                <p className="font-bold">DOCKET ID: #{transaction.reference}</p>
+                <p className="font-bold">DOCKET: #{transaction.reference}</p>
                 <p>DATE: {new Date(transaction.createdAt).toLocaleDateString()}</p>
                 <p>TIME: {new Date(transaction.createdAt).toLocaleTimeString()}</p>
                 <div className="h-2"></div>
@@ -73,7 +73,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <span>₦{item.total.toLocaleString()}</span>
                     </div>
                     <div className="text-[8px] opacity-60 italic">
-                      Price: ₦{item.price.toLocaleString()} per unit
+                      @{item.price.toLocaleString()} per unit
                     </div>
                   </div>
                 ))}
@@ -89,7 +89,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <span>₦{transaction.paidAmount.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-bold text-xs border-t border-black/5 pt-1">
-                  <span>BALANCE DUE:</span>
+                  <span>BALANCE:</span>
                   <span>₦{transaction.balance.toLocaleString()}</span>
                 </div>
               </div>
@@ -120,14 +120,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             </div>
           ) : (
             /* A4 INVOICE - Specialized for Reservations/Folio management */
-            <div className="w-[210mm] min-h-[297mm] text-black bg-white p-[20mm] font-sans text-sm shadow-2xl">
+            <div className="invoice-container text-black bg-white p-[20mm] font-sans text-sm shadow-2xl">
               <div className="flex justify-between items-start border-b-2 border-black pb-8 mb-8">
                 <div>
                   <h1 className="text-3xl font-black tracking-tighter mb-1">{BRAND.name}</h1>
                   <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{BRAND.address}</p>
                 </div>
                 <div className="text-right">
-                  <h2 className="text-xl font-black text-gray-400 uppercase tracking-tighter mb-1">Reservation Folio / Tax Invoice</h2>
+                  <h2 className="text-xl font-black text-gray-400 uppercase tracking-tighter mb-1">Reservation Folio / Invoice</h2>
                   <p className="text-lg font-bold text-[#C8A862]">REF: {transaction.reference}</p>
                 </div>
               </div>
@@ -149,7 +149,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                     <p>Terminal: <span className="text-black">{transaction.cashierName}</span></p>
                     {transaction.roomDetails && (
                       <div className="pt-2 mt-2 border-t border-dashed border-gray-300">
-                        <p>Stay: <span className="text-black">{transaction.roomDetails.checkIn} - {transaction.roomDetails.checkOut}</span></p>
+                        <p>Stay Cycle: <span className="text-black">{transaction.roomDetails.checkIn} - {transaction.roomDetails.checkOut}</span></p>
                         <p>Total Cycle: <span className="text-black">{transaction.roomDetails.nights} Night(s)</span></p>
                       </div>
                     )}
@@ -163,7 +163,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                     <th className="text-left p-4 uppercase text-[10px] font-black tracking-widest">Service Description</th>
                     <th className="text-center p-4 uppercase text-[10px] font-black tracking-widest">Qty / Count</th>
                     <th className="text-right p-4 uppercase text-[10px] font-black tracking-widest">Rate per Unit</th>
-                    <th className="text-right p-4 uppercase text-[10px] font-black tracking-widest">Total Amount</th>
+                    <th className="text-right p-4 uppercase text-[10px] font-black tracking-widest">Net Total</th>
                   </tr>
                 </thead>
                 <tbody className="font-bold border-b-2 border-gray-900">
@@ -197,7 +197,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                     <span>₦{transaction.totalAmount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-green-600 font-black text-lg">
-                    <span>Settled Amount</span>
+                    <span>Account Settlement</span>
                     <span>₦{transaction.paidAmount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between border-t border-black/10 pt-2 text-xl font-black text-red-600">
@@ -210,7 +210,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <div className="mt-auto pt-10 grid grid-cols-2 gap-10 text-[9px] text-gray-400">
                 <div className="space-y-4">
                   <div className="bg-gray-50 p-4 border border-black/5 rounded">
-                    <p className="font-black text-black uppercase tracking-widest mb-2">Notice: Tax-Inclusive Billing</p>
+                    <p className="font-black text-black uppercase tracking-widest mb-2">Notice: Official Payment Accounts</p>
                     <div className="space-y-2 text-black font-bold">
                       {settings.invoiceBanks.map((bank, i) => (
                         <p key={i} className="border-b border-dashed border-gray-200 pb-1 last:border-0">{bank.bank} | {bank.accountNumber} | {bank.accountName}</p>
