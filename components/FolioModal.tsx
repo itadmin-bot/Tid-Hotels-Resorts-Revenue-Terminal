@@ -7,7 +7,8 @@ import {
   Room,
   AppSettings,
   Transaction,
-  TransactionItem
+  TransactionItem,
+  BankAccount
 } from '../types';
 import ReceiptPreview from './ReceiptPreview';
 
@@ -27,6 +28,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [guest, setGuest] = useState({ name: '', idType: 'National ID', idNumber: '', email: '', phone: '' });
   const [stayPeriod, setStayPeriod] = useState({ checkIn: '', checkOut: '', nights: 1 });
   const [bookings, setBookings] = useState<RoomBooking[]>([{ roomId: '', quantity: 1 }]);
+  const [selectedBankIdx, setSelectedBankIdx] = useState<number>(-1); // -1 means "All Configured Accounts"
   const [paid, setPaid] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,6 +108,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         };
       });
 
+      const selectedBank = selectedBankIdx === -1 ? null : settings?.invoiceBanks[selectedBankIdx];
+
       const txData = {
         reference: `RES-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'FOLIO',
@@ -116,12 +120,13 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         email: guest.email,
         phone: guest.phone,
         items: transactionItems,
+        selectedBank: selectedBank || null,
         roomDetails: {
           roomName: bookings.length === 1 ? rooms.find(r => r.id === bookings[0].roomId)!.name : 'Multiple Rooms',
           checkIn: stayPeriod.checkIn,
           checkOut: stayPeriod.checkOut,
           nights: stayPeriod.nights,
-          rate: subtotal / stayPeriod.nights // Average or total rate per night
+          rate: subtotal / stayPeriod.nights
         },
         subtotal: baseValue,
         taxAmount,
@@ -325,6 +330,27 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="space-y-4">
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Accounting Tracking</h3>
+             <div className="space-y-1">
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Target Settlement Account</label>
+                <select 
+                  className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none"
+                  value={selectedBankIdx}
+                  onChange={(e) => setSelectedBankIdx(parseInt(e.target.value))}
+                >
+                  <option value={-1}>ALL CONFIGURED ACCOUNTS</option>
+                  {settings?.invoiceBanks.map((bank, i) => (
+                    <option key={i} value={i}>{bank.bank} - {bank.accountNumber}</option>
+                  ))}
+                  {(!settings?.invoiceBanks || settings.invoiceBanks.length === 0) && (
+                    <option value={0} disabled>No invoice accounts configured</option>
+                  )}
+                </select>
+                <p className="text-[9px] text-gray-600 italic">Selecting a specific account will display ONLY that account on the invoice. "All" will display the full registered list.</p>
+             </div>
           </section>
         </div>
 

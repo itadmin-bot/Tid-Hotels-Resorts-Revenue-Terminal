@@ -35,9 +35,13 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
   if (!settings) return null;
 
-  const currentBanks = isPos 
+  // Logic: If a specific bank is selected for the transaction, show ONLY that. 
+  // If no bank is selected (selectedBank is null), show ALL configured accounts for the unit.
+  const bankList = isPos 
     ? (transaction.unit === UnitType.ZENZA ? settings.zenzaBanks : settings.whispersBanks)
     : settings.invoiceBanks;
+
+  const currentBanks = transaction.selectedBank ? [transaction.selectedBank] : bankList;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 overflow-y-auto">
@@ -81,9 +85,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <span className="pr-4">{item.description} (x{item.quantity})</span>
                       <span>₦{item.total.toLocaleString()}</span>
                     </div>
-                    <div className="text-[8px] opacity-60 italic">
-                      @{item.price.toLocaleString()} per unit
-                    </div>
+                    <div className="text-[8px] opacity-60 italic">@{item.price.toLocaleString()} per unit</div>
                   </div>
                 ))}
                 {transaction.discountAmount > 0 && (
@@ -94,9 +96,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 )}
               </div>
 
-              <div className="text-right text-sm font-black mb-6">
-                GRAND TOTAL: ₦{transaction.totalAmount.toLocaleString()}
-              </div>
+              <div className="text-right text-sm font-black mb-6">GRAND TOTAL: ₦{transaction.totalAmount.toLocaleString()}</div>
 
               <div className="border-t border-black/10 pt-3 space-y-1.5 mb-6 uppercase">
                 <div className="flex justify-between">
@@ -226,7 +226,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <div className="bg-gray-50 p-4 border border-black/5 rounded">
                     <p className="font-black text-black uppercase tracking-widest mb-2">Notice: Official Payment Accounts</p>
                     <div className="space-y-2 text-black font-bold">
-                      {settings.invoiceBanks.map((bank, i) => (
+                      {currentBanks.map((bank, i) => (
                         <p key={i} className="border-b border-dashed border-gray-200 pb-1 last:border-0">{bank.bank} | {bank.accountNumber} | {bank.accountName}</p>
                       ))}
                     </div>

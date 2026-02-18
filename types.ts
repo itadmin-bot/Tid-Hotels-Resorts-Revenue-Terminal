@@ -71,6 +71,7 @@ export interface Transaction {
   balance: number;
   status: SettlementStatus;
   settlementMethod?: SettlementMethod;
+  selectedBank?: BankAccount; // Assigned bank account for this transaction
   createdBy: string;
   userId: string; // Explicitly for rule matching
   cashierName: string;

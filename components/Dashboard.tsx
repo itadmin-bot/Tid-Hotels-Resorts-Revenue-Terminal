@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -67,7 +66,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   const downloadReport = () => {
-    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
+    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Bank Account', 'Cashier'];
     const rows = filteredTransactions.map(t => [
       `"${t.reference}"`,
       new Date(t.createdAt).toLocaleDateString(),
@@ -81,6 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       t.balance,
       t.status,
       t.settlementMethod || 'N/A',
+      `"${t.selectedBank?.bank || 'Default'}"`,
       `"${t.cashierName}"`
     ]);
 
@@ -159,7 +159,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             <thead>
               <tr className="border-b border-gray-700/50 bg-[#0B1C2D]/50 text-[10px] font-black uppercase tracking-widest text-gray-500">
                 <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('reference')}>Origin/Ref</th>
-                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('guestName')}>Guest Information</th>
+                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('guestName')}>Guest & Operator</th>
                 <th className="px-6 py-5">Items Sold</th>
                 <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('totalAmount')}>Financial Summary</th>
                 <th className="px-6 py-5 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>Status</th>
@@ -176,10 +176,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     </div>
                     <div className="text-sm font-black text-white">{t.reference}</div>
                     <div className="text-[10px] text-gray-600 font-bold">{new Date(t.createdAt).toLocaleString()}</div>
+                    {t.selectedBank && (
+                       <div className="text-[9px] text-[#C8A862] font-black uppercase tracking-widest mt-1">Bank: {t.selectedBank.bank}</div>
+                    )}
                   </td>
                   <td className="px-6 py-5">
                     <div className="text-sm font-bold text-gray-200">{t.guestName}</div>
-                    <div className="text-[10px] text-gray-500 font-medium truncate max-w-[150px]">{t.email || 'No Email'} • {t.phone || 'No Phone'}</div>
+                    <div className="text-[10px] text-gray-500 font-medium truncate max-w-[150px] mb-1">{t.email || 'No Email'} • {t.phone || 'No Phone'}</div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[8px] font-black text-gray-300">
+                        {t.cashierName?.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-[9px] text-gray-600 font-black uppercase tracking-widest">Operator: {t.cashierName}</span>
+                    </div>
                   </td>
                   <td className="px-6 py-5">
                     <div className="max-w-[200px]">
