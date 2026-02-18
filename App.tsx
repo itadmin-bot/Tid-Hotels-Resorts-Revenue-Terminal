@@ -27,25 +27,16 @@ const App: React.FC = () => {
         setLoading(true);
         const userRef = doc(db, 'users', currentUser.uid);
         
-        // Ensure profile exists and mark as online
         try {
-          await updateDoc(userRef, {
+          // Attempt to initialize/mark user as online
+          await setDoc(userRef, {
+            uid: currentUser.uid,
+            email: currentUser.email,
             isOnline: true,
             lastActive: Date.now()
-          }).catch(async () => {
-            // If update fails, document might not exist, create it
-            await setDoc(userRef, {
-              uid: currentUser.uid,
-              email: currentUser.email,
-              role: UserRole.STAFF,
-              isOnline: true,
-              lastActive: Date.now(),
-              createdAt: Date.now(),
-              displayName: currentUser.email?.split('@')[0] || 'Operator'
-            }, { merge: true });
-          });
+          }, { merge: true });
         } catch (e) {
-          console.error("Error updating user status:", e);
+          console.error("Firestore Init Error:", e);
         }
 
         unsubProfile = onSnapshot(userRef, (snapshot) => {
@@ -57,15 +48,24 @@ const App: React.FC = () => {
               uid: currentUser.uid,
               email: currentUser.email || '',
               displayName: data.displayName || currentUser.email?.split('@')[0] || 'User',
-              role: data.role as UserRole,
+              role: (data.role as UserRole) || UserRole.STAFF,
               domainVerified: isVerified,
               isOnline: data.isOnline,
               lastActive: data.lastActive
             });
+            // Only stop loading once we have the profile data
+            setLoading(false);
+          } else {
+            // Profile doc doesn't exist yet, but we are logged in
+            // This can happen briefly during account creation
+            setLoading(false);
           }
+        }, (error) => {
+          console.error("Profile Subscription Error:", error);
           setLoading(false);
         });
       } else {
+        // Logged out
         if (userProfile?.uid) {
           updateDoc(doc(db, 'users', userProfile.uid), { isOnline: false }).catch(() => {});
         }
@@ -81,38 +81,49 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Show loading while auth is resolving OR if user is logged in but profile isn't loaded yet
-  if (loading || (user && !userProfile)) {
+  // 1. Permanent Loading State while resolving
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0B1C2D]">
         <div className="flex flex-col items-center gap-4">
           <div className="text-[#C8A862] animate-pulse text-2xl font-bold italic tracking-widest uppercase">TIDÈ HOTELS</div>
-          <div className="w-48 h-1 bg-gray-800 rounded-full overflow-hidden">
-            <div className="h-full bg-[#C8A862] animate-[progress_2s_ease-in-out_infinite]" style={{ width: '30%' }}></div>
+          <div className="w-48 h-1 bg-gray-800 rounded-full relative overflow-hidden">
+            <div className="absolute top-0 left-0 h-full bg-[#C8A862] animate-progress w-1/2"></div>
           </div>
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest">Establishing Secure Connection...</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-widest">Securing Terminal Connection...</p>
         </div>
       </div>
     );
   }
 
+  // 2. Auth Guard
   if (!user) {
     return <AuthScreen />;
   }
 
-  if (userProfile && !userProfile.domainVerified) {
+  // 3. Profile Guard - if we have a user but Firestore hasn't returned a profile yet
+  if (!userProfile) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#0B1C2D]">
+        <div className="text-center">
+          <p className="text-[#C8A862] text-sm animate-pulse mb-4">INITIALIZING PROFILE...</p>
+          <button onClick={() => window.location.reload()} className="text-[10px] text-gray-500 hover:text-white uppercase underline">Click here if stuck</button>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Domain Restrictions
+  if (!userProfile.domainVerified) {
     return <AuthScreen isRestricted={true} />;
   }
 
-  if (user && !user.emailVerified) {
+  // 5. Verification Guard
+  if (!user.emailVerified) {
     return <AuthScreen needsVerification={true} />;
   }
 
-  // Safety check to prevent .role error
-  if (!userProfile) {
-    return <AuthScreen />;
-  }
-
+  // 6. Main Application Shell
   return (
     <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white">
       <Sidebar 
