@@ -86,21 +86,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   const downloadReport = () => {
-    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Amount', 'Status', 'Cashier'];
+    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Amount', 'Status', 'Payment Method', 'Cashier'];
     const rows = filteredTransactions.map(t => [
-      t.reference,
+      `"${t.reference}"`,
       new Date(t.createdAt).toLocaleDateString(),
       t.type,
       t.unit || 'Hotel Folio',
       t.source || 'App',
-      t.guestName,
+      `"${t.guestName}"`,
+      `"${t.items.map(i => `${i.description} (x${i.quantity})`).join('; ')}"`,
       t.totalAmount,
       t.status,
-      t.cashierName
+      t.settlementMethod || 'N/A',
+      `"${t.cashierName}"`
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
