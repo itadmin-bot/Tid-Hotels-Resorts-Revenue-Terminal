@@ -50,6 +50,12 @@ export interface AppSettings {
   invoiceBanks: BankAccount[];
 }
 
+export interface TransactionPayment {
+  method: SettlementMethod;
+  amount: number;
+  timestamp: number;
+}
+
 export interface Transaction {
   id: string;
   reference: string;
@@ -68,9 +74,10 @@ export interface Transaction {
   discountAmount: number; // Added for flexible discounting
   totalAmount: number;
   paidAmount: number;
+  payments?: TransactionPayment[]; // Breakdown of split payments
   balance: number;
   status: SettlementStatus;
-  settlementMethod?: SettlementMethod;
+  settlementMethod?: SettlementMethod; // Primary or legacy method
   selectedBank?: BankAccount; // Assigned bank account for this transaction
   createdBy: string;
   userId: string; // Explicitly for rule matching

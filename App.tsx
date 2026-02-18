@@ -99,7 +99,8 @@ const App: React.FC = () => {
             const data = snapshot.data();
             if (isMounted) {
               // Automatically ensure online status and update heartbeat when profile is loaded
-              if (!data.isOnline || (data.lastActive && Date.now() - data.lastActive > 60000)) {
+              // Fix: Added check for !data.lastActive to prevent "Never" status for existing users
+              if (!data.isOnline || !data.lastActive || (Date.now() - (data.lastActive || 0) > 60000)) {
                 updateDoc(userRef, { isOnline: true, lastActive: Date.now() }).catch(console.warn);
               }
 
@@ -109,7 +110,7 @@ const App: React.FC = () => {
                 displayName: data.displayName || 'Operator',
                 role: (data.role as UserRole) || UserRole.STAFF,
                 domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
-                isOnline: true, // We override here because the user is currently connected
+                isOnline: true,
                 lastActive: data.lastActive || Date.now()
               });
               setLoading(false);
@@ -170,7 +171,6 @@ const App: React.FC = () => {
   }
 
   if (userProfile && !userProfile.domainVerified) return <AuthScreen isRestricted={true} />;
-  // Verification check - AuthScreen handles the UI for unverified users
   if (user && !isVerified) return <AuthScreen needsVerification={true} />;
 
   return (

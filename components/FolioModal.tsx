@@ -8,7 +8,9 @@ import {
   AppSettings,
   Transaction,
   TransactionItem,
-  BankAccount
+  BankAccount,
+  SettlementMethod,
+  TransactionPayment
 } from '../types';
 import ReceiptPreview from './ReceiptPreview';
 
@@ -28,8 +30,12 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [guest, setGuest] = useState({ name: '', idType: 'National ID', idNumber: '', email: '', phone: '' });
   const [stayPeriod, setStayPeriod] = useState({ checkIn: '', checkOut: '', nights: 1 });
   const [bookings, setBookings] = useState<RoomBooking[]>([{ roomId: '', quantity: 1 }]);
-  const [selectedBankIdx, setSelectedBankIdx] = useState<number>(-1); // -1 means "All Configured Accounts"
-  const [paid, setPaid] = useState(0);
+  
+  // Split Payments
+  const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.TRANSFER, amount: 0 }]);
+  
+  // Default to 0 (Zenith Bank - 1311027935) as requested for prominent display
+  const [selectedBankIdx, setSelectedBankIdx] = useState<number>(0); 
   const [discount, setDiscount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
@@ -88,7 +94,17 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const baseValue = total / divisor;
   const taxAmount = baseValue * vatRate;
   const serviceCharge = baseValue * scRate;
-  const balance = total - paid;
+  
+  const totalPaid = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const balance = total - totalPaid;
+
+  const addPaymentRow = () => setPayments([...payments, { method: SettlementMethod.TRANSFER, amount: 0 }]);
+  const removePaymentRow = (idx: number) => setPayments(payments.filter((_, i) => i !== idx));
+  const updatePayment = (idx: number, field: keyof TransactionPayment, value: any) => {
+    const newPayments = [...payments];
+    (newPayments[idx] as any)[field] = value;
+    setPayments(newPayments);
+  };
 
   const handleSubmit = async () => {
     if (!guest.name || !stayPeriod.checkIn || !stayPeriod.checkOut || bookings.some(b => !b.roomId)) {
@@ -109,6 +125,14 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       });
 
       const selectedBank = selectedBankIdx === -1 ? null : settings?.invoiceBanks[selectedBankIdx];
+      
+      const finalPayments: TransactionPayment[] = payments
+        .filter(p => (p.amount || 0) > 0)
+        .map(p => ({
+          method: p.method as SettlementMethod,
+          amount: p.amount as number,
+          timestamp: Date.now()
+        }));
 
       const txData = {
         reference: `RES-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
@@ -133,9 +157,11 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         serviceCharge,
         discountAmount: discount,
         totalAmount: total,
-        paidAmount: paid,
+        paidAmount: totalPaid,
+        payments: finalPayments,
         balance,
         status: balance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
+        settlementMethod: finalPayments.length > 0 ? finalPayments[0].method : SettlementMethod.TRANSFER,
         createdBy: user.uid,
         userId: user.uid,
         cashierName: user.displayName,
@@ -155,18 +181,24 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
 
   const handleSettleMore = async () => {
     if (!savedTransaction) return;
-    const amount = prompt(`Enter additional payment for guest ${savedTransaction.guestName} (Folio Balance: ₦${savedTransaction.balance.toLocaleString()}):`, savedTransaction.balance.toString());
-    if (!amount) return;
+    const amountStr = prompt(`Enter payment for ${savedTransaction.guestName} (Bal: ₦${savedTransaction.balance.toLocaleString()}):`, savedTransaction.balance.toString());
+    if (!amountStr) return;
 
-    const paidVal = parseFloat(amount);
-    if (isNaN(paidVal) || paidVal <= 0) return;
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || amount <= 0) return;
 
-    const newPaid = savedTransaction.paidAmount + paidVal;
+    const method = prompt('Method (POS, CASH, TRANSFER):', 'TRANSFER')?.toUpperCase() as SettlementMethod;
+    if (![SettlementMethod.POS, SettlementMethod.CASH, SettlementMethod.TRANSFER].includes(method)) return;
+
+    const newPayment = { method, amount, timestamp: Date.now() };
+    const updatedPayments = [...(savedTransaction.payments || []), newPayment];
+    const newPaid = savedTransaction.paidAmount + amount;
     const newBalance = Math.max(0, savedTransaction.totalAmount - newPaid);
 
     try {
       await updateDoc(doc(db, 'transactions', savedTransaction.id), {
         paidAmount: newPaid,
+        payments: updatedPayments,
         balance: newBalance,
         status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
         updatedAt: Date.now()
@@ -174,11 +206,12 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       setSavedTransaction({
         ...savedTransaction,
         paidAmount: newPaid,
+        payments: updatedPayments,
         balance: newBalance,
         status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID
       });
     } catch (err) {
-      alert('Folio settlement failed.');
+      alert('Folio settlement update failed.');
     }
   };
 
@@ -286,8 +319,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
 
           <section className="space-y-4">
             <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
-              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Room Inventory (Corporate Reservation)</h3>
-              <button onClick={addBookingRow} className="px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] text-[10px] font-black rounded border border-[#C8A862]/30 hover:bg-[#C8A862]/20 transition-all uppercase tracking-widest">+ Add Room Selection</button>
+              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Room Inventory</h3>
+              <button onClick={addBookingRow} className="px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] text-[10px] font-black rounded border border-[#C8A862]/30 hover:bg-[#C8A862]/20 transition-all uppercase tracking-widest">+ Add Room</button>
             </div>
             
             <div className="space-y-3">
@@ -325,7 +358,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                     </button>
                   </div>
                   <div className="col-span-2 hidden md:block text-right pb-3 text-[10px] font-black text-gray-600 uppercase">
-                    Row Subtotal: ₦{( (rooms.find(r => r.id === booking.roomId)?.price || 0) * booking.quantity * stayPeriod.nights ).toLocaleString()}
+                    ₦{( (rooms.find(r => r.id === booking.roomId)?.price || 0) * booking.quantity * stayPeriod.nights ).toLocaleString()}
                   </div>
                 </div>
               ))}
@@ -333,23 +366,50 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
           </section>
 
           <section className="space-y-4">
-             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Accounting Tracking</h3>
-             <div className="space-y-1">
-                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Target Settlement Account</label>
-                <select 
-                  className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none"
-                  value={selectedBankIdx}
-                  onChange={(e) => setSelectedBankIdx(parseInt(e.target.value))}
-                >
-                  <option value={-1}>ALL CONFIGURED ACCOUNTS</option>
-                  {settings?.invoiceBanks.map((bank, i) => (
-                    <option key={i} value={i}>{bank.bank} - {bank.accountNumber}</option>
+             <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
+                <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Accounting & Split Payment</h3>
+                <button onClick={addPaymentRow} className="text-green-500 text-xs font-bold hover:underline">+ Add Payment Row</button>
+             </div>
+             <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Target Settlement Account</label>
+                  <select 
+                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none"
+                    value={selectedBankIdx}
+                    onChange={(e) => setSelectedBankIdx(parseInt(e.target.value))}
+                  >
+                    <option value={-1}>ALL CONFIGURED ACCOUNTS</option>
+                    {settings?.invoiceBanks.map((bank, i) => (
+                      <option key={i} value={i}>{bank.bank} - {bank.accountNumber}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  {payments.map((p, idx) => (
+                    <div key={idx} className="flex gap-2 items-center bg-white/5 p-2 rounded-lg">
+                      <select 
+                        className="bg-[#0B1C2D] border border-gray-700 rounded p-2 text-xs text-white flex-1"
+                        value={p.method}
+                        onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}
+                      >
+                        <option value={SettlementMethod.TRANSFER}>Transfer</option>
+                        <option value={SettlementMethod.POS}>POS</option>
+                        <option value={SettlementMethod.CASH}>Cash</option>
+                      </select>
+                      <input 
+                        type="number"
+                        placeholder="Amount"
+                        className="bg-[#0B1C2D] border border-gray-700 rounded p-2 text-xs text-white w-32 text-right"
+                        value={p.amount}
+                        onChange={(e) => updatePayment(idx, 'amount', parseFloat(e.target.value) || 0)}
+                      />
+                      {payments.length > 1 && (
+                        <button onClick={() => removePaymentRow(idx)} className="text-red-500 font-bold px-2">&times;</button>
+                      )}
+                    </div>
                   ))}
-                  {(!settings?.invoiceBanks || settings.invoiceBanks.length === 0) && (
-                    <option value={0} disabled>No invoice accounts configured</option>
-                  )}
-                </select>
-                <p className="text-[9px] text-gray-600 italic">Selecting a specific account will display ONLY that account on the invoice. "All" will display the full registered list.</p>
+                </div>
              </div>
           </section>
         </div>
@@ -357,11 +417,11 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         <div className="p-6 bg-[#0B1C2D] border-t border-gray-700 space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1 font-black uppercase tracking-widest">Stay Subtotal</label>
+              <label className="text-[10px] text-gray-500 block mb-1 font-black uppercase tracking-widest">Gross Val</label>
               <div className="text-sm font-bold text-gray-400">₦{subtotal.toLocaleString()}</div>
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1 font-black uppercase tracking-widest text-[#C8A862]">Benefit Discount</label>
+              <label className="text-[10px] text-gray-500 block mb-1 font-black uppercase tracking-widest text-[#C8A862]">Discount</label>
               <input 
                 type="number" 
                 className="w-full bg-[#13263A] border border-[#C8A862]/30 rounded-lg p-2 text-sm text-[#C8A862] font-black focus:border-[#C8A862] outline-none" 
@@ -370,20 +430,15 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               />
             </div>
             <div className="col-span-2 text-right">
-              <div className="text-[10px] uppercase tracking-widest font-black text-gray-500">Gross Net Valuation</div>
+              <div className="text-[10px] uppercase tracking-widest font-black text-gray-500">Net Valuation</div>
               <div className="text-3xl font-black text-white tracking-tighter">₦{total.toLocaleString()}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6 bg-white/5 p-4 rounded-xl border border-white/5">
             <div>
-              <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest block mb-2">Advance Payment</label>
-              <input 
-                type="number" 
-                className="w-full bg-[#0B1C2D] border border-gray-700 rounded-xl p-3 text-2xl font-black text-green-400 focus:ring-2 focus:ring-green-500/30 outline-none" 
-                value={paid} 
-                onChange={(e) => setPaid(parseFloat(e.target.value) || 0)} 
-              />
+              <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest block mb-2">Total Paid</label>
+              <div className="text-2xl font-black text-green-400">₦{totalPaid.toLocaleString()}</div>
             </div>
             <div className="text-right flex flex-col justify-end">
               <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest block mb-2">Folio Outstanding</label>
@@ -396,7 +451,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
             onClick={handleSubmit} 
             className="w-full py-5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all uppercase tracking-[0.2em] shadow-xl text-xs active:scale-[0.98] disabled:opacity-50"
           >
-            {isSubmitting ? 'SYCHRONIZING REVENUE MODULE...' : 'GENERATE CORPORATE FOLIO'}
+            {isSubmitting ? 'SYCHRONIZING...' : 'GENERATE CORPORATE FOLIO'}
           </button>
         </div>
       </div>

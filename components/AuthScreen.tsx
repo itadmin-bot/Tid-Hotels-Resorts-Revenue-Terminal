@@ -40,7 +40,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     }
   }, []);
 
-  // Cooldown timer for resend verification
   useEffect(() => {
     let timer: number;
     if (resendCooldown > 0) {
@@ -65,6 +64,26 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
         return 'Too many attempts. Please try again later.';
       default:
         return err.message || 'An error occurred';
+    }
+  };
+
+  const handleManualCheck = async () => {
+    if (!auth.currentUser) return;
+    setLoading(true);
+    setError('');
+    setInfo('');
+    try {
+      await reload(auth.currentUser);
+      if (auth.currentUser.emailVerified) {
+        setInfo('Verification confirmed. Synchronizing terminal...');
+        window.location.reload();
+      } else {
+        setError('Verification not detected yet. Please click the link in your email.');
+      }
+    } catch (err: any) {
+      setError(mapAuthError(err));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,12 +128,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const role = isAdminMode ? UserRole.ADMIN : UserRole.STAFF;
         
-        // Check admin code if registering as admin
         if (isAdminMode) {
           const codeDoc = await getDoc(doc(db, 'accessCodes', 'master'));
           const masterCode = codeDoc.exists() ? codeDoc.data().code : DEFAULT_ADMIN_KEY;
           if (accessCode !== masterCode) {
-            // Delete user if admin code is wrong to allow retry
             await userCredential.user.delete();
             setError('Invalid Admin Access Key during registration.');
             setLoading(false);
@@ -175,8 +192,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
 
   if (needsVerification) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#0B1C2D] px-4 font-inter text-center">
-        <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-gray-700/40 shadow-2xl backdrop-blur-md space-y-8">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#0B1C2D] py-12 px-4 font-inter text-center">
+        <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-gray-700/40 shadow-2xl backdrop-blur-md space-y-8 mb-8">
           <div className="flex justify-center">
             <div className="w-20 h-20 bg-[#C8A862]/10 rounded-full flex items-center justify-center border border-[#C8A862]/30">
               <svg className="w-10 h-10 text-[#C8A862]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,7 +205,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
             <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Verify Your Account</h2>
             <p className="text-gray-400 text-xs leading-relaxed">
               A verification link was sent to <span className="text-white font-bold">{auth.currentUser?.email}</span>. 
-              Please click the link to authorize your terminal access.
+              Please click the link in the email, then return here and click the button below.
             </p>
           </div>
           <div className="bg-[#0B1C2D]/50 border border-[#C8A862]/20 p-4 rounded-xl text-[10px] text-[#C8A862] font-black uppercase tracking-widest leading-relaxed">
@@ -197,48 +214,60 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           
           <div className="space-y-4">
             <button 
+              onClick={handleManualCheck}
+              disabled={loading}
+              className="w-full py-4 bg-white text-[#0B1C2D] font-black rounded-lg uppercase tracking-[0.2em] text-xs hover:bg-gray-200 transition-all shadow-xl active:scale-[0.98]"
+            >
+              {loading ? 'Validating Account...' : 'I Have Verified (Check Now)'}
+            </button>
+            <button 
               onClick={handleResendVerification}
               disabled={loading || resendCooldown > 0}
               className={`w-full py-4 rounded-lg font-black uppercase tracking-[0.2em] text-xs transition-all shadow-xl ${
                 resendCooldown > 0 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-[#C8A862] text-[#0B1C2D] hover:bg-[#B69651]'
               }`}
             >
-              {loading ? 'Processing...' : (resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Link')}
+              {resendCooldown > 0 ? `Resend Link in ${resendCooldown}s` : 'Resend Verification Link'}
             </button>
             <button 
               onClick={() => signOut(auth)}
               className="w-full py-3 border border-gray-700 text-gray-500 font-bold rounded-lg uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all"
             >
-              Sign Out & Try Again
+              Cancel & Sign Out
             </button>
           </div>
 
+          {error && <p className="text-red-400 text-[11px] font-bold bg-red-900/10 py-2 rounded border border-red-500/20">{error}</p>}
+          {info && <p className="text-[#C8A862] text-[11px] font-bold bg-[#C8A862]/10 py-2 rounded border border-[#C8A862]/20">{info}</p>}
+
           <div className="flex items-center justify-center gap-2 pt-4">
             <div className="w-2 h-2 bg-[#C8A862] rounded-full animate-ping"></div>
-            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Awaiting Verification Signal...</p>
+            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Waiting for signal...</p>
           </div>
         </div>
+        <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Revenue Terminal v2.9.1</p>
       </div>
     );
   }
 
   if (isRestricted) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#0B1C2D] px-4 font-inter text-center">
-        <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-red-500/20 shadow-2xl backdrop-blur-md space-y-6">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#0B1C2D] py-12 px-4 font-inter text-center">
+        <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-red-500/20 shadow-2xl backdrop-blur-md space-y-6 mb-8">
           <h2 className="text-2xl font-bold text-white uppercase">Domain Restricted</h2>
           <p className="text-gray-400 text-xs leading-relaxed">
             The TIDÈ Revenue Terminal is strictly for internal use. Please sign in with an official <span className="text-[#C8A862]">{BRAND.domain}</span> account.
           </p>
           <button onClick={() => signOut(auth)} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg uppercase text-xs tracking-widest">Return to Gateway</button>
         </div>
+        <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Revenue Terminal v2.9.1</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col items-center justify-center bg-[#0B1C2D] px-4 font-inter">
-      <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-gray-700/40 shadow-2xl backdrop-blur-md">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0B1C2D] py-12 px-4 font-inter overflow-y-auto">
+      <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-gray-700/40 shadow-2xl backdrop-blur-md mb-8">
         <div className="text-center mb-10">
           <h1 className="text-5xl font-bold text-[#C8A862] italic tracking-tight mb-1">TIDÈ</h1>
           <p className="text-[11px] text-gray-500 uppercase tracking-[0.5em] font-medium">Hotels & Resorts</p>
@@ -338,7 +367,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           </div>
         </form>
       </div>
-      <p className="fixed bottom-10 text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold">Revenue Terminal v2.9.1</p>
+      <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Revenue Terminal v2.9.1</p>
     </div>
   );
 };

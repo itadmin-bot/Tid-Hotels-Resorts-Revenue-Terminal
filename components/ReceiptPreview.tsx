@@ -35,8 +35,6 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
   if (!settings) return null;
 
-  // Logic: If a specific bank is selected for the transaction, show ONLY that. 
-  // If no bank is selected (selectedBank is null), show ALL configured accounts for the unit.
   const bankList = isPos 
     ? (transaction.unit === UnitType.ZENZA ? settings.zenzaBanks : settings.whispersBanks)
     : settings.invoiceBanks;
@@ -49,11 +47,11 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         <div className="flex justify-between items-center mb-6 no-print">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-[#C8A862] rounded-full"></div>
-            <h3 className="text-white font-bold tracking-widest uppercase text-sm">Revenue Authority Documentation</h3>
+            <h3 className="text-white font-bold tracking-widest uppercase text-sm">Revenue Documentation</h3>
           </div>
           <div className="flex gap-4">
-            <button onClick={handlePrint} className="px-8 py-2 bg-[#C8A862] text-black font-bold rounded shadow-lg transition-transform hover:scale-105 active:scale-95">Print {isPos ? '80mm Docket' : 'A4 Invoice'}</button>
-            <button onClick={onClose} className="px-8 py-2 border border-gray-600 text-white rounded transition-colors hover:bg-gray-800">Exit Hub</button>
+            <button onClick={handlePrint} className="px-8 py-2 bg-[#C8A862] text-black font-bold rounded shadow-lg transition-transform hover:scale-105 active:scale-95">Print Document</button>
+            <button onClick={onClose} className="px-8 py-2 border border-gray-600 text-white rounded transition-colors hover:bg-gray-800">Close Hub</button>
           </div>
         </div>
 
@@ -68,7 +66,6 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <div className="mb-4 space-y-0.5 uppercase">
                 <p className="font-bold">DOCKET: #{transaction.reference}</p>
                 <p>DATE: {new Date(transaction.createdAt).toLocaleDateString()}</p>
-                <p>TIME: {new Date(transaction.createdAt).toLocaleTimeString()}</p>
                 <div className="h-2"></div>
                 <p>OUTLET: {transaction.unit}</p>
                 <p>CASHIER: {transaction.cashierName}</p>
@@ -76,56 +73,53 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
               <div className="border-y border-dashed border-black/20 py-3 mb-3">
                 <div className="font-bold flex justify-between mb-2 text-[9px]">
-                  <span>DESCRIPTION</span>
+                  <span>ITEM</span>
                   <span>TOTAL</span>
                 </div>
                 {transaction.items.map((item, idx) => (
-                  <div key={idx} className="mb-2">
-                    <div className="flex justify-between">
-                      <span className="pr-4">{item.description} (x{item.quantity})</span>
-                      <span>₦{item.total.toLocaleString()}</span>
-                    </div>
-                    <div className="text-[8px] opacity-60 italic">@{item.price.toLocaleString()} per unit</div>
+                  <div key={idx} className="flex justify-between mb-1">
+                    <span className="truncate pr-4">{item.description} (x{item.quantity})</span>
+                    <span>₦{item.total.toLocaleString()}</span>
                   </div>
                 ))}
-                {transaction.discountAmount > 0 && (
-                  <div className="flex justify-between border-t border-black/5 pt-2 font-bold italic text-red-600">
-                    <span>DISCOUNT APPLIED</span>
-                    <span>-₦{transaction.discountAmount.toLocaleString()}</span>
-                  </div>
-                )}
               </div>
 
-              <div className="text-right text-sm font-black mb-6">GRAND TOTAL: ₦{transaction.totalAmount.toLocaleString()}</div>
+              <div className="text-right text-sm font-black mb-4 uppercase">Grand Total: ₦{transaction.totalAmount.toLocaleString()}</div>
 
-              <div className="border-t border-black/10 pt-3 space-y-1.5 mb-6 uppercase">
-                <div className="flex justify-between">
-                  <span>PAID ({transaction.settlementMethod}):</span>
-                  <span>₦{transaction.paidAmount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between font-bold text-xs border-t border-black/5 pt-1">
-                  <span>BALANCE:</span>
+              <div className="border-t border-black/10 pt-3 space-y-1 mb-6 uppercase">
+                <p className="font-bold text-[8px] opacity-60">Payment Breakdown:</p>
+                {transaction.payments && transaction.payments.length > 0 ? (
+                  transaction.payments.map((p, i) => (
+                    <div key={i} className="flex justify-between text-[9px]">
+                      <span>{p.method}</span>
+                      <span>₦{p.amount.toLocaleString()}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex justify-between text-[9px]">
+                    <span>{transaction.settlementMethod || 'N/A'}</span>
+                    <span>₦{transaction.paidAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-xs border-t border-black/5 pt-1 mt-1">
+                  <span>OUTSTANDING:</span>
                   <span>₦{transaction.balance.toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="mb-6">
                 <div className="font-bold text-[8px] uppercase tracking-widest opacity-60 mb-1">Settlement Account(s)</div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {currentBanks.map((bank, i) => (
-                    <div key={i} className="p-2 border border-dashed border-black/10 bg-gray-50 text-[9px] space-y-0.5">
+                    <div key={i} className="p-1 border border-dashed border-black/10 text-[8px]">
                       <p className="font-bold">{bank.bank}</p>
-                      <p>Acc: {bank.accountNumber}</p>
-                      <p className="truncate">Name: {bank.accountName}</p>
+                      <p>{bank.accountNumber} • {bank.accountName}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="text-center italic text-[8px] opacity-50">
-                Inclusive of VAT and Service Charge.
-                <p className="mt-2 font-sans not-italic font-black text-black uppercase tracking-widest">Revenue Authority Verified</p>
-              </div>
+              <div className="text-center italic text-[8px] opacity-50">Revenue Authority Verified</div>
             </div>
           ) : (
             <div className="invoice-container text-black bg-white p-[20mm] font-sans text-sm shadow-2xl">
@@ -135,108 +129,75 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{BRAND.address}</p>
                 </div>
                 <div className="text-right">
-                  <h2 className="text-xl font-black text-gray-400 uppercase tracking-tighter mb-1">Reservation Folio / Invoice</h2>
+                  <h2 className="text-xl font-black text-gray-400 uppercase tracking-tighter mb-1">Reservation Folio</h2>
                   <p className="text-lg font-bold text-[#C8A862]">REF: {transaction.reference}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-20 mb-12">
+              <div className="grid grid-cols-2 gap-20 mb-8">
                 <div>
-                  <h3 className="font-black uppercase text-[10px] text-gray-400 mb-4 border-b pb-1 tracking-widest">Guest Identification</h3>
-                  <div className="space-y-1">
-                    <p className="text-xl font-black text-black uppercase">{transaction.guestName}</p>
-                    <p className="text-gray-600 font-bold">{transaction.identityType}: {transaction.idNumber}</p>
-                    <p className="text-gray-600 font-medium">{transaction.email}</p>
-                    <p className="text-gray-600 font-medium">{transaction.phone}</p>
-                  </div>
+                  <h3 className="font-black uppercase text-[10px] text-gray-400 mb-2 tracking-widest">Guest Info</h3>
+                  <p className="text-lg font-black uppercase">{transaction.guestName}</p>
+                  <p className="text-gray-600 text-xs">{transaction.email} • {transaction.phone}</p>
                 </div>
                 <div className="text-right">
-                  <h3 className="font-black uppercase text-[10px] text-gray-400 mb-4 border-b pb-1 tracking-widest">Operational Metadata</h3>
-                  <div className="space-y-1 text-gray-600 font-bold">
-                    <p>Issue Date: <span className="text-black">{new Date(transaction.createdAt).toLocaleString()}</span></p>
-                    <p>Terminal: <span className="text-black">{transaction.cashierName}</span></p>
-                    {transaction.roomDetails && (
-                      <div className="pt-2 mt-2 border-t border-dashed border-gray-300">
-                        <p>Stay Cycle: <span className="text-black">{transaction.roomDetails.checkIn} - {transaction.roomDetails.checkOut}</span></p>
-                        <p>Total Cycle: <span className="text-black">{transaction.roomDetails.nights} Night(s)</span></p>
-                      </div>
-                    )}
-                  </div>
+                  <h3 className="font-black uppercase text-[10px] text-gray-400 mb-2 tracking-widest">Metadata</h3>
+                  <p className="text-xs font-bold">Issued: {new Date(transaction.createdAt).toLocaleString()}</p>
+                  <p className="text-xs font-bold text-[#C8A862]">Operator: {transaction.cashierName}</p>
                 </div>
               </div>
 
-              <table className="w-full mb-12 border-collapse">
+              <table className="w-full mb-8 border-collapse">
                 <thead>
-                  <tr className="bg-gray-900 text-white">
-                    <th className="text-left p-4 uppercase text-[10px] font-black tracking-widest">Service Description</th>
-                    <th className="text-center p-4 uppercase text-[10px] font-black tracking-widest">Qty / Count</th>
-                    <th className="text-right p-4 uppercase text-[10px] font-black tracking-widest">Rate per Unit</th>
-                    <th className="text-right p-4 uppercase text-[10px] font-black tracking-widest">Net Total</th>
+                  <tr className="bg-gray-900 text-white text-[10px] uppercase font-black tracking-widest">
+                    <th className="text-left p-4">Description</th>
+                    <th className="text-center p-4">Qty</th>
+                    <th className="text-right p-4">Amount</th>
                   </tr>
                 </thead>
-                <tbody className="font-bold border-b-2 border-gray-900">
+                <tbody className="font-bold">
                   {transaction.items.map((item, idx) => (
                     <tr key={idx} className="border-b border-gray-100">
                       <td className="p-4">{item.description}</td>
                       <td className="text-center p-4">{item.quantity}</td>
-                      <td className="text-right p-4">₦{item.price.toLocaleString()}</td>
                       <td className="text-right p-4">₦{item.total.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              <div className="flex justify-end mb-20">
-                <div className="w-80 space-y-3">
-                  <div className="flex justify-between text-gray-400 font-black uppercase text-[10px] tracking-widest">
-                    <span>Valuation Base</span>
-                    <span>₦{transaction.subtotal.toLocaleString()}</span>
-                  </div>
-                  {transaction.discountAmount > 0 && (
-                    <div className="flex justify-between text-red-600 font-black uppercase text-[10px] tracking-widest">
-                      <span>Discount Benefit</span>
-                      <span>-₦{transaction.discountAmount.toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-gray-400 font-black uppercase text-[10px] tracking-widest">
-                    <span>VAT (7.5%) - Included</span>
-                    <span>₦{transaction.taxAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-400 font-black uppercase text-[10px] tracking-widest">
-                    <span>S.C. (10%) - Included</span>
-                    <span>₦{transaction.serviceCharge.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between border-t-2 border-black pt-4 text-2xl font-black">
-                    <span>Grand Total</span>
-                    <span>₦{transaction.totalAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-green-600 font-black text-lg">
-                    <span>Account Settlement</span>
-                    <span>₦{transaction.paidAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-black/10 pt-2 text-xl font-black text-red-600">
-                    <span>Outstanding Due</span>
-                    <span>₦{transaction.balance.toLocaleString()}</span>
-                  </div>
+              <div className="flex justify-end mb-12">
+                <div className="w-64 space-y-2 border-t-2 border-black pt-4">
+                  <div className="flex justify-between text-xs text-gray-500 uppercase font-black"><span>Total Bill</span><span>₦{transaction.totalAmount.toLocaleString()}</span></div>
+                  <div className="flex justify-between text-xs text-green-600 font-black"><span>Total Paid</span><span>₦{transaction.paidAmount.toLocaleString()}</span></div>
+                  <div className="flex justify-between text-lg text-red-600 font-black border-t border-black/10 pt-2"><span>Balance</span><span>₦{transaction.balance.toLocaleString()}</span></div>
                 </div>
               </div>
 
-              <div className="mt-auto pt-10 grid grid-cols-2 gap-10 text-[9px] text-gray-400">
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 border border-black/5 rounded">
-                    <p className="font-black text-black uppercase tracking-widest mb-2">Notice: Official Payment Accounts</p>
-                    <div className="space-y-2 text-black font-bold">
-                      {currentBanks.map((bank, i) => (
-                        <p key={i} className="border-b border-dashed border-gray-200 pb-1 last:border-0">{bank.bank} | {bank.accountNumber} | {bank.accountName}</p>
-                      ))}
-                    </div>
+              <div className="grid grid-cols-2 gap-8 text-[10px]">
+                <div className="bg-gray-50 p-4 rounded border border-black/5">
+                  <p className="font-black uppercase tracking-widest mb-2">Split Payment History</p>
+                  <div className="space-y-1 font-bold">
+                    {transaction.payments && transaction.payments.length > 0 ? (
+                      transaction.payments.map((p, i) => (
+                        <div key={i} className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                          <span>{p.method}</span>
+                          <span>₦{p.amount.toLocaleString()}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                        <span>{transaction.settlementMethod || 'Direct'}</span>
+                        <span>₦{transaction.paidAmount.toLocaleString()}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="text-right flex flex-col justify-end">
-                  <div className="border-t-2 border-black w-64 ml-auto pt-4 text-center">
-                    <p className="text-black font-black uppercase text-[10px] tracking-widest">Authorized Revenue Signatory</p>
-                    <p className="text-gray-400 text-[8px] mt-1 font-black uppercase">{transaction.cashierName}</p>
-                  </div>
+                  <p className="font-black uppercase tracking-widest mb-1">Payment Instructions</p>
+                  {currentBanks.map((bank, i) => (
+                    <p key={i} className="text-[9px] text-gray-600 uppercase font-bold">{bank.bank} • {bank.accountNumber}</p>
+                  ))}
                 </div>
               </div>
             </div>
