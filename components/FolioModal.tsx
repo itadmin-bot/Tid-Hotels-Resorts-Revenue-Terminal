@@ -6,9 +6,15 @@ import {
   SettlementStatus,
   Room,
   AppSettings,
-  Transaction
+  Transaction,
+  TransactionItem
 } from '../types';
 import ReceiptPreview from './ReceiptPreview';
+
+interface RoomBooking {
+  roomId: string;
+  quantity: number;
+}
 
 interface FolioModalProps {
   user: UserProfile;
@@ -19,7 +25,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [guest, setGuest] = useState({ name: '', idType: 'National ID', idNumber: '', email: '', phone: '' });
-  const [reservation, setReservation] = useState({ roomId: '', checkIn: '', checkOut: '', nights: 1 });
+  const [stayPeriod, setStayPeriod] = useState({ checkIn: '', checkOut: '', nights: 1 });
+  const [bookings, setBookings] = useState<RoomBooking[]>([{ roomId: '', quantity: 1 }]);
   const [paid, setPaid] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,8 +37,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     const unsubRooms = onSnapshot(collection(db, 'rooms'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
       setRooms(data);
-      if (data.length > 0 && !reservation.roomId) {
-        setReservation(prev => ({ ...prev, roomId: data[0].id }));
+      if (data.length > 0 && bookings[0].roomId === '') {
+        setBookings([{ roomId: data[0].id, quantity: 1 }]);
       }
     });
 
@@ -45,11 +52,33 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     };
   }, []);
 
-  const selectedRoom = rooms.find(r => r.id === reservation.roomId);
-  const subtotal = selectedRoom ? selectedRoom.price * reservation.nights : 0;
+  const addBookingRow = () => {
+    if (rooms.length > 0) {
+      setBookings([...bookings, { roomId: rooms[0].id, quantity: 1 }]);
+    }
+  };
+
+  const removeBookingRow = (index: number) => {
+    if (bookings.length > 1) {
+      setBookings(bookings.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateBooking = (index: number, field: keyof RoomBooking, value: any) => {
+    const newBookings = [...bookings];
+    (newBookings[index] as any)[field] = value;
+    setBookings(newBookings);
+  };
+
+  // Calculation Logic
+  const subtotal = bookings.reduce((acc, b) => {
+    const room = rooms.find(r => r.id === b.roomId);
+    if (!room) return acc;
+    return acc + (room.price * b.quantity * stayPeriod.nights);
+  }, 0);
+
   const total = Math.max(0, subtotal - discount);
   
-  // Inclusive Tax
   const vatRate = settings?.vat || 0.075;
   const scRate = settings?.serviceCharge || 0.10;
   const divisor = 1 + vatRate + scRate;
@@ -60,13 +89,23 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const balance = total - paid;
 
   const handleSubmit = async () => {
-    if (!guest.name || !reservation.checkIn || !reservation.checkOut || !selectedRoom) {
-      alert('Please complete all fields.');
+    if (!guest.name || !stayPeriod.checkIn || !stayPeriod.checkOut || bookings.some(b => !b.roomId)) {
+      alert('Please complete all guest and stay fields.');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const transactionItems: TransactionItem[] = bookings.map(b => {
+        const room = rooms.find(r => r.id === b.roomId)!;
+        return {
+          description: `${room.name} (${room.type}) x ${stayPeriod.nights} Nights`,
+          quantity: b.quantity,
+          price: room.price * stayPeriod.nights,
+          total: room.price * b.quantity * stayPeriod.nights
+        };
+      });
+
       const txData = {
         reference: `RES-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'FOLIO',
@@ -76,18 +115,13 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         idNumber: guest.idNumber,
         email: guest.email,
         phone: guest.phone,
-        items: [{
-          description: `${selectedRoom.name} (${selectedRoom.type})`,
-          quantity: reservation.nights,
-          price: selectedRoom.price,
-          total: subtotal
-        }],
+        items: transactionItems,
         roomDetails: {
-          roomName: selectedRoom.name,
-          checkIn: reservation.checkIn,
-          checkOut: reservation.checkOut,
-          nights: reservation.nights,
-          rate: selectedRoom.price
+          roomName: bookings.length === 1 ? rooms.find(r => r.id === bookings[0].roomId)!.name : 'Multiple Rooms',
+          checkIn: stayPeriod.checkIn,
+          checkOut: stayPeriod.checkOut,
+          nights: stayPeriod.nights,
+          rate: subtotal / stayPeriod.nights // Average or total rate per night
         },
         subtotal: baseValue,
         taxAmount,
@@ -190,70 +224,154 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-[#13263A] w-full max-w-3xl rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-[#13263A] w-full max-w-4xl rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-gray-700 flex justify-between items-center">
           <h2 className="text-xl font-bold text-[#C8A862]">FOLIO CONTROL HUB</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-2xl">&times;</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           <section className="space-y-4">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-gray-700 pb-2">Guest Identity</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <input placeholder="Full Guest Name" className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={guest.name} onChange={(e) => setGuest({...guest, name: e.target.value})} />
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Guest Identity</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="col-span-1 md:col-span-2">
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Guest Full Name</label>
+                <input placeholder="Enter full legal name" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={guest.name} onChange={(e) => setGuest({...guest, name: e.target.value})} />
               </div>
-              <select className="bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={guest.idType} onChange={(e) => setGuest({...guest, idType: e.target.value})}>
-                <option>National ID</option>
-                <option>Passport</option>
-                <option>Driver License</option>
-              </select>
-              <input placeholder="ID Number" className="bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={guest.idNumber} onChange={(e) => setGuest({...guest, idNumber: e.target.value})} />
-              <input placeholder="Email Address" className="bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={guest.email} onChange={(e) => setGuest({...guest, email: e.target.value})} />
-              <input placeholder="Contact Phone" className="bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={guest.phone} onChange={(e) => setGuest({...guest, phone: e.target.value})} />
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">ID Protocol</label>
+                <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={guest.idType} onChange={(e) => setGuest({...guest, idType: e.target.value})}>
+                  <option>National ID</option>
+                  <option>Passport</option>
+                  <option>Driver License</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">ID Number</label>
+                <input placeholder="Document Reference" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={guest.idNumber} onChange={(e) => setGuest({...guest, idNumber: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Email Communication</label>
+                <input placeholder="guest@email.com" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={guest.email} onChange={(e) => setGuest({...guest, email: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Contact Phone</label>
+                <input placeholder="+234..." className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={guest.phone} onChange={(e) => setGuest({...guest, phone: e.target.value})} />
+              </div>
             </div>
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-gray-700 pb-2">Stay Information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <select className="col-span-2 bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={reservation.roomId} onChange={(e) => setReservation({...reservation, roomId: e.target.value})}>
-                {rooms.map(r => (
-                  <option key={r.id} value={r.id}>{r.name} - ₦{r.price.toLocaleString()}/night</option>
-                ))}
-              </select>
-              <div><label className="text-[10px] text-gray-500 block mb-1">Check In</label><input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={reservation.checkIn} onChange={(e) => setReservation({...reservation, checkIn: e.target.value})} /></div>
-              <div><label className="text-[10px] text-gray-500 block mb-1">Check Out</label><input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={reservation.checkOut} onChange={(e) => setReservation({...reservation, checkOut: e.target.value})} /></div>
-              <div><label className="text-[10px] text-gray-500 block mb-1">Total Nights</label><input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={reservation.nights} onChange={(e) => setReservation({...reservation, nights: parseInt(e.target.value) || 1})} /></div>
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Stay Period</h3>
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">Apply Discount (₦)</label>
-                <input 
-                  type="number" 
-                  className="w-full bg-[#0B1C2D] border border-[#C8A862]/20 rounded p-3 text-sm text-[#C8A862] font-black" 
-                  value={discount} 
-                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} 
-                />
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Check In</label>
+                <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={stayPeriod.checkIn} onChange={(e) => setStayPeriod({...stayPeriod, checkIn: e.target.value})} />
               </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Check Out</label>
+                <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={stayPeriod.checkOut} onChange={(e) => setStayPeriod({...stayPeriod, checkOut: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Total Duration (Nights)</label>
+                <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={stayPeriod.nights} onChange={(e) => setStayPeriod({...stayPeriod, nights: parseInt(e.target.value) || 1})} />
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
+              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Room Inventory (Corporate Reservation)</h3>
+              <button onClick={addBookingRow} className="px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] text-[10px] font-black rounded border border-[#C8A862]/30 hover:bg-[#C8A862]/20 transition-all uppercase tracking-widest">+ Add Room Selection</button>
+            </div>
+            
+            <div className="space-y-3">
+              {bookings.map((booking, idx) => (
+                <div key={idx} className="bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/50 grid grid-cols-12 gap-3 items-end group">
+                  <div className="col-span-12 md:col-span-7">
+                    <label className="text-[9px] text-gray-600 block mb-1 font-black uppercase tracking-widest">Select Room Type</label>
+                    <select 
+                      className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" 
+                      value={booking.roomId} 
+                      onChange={(e) => updateBooking(idx, 'roomId', e.target.value)}
+                    >
+                      {rooms.map(r => (
+                        <option key={r.id} value={r.id}>{r.name} - ₦{r.price.toLocaleString()}/night</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-6 md:col-span-3">
+                    <label className="text-[9px] text-gray-600 block mb-1 font-black uppercase tracking-widest">Room Quantity</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-center focus:border-[#C8A862] outline-none" 
+                      value={booking.quantity} 
+                      onChange={(e) => updateBooking(idx, 'quantity', parseInt(e.target.value) || 1)} 
+                    />
+                  </div>
+                  <div className="col-span-4 md:col-span-1 flex justify-center pb-3">
+                    <button 
+                      onClick={() => removeBookingRow(idx)}
+                      disabled={bookings.length === 1}
+                      className="text-red-500/50 hover:text-red-400 disabled:opacity-0 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                  </div>
+                  <div className="col-span-2 hidden md:block text-right pb-3 text-[10px] font-black text-gray-600 uppercase">
+                    Row Subtotal: ₦{( (rooms.find(r => r.id === booking.roomId)?.price || 0) * booking.quantity * stayPeriod.nights ).toLocaleString()}
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         </div>
 
-        <div className="p-6 bg-[#0B1C2D] border-t border-gray-700 space-y-4">
-          <div className="flex justify-between items-center text-gray-400 border-b border-gray-800 pb-4">
+        <div className="p-6 bg-[#0B1C2D] border-t border-gray-700 space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
             <div>
-               <span className="text-sm block">Subtotal: ₦{subtotal.toLocaleString()}</span>
-               <span className="text-xs text-[#C8A862]">Discount Applied: -₦{discount.toLocaleString()}</span>
+              <label className="text-[10px] text-gray-500 block mb-1 font-black uppercase tracking-widest">Stay Subtotal</label>
+              <div className="text-sm font-bold text-gray-400">₦{subtotal.toLocaleString()}</div>
             </div>
-            <div className="text-right">
-              <div className="text-xs uppercase tracking-widest font-black text-gray-500">Net Valuation</div>
-              <div className="text-2xl font-black text-white">₦{total.toLocaleString()}</div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1 font-black uppercase tracking-widest text-[#C8A862]">Benefit Discount</label>
+              <input 
+                type="number" 
+                className="w-full bg-[#13263A] border border-[#C8A862]/30 rounded-lg p-2 text-sm text-[#C8A862] font-black focus:border-[#C8A862] outline-none" 
+                value={discount} 
+                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} 
+              />
+            </div>
+            <div className="col-span-2 text-right">
+              <div className="text-[10px] uppercase tracking-widest font-black text-gray-500">Gross Net Valuation</div>
+              <div className="text-3xl font-black text-white tracking-tighter">₦{total.toLocaleString()}</div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex-1"><label className="text-[10px] text-gray-500 uppercase">Paid</label><input type="number" className="w-full bg-[#13263A] border border-gray-700 rounded p-3 text-xl font-bold text-green-400" value={paid} onChange={(e) => setPaid(parseFloat(e.target.value) || 0)} /></div>
-            <div className="flex-1"><label className="text-[10px] text-gray-500 uppercase">Balance</label><div className={`p-3 text-xl font-bold rounded ${balance > 0 ? 'text-red-400' : 'text-gray-400'}`}>₦{balance.toLocaleString()}</div></div>
+
+          <div className="grid grid-cols-2 gap-6 bg-white/5 p-4 rounded-xl border border-white/5">
+            <div>
+              <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest block mb-2">Advance Payment</label>
+              <input 
+                type="number" 
+                className="w-full bg-[#0B1C2D] border border-gray-700 rounded-xl p-3 text-2xl font-black text-green-400 focus:ring-2 focus:ring-green-500/30 outline-none" 
+                value={paid} 
+                onChange={(e) => setPaid(parseFloat(e.target.value) || 0)} 
+              />
+            </div>
+            <div className="text-right flex flex-col justify-end">
+              <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest block mb-2">Folio Outstanding</label>
+              <div className={`text-2xl font-black ${balance > 0 ? 'text-red-500' : 'text-gray-400'}`}>₦{balance.toLocaleString()}</div>
+            </div>
           </div>
-          <button disabled={isSubmitting || !guest.name || rooms.length === 0 || total < 0} onClick={handleSubmit} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-bold rounded-xl hover:bg-[#B69651] transition-all uppercase tracking-widest disabled:opacity-50">{isSubmitting ? 'Confirming...' : 'Generate Folio'}</button>
+
+          <button 
+            disabled={isSubmitting || !guest.name || rooms.length === 0 || total < 0 || !stayPeriod.checkIn || !stayPeriod.checkOut} 
+            onClick={handleSubmit} 
+            className="w-full py-5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all uppercase tracking-[0.2em] shadow-xl text-xs active:scale-[0.98] disabled:opacity-50"
+          >
+            {isSubmitting ? 'SYCHRONIZING REVENUE MODULE...' : 'GENERATE CORPORATE FOLIO'}
+          </button>
         </div>
       </div>
     </div>

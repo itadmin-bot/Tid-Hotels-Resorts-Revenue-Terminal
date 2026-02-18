@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -13,7 +12,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Room, AppSettings, UserProfile, UserRole, MenuItem } from '../types';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount } from '../types';
 import { INITIAL_ROOMS, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '../constants';
 
 interface AdminPanelProps {
@@ -171,6 +170,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
 
   const updateGlobalSettings = async (data: Partial<AppSettings>) => {
     await updateDoc(doc(db, 'settings', 'master'), data);
+  };
+
+  const addInvoiceBank = () => {
+    if (!settings) return;
+    const newBanks = [...settings.invoiceBanks, { bank: 'New Bank', accountNumber: '0000000000', accountName: 'Account Name' }];
+    updateGlobalSettings({ invoiceBanks: newBanks });
+  };
+
+  const removeInvoiceBank = (index: number) => {
+    if (!settings || !confirm('Remove this invoice account?')) return;
+    const newBanks = settings.invoiceBanks.filter((_, i) => i !== index);
+    updateGlobalSettings({ invoiceBanks: newBanks });
+  };
+
+  const updateInvoiceBank = (index: number, field: keyof BankAccount, value: string) => {
+    if (!settings) return;
+    const newBanks = [...settings.invoiceBanks];
+    newBanks[index] = { ...newBanks[index], [field]: value };
+    updateGlobalSettings({ invoiceBanks: newBanks });
   };
 
   if (!isAuthorized) {
@@ -436,24 +454,81 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         )}
 
         {activeTab === 'ACCOUNTS' && settings && (
-          <div className="space-y-8">
+          <div className="space-y-12">
             <h3 className="font-bold text-[#C8A862]">Settlement Accounts</h3>
+            
+            {/* POS Terminal Accounts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase text-gray-500 border-b border-gray-700 pb-2">Zenza POS</h4>
-                <div className="space-y-3">
-                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-white" defaultValue={settings.zenzaBank.bank} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, bank: e.target.value } })} />
-                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-white" defaultValue={settings.zenzaBank.accountNumber} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, accountNumber: e.target.value } })} />
-                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-white" defaultValue={settings.zenzaBank.accountName} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, accountName: e.target.value } })} />
+                <h4 className="text-xs font-bold uppercase text-gray-500 border-b border-gray-700 pb-2 tracking-widest">Zenza POS Channel</h4>
+                <div className="space-y-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30">
+                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-sm text-white font-bold" placeholder="Bank Name" defaultValue={settings.zenzaBank.bank} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, bank: e.target.value } })} />
+                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-sm text-[#C8A862] font-mono" placeholder="Account Number" defaultValue={settings.zenzaBank.accountNumber} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, accountNumber: e.target.value } })} />
+                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-[10px] text-gray-400 uppercase tracking-wider" placeholder="Account Name" defaultValue={settings.zenzaBank.accountName} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, accountName: e.target.value } })} />
                 </div>
               </div>
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase text-gray-500 border-b border-gray-700 pb-2">Whispers POS</h4>
-                <div className="space-y-3">
-                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-white" defaultValue={settings.whispersBank.bank} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, bank: e.target.value } })} />
-                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-white" defaultValue={settings.whispersBank.accountNumber} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, accountNumber: e.target.value } })} />
-                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-white" defaultValue={settings.whispersBank.accountName} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, accountName: e.target.value } })} />
+                <h4 className="text-xs font-bold uppercase text-gray-500 border-b border-gray-700 pb-2 tracking-widest">Whispers POS Channel</h4>
+                <div className="space-y-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30">
+                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-sm text-white font-bold" placeholder="Bank Name" defaultValue={settings.whispersBank.bank} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, bank: e.target.value } })} />
+                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-sm text-[#C8A862] font-mono" placeholder="Account Number" defaultValue={settings.whispersBank.accountNumber} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, accountNumber: e.target.value } })} />
+                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-[10px] text-gray-400 uppercase tracking-wider" placeholder="Account Name" defaultValue={settings.whispersBank.accountName} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, accountName: e.target.value } })} />
                 </div>
+              </div>
+            </div>
+
+            {/* A4 Invoice / Reservation Accounts */}
+            <div className="pt-8 border-t border-gray-700/50 space-y-6">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-bold uppercase text-gray-500 tracking-widest">Reservation & Invoice Accounts (A4 Template)</h4>
+                <button 
+                  onClick={addInvoiceBank}
+                  className="px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] text-[10px] font-black rounded border border-[#C8A862]/30 hover:bg-[#C8A862]/20 transition-all uppercase tracking-widest"
+                >
+                  + Add Invoice Account
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {settings.invoiceBanks.map((bank, idx) => (
+                  <div key={idx} className="bg-[#0B1C2D]/50 border border-gray-700/30 rounded-xl p-4 space-y-3 relative group transition-all hover:border-[#C8A862]/30">
+                    <button 
+                      onClick={() => removeInvoiceBank(idx)}
+                      className="absolute top-3 right-3 text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                    <div>
+                      <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Institution</label>
+                      <input 
+                        className="w-full bg-transparent border-b border-gray-800 p-1 text-sm text-white font-bold focus:border-[#C8A862] outline-none" 
+                        defaultValue={bank.bank} 
+                        onBlur={(e) => updateInvoiceBank(idx, 'bank', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Account String</label>
+                      <input 
+                        className="w-full bg-transparent border-b border-gray-800 p-1 text-sm text-[#C8A862] font-mono focus:border-[#C8A862] outline-none" 
+                        defaultValue={bank.accountNumber} 
+                        onBlur={(e) => updateInvoiceBank(idx, 'accountNumber', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Legal Name</label>
+                      <input 
+                        className="w-full bg-transparent border-b border-gray-800 p-1 text-[9px] text-gray-400 font-medium uppercase tracking-wider focus:border-[#C8A862] outline-none" 
+                        defaultValue={bank.accountName} 
+                        onBlur={(e) => updateInvoiceBank(idx, 'accountName', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+                {settings.invoiceBanks.length === 0 && (
+                  <div className="col-span-full py-10 border-2 border-dashed border-gray-800 rounded-2xl flex items-center justify-center text-gray-600 uppercase text-[10px] font-black tracking-widest">
+                    No Secondary Settlement Accounts Registered
+                  </div>
+                )}
               </div>
             </div>
           </div>
