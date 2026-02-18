@@ -1,4 +1,3 @@
-
 export enum UnitType {
   ZENZA = 'Zenza',
   WHISPERS = 'Whispers'
@@ -72,6 +71,7 @@ export interface Transaction {
   status: SettlementStatus;
   settlementMethod?: SettlementMethod;
   createdBy: string;
+  userId: string; // Explicitly for rule matching
   cashierName: string;
   createdAt: number;
   updatedAt: number;

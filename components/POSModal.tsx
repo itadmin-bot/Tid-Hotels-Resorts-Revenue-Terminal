@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -107,6 +106,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
         status: balance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
         settlementMethod: settlement,
         createdBy: user.uid,
+        userId: user.uid, // Explicit field for security rules
         cashierName: user.displayName,
         createdAt: Date.now(),
         updatedAt: Date.now()

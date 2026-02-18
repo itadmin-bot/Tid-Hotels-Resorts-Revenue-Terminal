@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Transaction, UserProfile, UserRole, SettlementStatus } from '../types';
+import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod } from '../types';
 import { BRAND } from '../constants';
 import POSModal from './POSModal';
 import FolioModal from './FolioModal';
@@ -22,13 +21,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
-    // Determine if the user is an admin based on role and email domain
+    // Correct Subscription Logic: Match Firestore rules exactly
+    // Admin sees everything; Staff sees only their own via where filter
     const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
-    
-    // Core Fix: Use the top-level 'transactions' collection for reliable multi-browser sync
-    // Staff see only their own records; Admins see everything.
     const transactionsRef = collection(db, 'transactions');
     
+    // Ensure the query structure aligns with security rules to avoid "insufficient permissions"
     const q = isAdminUser
       ? query(transactionsRef, orderBy('createdAt', 'desc'))
       : query(transactionsRef, where('createdBy', '==', user.uid), orderBy('createdAt', 'desc'));
@@ -37,10 +35,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
       setTransactions(data);
     }, (error) => {
-      // Safe fallback and logging
       console.error("Firestore Transaction Subscription Error:", error);
+      // Log context for debugging permission issues without breaking UI
       if (error.code === 'permission-denied') {
-        console.warn("Access denied to ledger entries. Please check operator permissions.");
+        console.warn(`Permission Denied for UID: ${user.uid}. Query mismatch or rule violation.`);
       }
     });
 
@@ -56,6 +54,34 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         console.error("Delete failed:", err);
         alert('Permission Denied: Only root admins can delete ledger entries.');
       }
+    }
+  };
+
+  const handleSettle = async (t: Transaction) => {
+    const amount = prompt(`Enter payment amount for ${t.reference} (Balance: ₦${t.balance.toLocaleString()}):`, t.balance.toString());
+    if (!amount) return;
+
+    const paid = parseFloat(amount);
+    if (isNaN(paid) || paid <= 0) {
+      alert("Invalid payment amount.");
+      return;
+    }
+
+    const newPaidAmount = t.paidAmount + paid;
+    const newBalance = Math.max(0, t.totalAmount - newPaidAmount);
+
+    try {
+      await updateDoc(doc(db, 'transactions', t.id), {
+        paidAmount: newPaidAmount,
+        balance: newBalance,
+        status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
+        updatedAt: Date.now(),
+        settlementMethod: SettlementMethod.TRANSFER // Default to transfer for partial settlements
+      });
+      alert("Account updated successfully.");
+    } catch (err) {
+      console.error("Settlement failed:", err);
+      alert("Failed to update settlement. Check your permissions.");
     }
   };
 
@@ -182,6 +208,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </td>
                 <td className="px-6 py-5 text-right space-x-2">
                   <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] hover:bg-[#C8A862] hover:text-black rounded transition-all">Print Receipt</button>
+                  {t.status === SettlementStatus.UNPAID && (
+                    <button onClick={() => handleSettle(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-green-900/20 text-green-400 hover:bg-green-600 hover:text-white rounded transition-all">Settle Balance</button>
+                  )}
                   {user.role === UserRole.ADMIN && (
                     <button onClick={() => handleDelete(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-red-900/20 text-red-400 hover:bg-red-900/40 rounded transition-all">Delete</button>
                   )}

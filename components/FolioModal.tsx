@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -92,6 +91,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         balance,
         status: balance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
         createdBy: user.uid,
+        userId: user.uid, // Explicit field for security rules
         cashierName: user.displayName,
         createdAt: Date.now(),
         updatedAt: Date.now()
