@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, updateDoc, setDoc, getDoc, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
+import React, { useState, useEffect, useCallback } from 'react';
+import { onAuthStateChanged, User, signOut, reload } from 'firebase/auth';
+import { doc, onSnapshot, updateDoc, setDoc, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import AuthScreen from './components/AuthScreen';
 import Dashboard from './components/Dashboard';
@@ -17,6 +16,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'LEDGER' | 'ADMIN'>('LEDGER');
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
   
   const handleForceReset = useCallback(async () => {
     try {
@@ -33,6 +33,27 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Verification Polling
+  useEffect(() => {
+    let interval: number;
+    if (user && !user.emailVerified) {
+      interval = window.setInterval(async () => {
+        try {
+          await reload(user);
+          if (user.emailVerified) {
+            setIsVerified(true);
+            clearInterval(interval);
+          }
+        } catch (e) {
+          console.error("Verification poll error:", e);
+        }
+      }, 3000);
+    } else if (user?.emailVerified) {
+      setIsVerified(true);
+    }
+    return () => clearInterval(interval);
+  }, [user]);
+
   useEffect(() => {
     let unsubProfile: (() => void) | undefined;
     let isMounted = true;
@@ -40,7 +61,6 @@ const App: React.FC = () => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (!isMounted) return;
       
-      // Cleanup previous listener
       if (unsubProfile) {
         unsubProfile();
         unsubProfile = undefined;
@@ -53,12 +73,10 @@ const App: React.FC = () => {
         setLoading(true);
         const userRef = doc(db, 'users', currentUser.uid);
 
-        // Core Fix: Fully Real-time Profile Synchronization using onSnapshot exclusively
         unsubProfile = onSnapshot(userRef, async (snapshot) => {
           if (!isMounted) return;
 
           if (!snapshot.exists()) {
-            // Initialization flow for new users
             const initialData = {
               uid: currentUser.uid,
               email: currentUser.email,
@@ -69,7 +87,6 @@ const App: React.FC = () => {
               displayName: currentUser.email?.split('@')[0] || 'Operator'
             };
             try {
-              // Write initial document - the next snapshot update will trigger the sync block
               await setDoc(userRef, initialData);
             } catch (err: any) {
               console.error("Profile Creation Error:", err);
@@ -79,16 +96,20 @@ const App: React.FC = () => {
               }
             }
           } else {
-            // Synchronize local state with real-time Firestore data
             const data = snapshot.data();
             if (isMounted) {
+              // Automatically ensure online status and update heartbeat when profile is loaded
+              if (!data.isOnline || (data.lastActive && Date.now() - data.lastActive > 60000)) {
+                updateDoc(userRef, { isOnline: true, lastActive: Date.now() }).catch(console.warn);
+              }
+
               setUserProfile({
                 uid: currentUser.uid,
                 email: currentUser.email || '',
                 displayName: data.displayName || 'Operator',
                 role: (data.role as UserRole) || UserRole.STAFF,
                 domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
-                isOnline: data.isOnline ?? true,
+                isOnline: true, // We override here because the user is currently connected
                 lastActive: data.lastActive || Date.now()
               });
               setLoading(false);
@@ -106,6 +127,7 @@ const App: React.FC = () => {
           setUserProfile(null);
           setIsAdminAuthorized(false);
           setLoading(false);
+          setIsVerified(false);
         }
       }
     });
@@ -148,7 +170,8 @@ const App: React.FC = () => {
   }
 
   if (userProfile && !userProfile.domainVerified) return <AuthScreen isRestricted={true} />;
-  if (user && !user.emailVerified) return <AuthScreen needsVerification={true} />;
+  // Verification check - AuthScreen handles the UI for unverified users
+  if (user && !isVerified) return <AuthScreen needsVerification={true} />;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white">
