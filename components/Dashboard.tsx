@@ -29,12 +29,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     startOfToday.setHours(0, 0, 0, 0);
     const startTimestamp = startOfToday.getTime();
 
-    /**
-     * Staff Transaction Subscription:
-     * To avoid the "Index Required" error (composite index on createdBy + createdAt),
-     * we only use a single 'where' filter on 'createdBy'.
-     * Date filtering and sorting are handled client-side for non-admin users.
-     */
     const q = isAdminUser
       ? query(transactionsRef, orderBy('createdAt', 'desc'))
       : query(transactionsRef, where('createdBy', '==', user.uid));
@@ -42,7 +36,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
       
-      // Post-process data for staff: Filter for today and sort by creation date
       if (!isAdminUser) {
         data = data
           .filter(t => t.createdAt >= startTimestamp)
@@ -52,10 +45,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       setTransactions(data);
     }, (error: any) => {
       console.error("Firestore Transaction Subscription Error:", error);
-      // In case of any remaining index issues, provide clear terminal logging
-      if (error.code === 'failed-precondition' || error.message.toLowerCase().includes('index')) {
-        console.warn("Critical: Firestore composite index missing for terminal query. Ensure 'createdBy' and 'createdAt' are indexed if server-side filtering is desired.");
-      }
     });
 
     return () => unsubscribe();
@@ -103,7 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   const downloadReport = () => {
-    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Amount', 'Status', 'Payment Method', 'Cashier'];
+    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
     const rows = filteredTransactions.map(t => [
       `"${t.reference}"`,
       new Date(t.createdAt).toLocaleDateString(),
@@ -113,6 +102,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       `"${t.guestName}"`,
       `"${t.items.map(i => `${i.description} (x${i.quantity})`).join('; ')}"`,
       t.totalAmount,
+      t.paidAmount,
+      t.balance,
       t.status,
       t.settlementMethod || 'N/A',
       `"${t.cashierName}"`
@@ -179,11 +170,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
         <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30">
           <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Settled Revenue</p>
-          <h2 className="text-3xl font-black text-green-400 tracking-tighter">₦{filteredTransactions.filter(t => t.status === SettlementStatus.SETTLED).reduce((a, b) => a + b.totalAmount, 0).toLocaleString()}</h2>
+          <h2 className="text-3xl font-black text-green-400 tracking-tighter">₦{filteredTransactions.reduce((a, b) => a + b.paidAmount, 0).toLocaleString()}</h2>
         </div>
         <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30">
           <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Outstanding</p>
-          <h2 className="text-3xl font-black text-red-500 tracking-tighter">₦{filteredTransactions.filter(t => t.status === SettlementStatus.UNPAID).reduce((a, b) => a + b.balance, 0).toLocaleString()}</h2>
+          <h2 className="text-3xl font-black text-red-500 tracking-tighter">₦{filteredTransactions.reduce((a, b) => a + b.balance, 0).toLocaleString()}</h2>
         </div>
       </div>
 
@@ -192,8 +183,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           <thead>
             <tr className="border-b border-gray-700/50 bg-[#0B1C2D]/50 text-[10px] font-black uppercase tracking-widest text-gray-500">
               <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('reference')}>Origin/Ref</th>
-              <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('guestName')}>Guest Identification</th>
-              <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('source')}>Source Details</th>
+              <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('guestName')}>Guest Information</th>
+              <th className="px-6 py-5">Items Sold</th>
+              <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('totalAmount')}>Financial Summary</th>
               <th className="px-6 py-5 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>Status</th>
               <th className="px-6 py-5 text-right">Terminal Actions</th>
             </tr>
@@ -214,9 +206,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   <div className="text-[10px] text-gray-500 font-medium">Operator: {t.cashierName}</div>
                 </td>
                 <td className="px-6 py-5">
-                  <div className="text-[10px] font-black text-[#C8A862] uppercase tracking-widest">{t.source || 'App Entry'}</div>
-                  <div className="text-sm font-black text-white">₦{t.totalAmount.toLocaleString()}</div>
-                  <div className="text-[10px] text-gray-600">Method: {t.settlementMethod || 'N/A'}</div>
+                  <div className="max-w-[200px]">
+                    {t.items.map((item, i) => (
+                      <div key={i} className="text-[10px] text-gray-400 truncate font-medium">
+                        • {item.description} <span className="text-gray-600">(x{item.quantity})</span>
+                      </div>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-6 py-5">
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] font-bold">
+                      <span className="text-gray-500 uppercase tracking-tighter">Total:</span>
+                      <span className="text-white">₦{t.totalAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] font-bold">
+                      <span className="text-gray-500 uppercase tracking-tighter">Paid:</span>
+                      <span className="text-green-400">₦{t.paidAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] font-bold">
+                      <span className="text-gray-500 uppercase tracking-tighter">Bal:</span>
+                      <span className={t.balance > 0 ? 'text-red-400' : 'text-gray-600'}>₦{t.balance.toLocaleString()}</span>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-6 py-5 text-center">
                   <span className={`px-2 py-1 rounded text-[9px] font-black tracking-widest border ${
@@ -226,9 +238,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   </span>
                 </td>
                 <td className="px-6 py-5 text-right space-x-2">
-                  <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] hover:bg-[#C8A862] hover:text-black rounded transition-all">Print Receipt</button>
+                  <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] hover:bg-[#C8A862] hover:text-black rounded transition-all">Receipt</button>
                   {t.status === SettlementStatus.UNPAID && (
-                    <button onClick={() => handleSettle(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-green-900/20 text-green-400 hover:bg-green-600 hover:text-white rounded transition-all">Settle Balance</button>
+                    <button onClick={() => handleSettle(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-green-900/20 text-green-400 hover:bg-green-600 hover:text-white rounded transition-all">Settle</button>
                   )}
                   {user.role === UserRole.ADMIN && (
                     <button onClick={() => handleDelete(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-red-900/20 text-red-400 hover:bg-red-900/40 rounded transition-all">Delete</button>
