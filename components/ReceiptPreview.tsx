@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -29,7 +30,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
   if (!settings) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 no-print overflow-y-auto">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 overflow-y-auto">
       <div className="flex flex-col h-full w-full max-w-4xl p-4">
         <div className="flex justify-between items-center mb-6 no-print">
           <div className="flex items-center gap-3">
@@ -42,7 +43,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           </div>
         </div>
 
-        <div className="flex-1 bg-gray-300 p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center">
+        <div className="flex-1 bg-gray-300 p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center print:bg-white print:p-0 print:shadow-none">
           {isPos ? (
             /* 80mm DOCKET - Specialized for Walk-in POS transactions */
             <div className="docket-container text-black bg-white p-6 font-mono text-[10px] leading-tight shadow-xl">

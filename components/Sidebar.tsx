@@ -12,7 +12,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange }) => {
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-[#13263A] border-r border-gray-700/50 p-6">
+    <aside className="hidden lg:flex flex-col w-64 bg-[#13263A] border-r border-gray-700/50 p-6 no-print">
       <div className="mb-10">
         <h1 className="text-2xl font-bold text-[#C8A862] italic tracking-tighter">TIDÈ</h1>
         <p className="text-[10px] text-gray-500 uppercase tracking-widest">Hotels & Resorts</p>
