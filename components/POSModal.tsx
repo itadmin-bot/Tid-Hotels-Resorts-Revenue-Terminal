@@ -112,6 +112,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
         updatedAt: Date.now()
       };
 
+      // Save to a centralized 'transactions' collection for unified cross-browser sync
       await addDoc(collection(db, 'transactions'), tx);
       onClose();
     } catch (err) {

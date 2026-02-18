@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Transaction, UserProfile, UserRole, SettlementStatus } from '../types';
+import { BRAND } from '../constants';
 import POSModal from './POSModal';
 import FolioModal from './FolioModal';
 import ReceiptPreview from './ReceiptPreview';
@@ -21,25 +22,40 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
-    const transactionsRef = collection(db, 'transactions');
-    let q = query(transactionsRef, orderBy('createdAt', 'desc'));
+    // Determine if the user is an admin based on role and email domain
+    const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
     
-    // User sees only their own unless Admin
-    if (user.role !== UserRole.ADMIN) {
-      q = query(transactionsRef, where('createdBy', '==', user.uid), orderBy('createdAt', 'desc'));
-    }
+    // Core Fix: Use the top-level 'transactions' collection for reliable multi-browser sync
+    // Staff see only their own records; Admins see everything.
+    const transactionsRef = collection(db, 'transactions');
+    
+    const q = isAdminUser
+      ? query(transactionsRef, orderBy('createdAt', 'desc'))
+      : query(transactionsRef, where('createdBy', '==', user.uid), orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      setTransactions(data);
+    }, (error) => {
+      // Safe fallback and logging
+      console.error("Firestore Transaction Subscription Error:", error);
+      if (error.code === 'permission-denied') {
+        console.warn("Access denied to ledger entries. Please check operator permissions.");
+      }
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user.uid, user.role, user.email]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (t: Transaction) => {
     if (user.role !== UserRole.ADMIN) return;
     if (window.confirm('PERMANENT ACTION: Delete this revenue record?')) {
-      await deleteDoc(doc(db, 'transactions', id));
+      try {
+        await deleteDoc(doc(db, 'transactions', t.id));
+      } catch (err) {
+        console.error("Delete failed:", err);
+        alert('Permission Denied: Only root admins can delete ledger entries.');
+      }
     }
   };
 
@@ -167,7 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 <td className="px-6 py-5 text-right space-x-2">
                   <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] hover:bg-[#C8A862] hover:text-black rounded transition-all">Print Receipt</button>
                   {user.role === UserRole.ADMIN && (
-                    <button onClick={() => handleDelete(t.id)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-red-900/20 text-red-400 hover:bg-red-900/40 rounded transition-all">Delete</button>
+                    <button onClick={() => handleDelete(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-red-900/20 text-red-400 hover:bg-red-900/40 rounded transition-all">Delete</button>
                   )}
                 </td>
               </tr>

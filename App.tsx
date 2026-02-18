@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
@@ -39,7 +38,10 @@ const App: React.FC = () => {
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (!isMounted) return;
-      if (unsubProfile) unsubProfile();
+      if (unsubProfile) {
+        unsubProfile();
+        unsubProfile = undefined;
+      }
       
       setUser(currentUser);
       setSyncError(null);
@@ -48,8 +50,8 @@ const App: React.FC = () => {
         setLoading(true);
         const userRef = doc(db, 'users', currentUser.uid);
 
-        // Fail-safe: Resolve profile immediately using getDoc
         try {
+          // One-time fetch to ensure document exists
           const snap = await getDoc(userRef);
           let data: any;
 
@@ -81,15 +83,22 @@ const App: React.FC = () => {
             setLoading(false);
           }
 
-          // Start Real-time sync in background
+          // Real-time snapshot for cross-browser profile sync
           unsubProfile = onSnapshot(userRef, (s) => {
             if (s.exists() && isMounted) {
               const d = s.data();
-              setUserProfile(prev => prev ? ({ ...prev, role: d.role as UserRole, displayName: d.displayName }) : null);
+              setUserProfile(prev => prev ? ({ 
+                ...prev, 
+                role: d.role as UserRole, 
+                displayName: d.displayName,
+                lastActive: d.lastActive
+              }) : null);
             }
+          }, (err) => {
+            console.error("Profile Sync Error:", err);
           });
         } catch (err: any) {
-          console.error("Sync Error:", err);
+          console.error("Initial Sync Error:", err);
           if (isMounted) {
             setSyncError(err.message || "Network Error");
             setLoading(false);

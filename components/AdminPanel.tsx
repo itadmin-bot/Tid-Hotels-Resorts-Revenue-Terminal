@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -35,34 +34,36 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [loading, setLoading] = useState(false);
   const [newAccessCode, setNewAccessCode] = useState('');
 
-  // Subscribe to Rooms
+  // 1. Snapshot Listener: Rooms (All Users)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'rooms'), (snapshot) => {
-      if (snapshot.empty) {
+      if (snapshot.empty && user.role === UserRole.ADMIN) {
+        // Only trigger initialization if admin
         INITIAL_ROOMS.forEach(r => setDoc(doc(db, 'rooms', r.id), { ...r, description: '' }));
       } else {
         const roomData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
         setRooms(roomData);
       }
-    });
+    }, (err) => console.error("Rooms Snapshot Error:", err));
     return () => unsubscribe();
-  }, []);
+  }, [user.role]);
 
-  // Subscribe to Global Menu
+  // 2. Snapshot Listener: Global Menu (All Users)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'menu'), (snapshot) => {
       const menuData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
       setMenuItems(menuData);
-    });
+    }, (err) => console.error("Menu Snapshot Error:", err));
     return () => unsubscribe();
   }, []);
 
-  // Subscribe to Settings
+  // 3. Snapshot Listener: Global Settings (All Users)
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (snapshot.exists()) {
         setSettings(snapshot.data() as AppSettings);
-      } else {
+      } else if (user.role === UserRole.ADMIN) {
+        // Initialize if admin and missing
         const defaultSettings: AppSettings = {
           vat: 0.075,
           serviceCharge: 0.10,
@@ -72,20 +73,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         };
         setDoc(doc(db, 'settings', 'master'), defaultSettings);
       }
-    });
+    }, (err) => console.error("Settings Snapshot Error:", err));
     return () => unsubscribe();
-  }, []);
+  }, [user.role]);
 
-  // Subscribe to Users (Admin only)
+  // 4. Snapshot Listener: User List (Admin Only)
   useEffect(() => {
-    if (!isAuthorized) return;
+    if (!isAuthorized || user.role !== UserRole.ADMIN) return;
     const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const userData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
       setUsers(userData);
-    });
+    }, (err) => console.error("Users Snapshot Error:", err));
     return () => unsubscribe();
-  }, [isAuthorized]);
+  }, [isAuthorized, user.role]);
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
