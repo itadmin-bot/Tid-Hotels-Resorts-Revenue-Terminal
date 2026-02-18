@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod } from '../types';
+import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType } from '../types';
 import { BRAND } from '../constants';
 import POSModal from './POSModal';
 import FolioModal from './FolioModal';
@@ -19,6 +19,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [managingTransaction, setManagingTransaction] = useState<Transaction | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [unitFilter, setUnitFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -26,7 +27,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
     const transactionsRef = collection(db, 'transactions');
     
-    // Determine the start of the current day for client-side filtering
+    // Determine the start of the current day for non-admin client-side filtering
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const startTimestamp = startOfToday.getTime();
@@ -65,50 +66,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }
   };
 
-  const downloadReport = () => {
-    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Bank Account', 'Cashier'];
-    const rows = filteredTransactions.map(t => [
-      `"${t.reference}"`,
-      new Date(t.createdAt).toLocaleDateString(),
-      t.type,
-      t.unit || 'Hotel Folio',
-      t.source || 'App',
-      `"${t.guestName}"`,
-      `"${t.items.map(i => `${i.description} (x${i.quantity})`).join('; ')}"`,
-      t.totalAmount,
-      t.paidAmount,
-      t.balance,
-      t.status,
-      t.settlementMethod || 'N/A',
-      `"${t.selectedBank?.bank || 'Default'}"`,
-      `"${t.cashierName}"`
-    ]);
-
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `TIDE_REPORT_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const handleSort = (field: keyof Transaction) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('desc');
-    }
-  };
-
   const filteredTransactions = transactions
     .filter(t => {
+      // Unit Filtering
+      if (unitFilter !== 'ALL') {
+        if (unitFilter === 'FOLIO' && t.type !== 'FOLIO') return false;
+        if (unitFilter === 'ZENZA' && t.unit !== UnitType.ZENZA) return false;
+        if (unitFilter === 'WHISPERS' && t.unit !== UnitType.WHISPERS) return false;
+      }
+
+      // Date Range Filtering
       if (!dateRange.start && !dateRange.end) return true;
-      const date = new Date(t.createdAt).toISOString().split('T')[0];
-      if (dateRange.start && date < dateRange.start) return false;
-      if (dateRange.end && date > dateRange.end) return false;
+      const tDate = new Date(t.createdAt).toISOString().split('T')[0];
+      if (dateRange.start && tDate < dateRange.start) return false;
+      if (dateRange.end && tDate > dateRange.end) return false;
+      
       return true;
     })
     .sort((a, b) => {
@@ -122,6 +94,44 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         : String(valB).localeCompare(String(valA));
     });
 
+  const downloadReport = () => {
+    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
+    const rows = filteredTransactions.map(t => [
+      `"${t.reference}"`,
+      new Date(t.createdAt).toLocaleDateString(),
+      t.type,
+      t.unit || 'Hotel Folio',
+      t.source || 'App',
+      `"${t.guestName}"`,
+      `"${t.items.map(i => `${i.description} (x${i.quantity})`).join('; ')}"`,
+      t.totalAmount,
+      t.paidAmount,
+      t.balance,
+      t.status,
+      t.settlementMethod || 'N/A',
+      `"${t.cashierName}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filterSuffix = unitFilter === 'ALL' ? 'COMPLETE' : unitFilter;
+    a.download = `TIDE_REPORT_${filterSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleSort = (field: keyof Transaction) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="no-print space-y-6">
@@ -131,11 +141,57 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Revenue Authority Terminal • Online</p>
           </div>
           <div className="flex gap-2">
-            {user.role === UserRole.ADMIN && (
-              <button onClick={downloadReport} className="px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] text-[10px] font-black uppercase tracking-widest rounded hover:bg-[#C8A862]/10 transition-all mr-2">Download Report</button>
-            )}
             <button onClick={() => setShowPOS(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Walk-In POS</button>
             <button onClick={() => setShowFolio(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Reservation Entry</button>
+          </div>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="bg-[#13263A] p-4 rounded-2xl border border-gray-700/30 flex flex-wrap items-end gap-4 shadow-xl">
+          <div className="flex-1 min-w-[200px] space-y-1">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Filter by Revenue Unit</label>
+            <select 
+              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
+              value={unitFilter}
+              onChange={(e) => setUnitFilter(e.target.value)}
+            >
+              <option value="ALL">All Revenue Streams</option>
+              <option value="ZENZA">Zenza Unit</option>
+              <option value="WHISPERS">Whispers Unit</option>
+              <option value="FOLIO">Reservations (Folio)</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-[150px] space-y-1">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Start Date</label>
+            <input 
+              type="date"
+              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+            />
+          </div>
+          <div className="flex-1 min-w-[150px] space-y-1">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">End Date</label>
+            <input 
+              type="date"
+              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => { setDateRange({ start: '', end: '' }); setUnitFilter('ALL'); }}
+              className="px-4 py-2 bg-gray-800 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
+            >
+              Reset
+            </button>
+            <button 
+              onClick={downloadReport} 
+              className="px-4 py-2 bg-green-600/10 text-green-500 text-[10px] font-black uppercase rounded-lg border border-green-600/20 hover:bg-green-600 hover:text-white transition-all shadow-lg"
+            >
+              Export Report ({filteredTransactions.length})
+            </button>
           </div>
         </div>
 
@@ -176,9 +232,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     </div>
                     <div className="text-sm font-black text-white">{t.reference}</div>
                     <div className="text-[10px] text-gray-600 font-bold">{new Date(t.createdAt).toLocaleString()}</div>
-                    {t.selectedBank && (
-                       <div className="text-[9px] text-[#C8A862] font-black uppercase tracking-widest mt-1">Bank: {t.selectedBank.bank}</div>
-                    )}
                   </td>
                   <td className="px-6 py-5">
                     <div className="text-sm font-bold text-gray-200">{t.guestName}</div>
@@ -242,7 +295,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </tbody>
           </table>
           {filteredTransactions.length === 0 && (
-            <div className="p-20 text-center text-gray-600 uppercase text-[11px] font-black tracking-[0.5em] italic">No Today's Transactions Recorded</div>
+            <div className="p-20 text-center text-gray-600 uppercase text-[11px] font-black tracking-[0.5em] italic">No Matching Revenue Records Found</div>
           )}
         </div>
       </div>
