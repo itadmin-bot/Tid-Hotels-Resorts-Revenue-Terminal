@@ -31,6 +31,16 @@ export interface Room {
   name: string;
   type: string;
   price: number;
+  description?: string;
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  imageUrl?: string;
 }
 
 export interface AppSettings {
@@ -45,7 +55,8 @@ export interface Transaction {
   id: string;
   reference: string;
   type: 'POS' | 'FOLIO';
-  unit?: UnitType;
+  unit?: UnitType; // Source Unit
+  source: string; // System Source (App, Walk-in, Third-party)
   guestName: string;
   identityType?: string;
   idNumber?: string;

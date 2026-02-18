@@ -13,7 +13,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Room, AppSettings, UserProfile, UserRole } from '../types';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem } from '../types';
 import { INITIAL_ROOMS, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '../constants';
 
 interface AdminPanelProps {
@@ -27,8 +27,9 @@ const DEFAULT_ADMIN_KEY = 'TIDE-ADMIN-2026-X9FQ';
 const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize }) => {
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'ROOMS' | 'SETTINGS' | 'ACCOUNTS' | 'SECURITY' | 'USERS'>('ROOMS');
+  const [activeTab, setActiveTab] = useState<'ROOMS' | 'MENU' | 'SETTINGS' | 'ACCOUNTS' | 'USERS' | 'SECURITY'>('ROOMS');
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,11 +39,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'rooms'), (snapshot) => {
       if (snapshot.empty) {
-        INITIAL_ROOMS.forEach(r => setDoc(doc(db, 'rooms', r.id), r));
+        INITIAL_ROOMS.forEach(r => setDoc(doc(db, 'rooms', r.id), { ...r, description: '' }));
       } else {
         const roomData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
         setRooms(roomData);
       }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Subscribe to Global Menu
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      const menuData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
+      setMenuItems(menuData);
     });
     return () => unsubscribe();
   }, []);
@@ -124,7 +134,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       name: 'New Room',
       type: 'Standard',
       price: 0,
-      updatedAt: Date.now()
+      description: ''
     };
     await addDoc(collection(db, 'rooms'), newRoom);
   };
@@ -132,6 +142,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const deleteRoom = async (roomId: string) => {
     if (confirm('Delete this room?')) {
       await deleteDoc(doc(db, 'rooms', roomId));
+    }
+  };
+
+  const updateMenuItem = async (id: string, data: Partial<MenuItem>) => {
+    await updateDoc(doc(db, 'menu', id), data);
+  };
+
+  const addMenuItem = async () => {
+    const newItem = {
+      name: 'New Item',
+      description: '',
+      price: 0,
+      category: 'General',
+      imageUrl: ''
+    };
+    await addDoc(collection(db, 'menu'), newItem);
+  };
+
+  const deleteMenuItem = async (id: string) => {
+    if (confirm('Delete this menu item?')) {
+      await deleteDoc(doc(db, 'menu', id));
     }
   };
 
@@ -178,12 +209,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           <h1 className="text-2xl font-bold text-white">SYSTEM CONFIGURATION</h1>
           <p className="text-gray-400 text-sm">Master Control Panel • {user.displayName}</p>
         </div>
-        <div className="bg-[#13263A] rounded-lg p-1 flex border border-gray-700 overflow-x-auto">
-          {['ROOMS', 'SETTINGS', 'ACCOUNTS', 'USERS', 'SECURITY'].map((tab) => (
+        <div className="bg-[#13263A] rounded-lg p-1 flex border border-gray-700 overflow-x-auto gap-1">
+          {['ROOMS', 'MENU', 'SETTINGS', 'ACCOUNTS', 'USERS', 'SECURITY'].map((tab) => (
             <button 
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`px-4 py-2 text-xs font-bold rounded whitespace-nowrap transition-all ${
+              className={`px-3 py-2 text-xs font-bold rounded whitespace-nowrap transition-all ${
                 activeTab === tab ? 'bg-[#C8A862] text-[#0B1C2D]' : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -204,9 +235,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               <table className="w-full text-left">
                 <thead>
                   <tr className="text-[10px] text-gray-500 uppercase border-b border-gray-700/50">
-                    <th className="pb-4">Room Name</th>
+                    <th className="pb-4">Name</th>
+                    <th className="pb-4">Description</th>
                     <th className="pb-4">Type</th>
-                    <th className="pb-4">Rate (₦)</th>
+                    <th className="pb-4 text-right">Rate (₦)</th>
                     <th className="pb-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -215,9 +247,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     <tr key={room.id}>
                       <td className="py-4">
                         <input 
-                          className="bg-transparent border-none text-white focus:outline-none w-full"
+                          className="bg-transparent border-none text-white font-bold focus:outline-none w-full"
                           defaultValue={room.name}
                           onBlur={(e) => updateRoom(room.id, { name: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-4">
+                        <input 
+                          className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full"
+                          placeholder="Add description..."
+                          defaultValue={room.description}
+                          onBlur={(e) => updateRoom(room.id, { description: e.target.value })}
                         />
                       </td>
                       <td className="py-4">
@@ -230,13 +270,74 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                       <td className="py-4">
                         <input 
                           type="number"
-                          className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24"
+                          className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24 text-right"
                           defaultValue={room.price}
                           onBlur={(e) => updateRoom(room.id, { price: parseFloat(e.target.value) || 0 })}
                         />
                       </td>
                       <td className="py-4 text-right">
                         <button onClick={() => deleteRoom(room.id)} className="text-red-400 text-xs hover:underline">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'MENU' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-[#C8A862]">POS Menu Catalog</h3>
+              <button onClick={addMenuItem} className="px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] text-xs font-bold rounded border border-[#C8A862]/30 hover:bg-[#C8A862]/20 transition-all">+ Add Item</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-[10px] text-gray-500 uppercase border-b border-gray-700/50">
+                    <th className="pb-4">Item Name</th>
+                    <th className="pb-4">Description</th>
+                    <th className="pb-4">Category</th>
+                    <th className="pb-4 text-right">Price (₦)</th>
+                    <th className="pb-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700/30">
+                  {menuItems.map((item) => (
+                    <tr key={item.id}>
+                      <td className="py-4">
+                        <input 
+                          className="bg-transparent border-none text-white font-bold focus:outline-none w-full"
+                          defaultValue={item.name}
+                          onBlur={(e) => updateMenuItem(item.id, { name: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-4">
+                        <input 
+                          className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full"
+                          placeholder="Add description..."
+                          defaultValue={item.description}
+                          onBlur={(e) => updateMenuItem(item.id, { description: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-4">
+                        <input 
+                          className="bg-transparent border-none text-gray-400 focus:outline-none w-full text-sm"
+                          defaultValue={item.category}
+                          onBlur={(e) => updateMenuItem(item.id, { category: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-4">
+                        <input 
+                          type="number"
+                          className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24 text-right"
+                          defaultValue={item.price}
+                          onBlur={(e) => updateMenuItem(item.id, { price: parseFloat(e.target.value) || 0 })}
+                        />
+                      </td>
+                      <td className="py-4 text-right">
+                        <button onClick={() => deleteMenuItem(item.id)} className="text-red-400 text-xs hover:underline">Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -356,7 +457,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         )}
 
         {activeTab === 'SECURITY' && (
-          <div className="space-y-6 max-w-md">
+          <div className="space-y-6 max-md">
             <h3 className="font-bold text-[#C8A862]">Security Control</h3>
             <div>
               <label className="text-xs text-gray-500 uppercase block mb-1">New Master Access Code</label>
@@ -379,15 +480,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
             </div>
           </div>
         )}
-      </div>
-      
-      <div className="text-center">
-        <button 
-          onClick={() => window.location.reload()} 
-          className="text-[10px] text-gray-600 hover:text-gray-400 uppercase tracking-widest font-bold"
-        >
-          Close Session & Lock Settings
-        </button>
       </div>
     </div>
   );

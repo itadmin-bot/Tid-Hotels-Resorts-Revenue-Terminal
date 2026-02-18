@@ -17,6 +17,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [showFolio, setShowFolio] = useState(false);
   const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const transactionsRef = collection(db, 'transactions');
@@ -42,12 +44,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   const downloadReport = () => {
-    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Guest', 'Amount', 'Status', 'Cashier'];
+    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Amount', 'Status', 'Cashier'];
     const rows = filteredTransactions.map(t => [
       t.reference,
       new Date(t.createdAt).toLocaleDateString(),
       t.type,
       t.unit || 'Hotel Folio',
+      t.source || 'App',
       t.guestName,
       t.totalAmount,
       t.status,
@@ -61,15 +64,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     a.href = url;
     a.download = `TIDE_REPORT_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
+    window.URL.revokeObjectURL(url);
   };
 
-  const filteredTransactions = transactions.filter(t => {
-    if (!dateRange.start && !dateRange.end) return true;
-    const date = new Date(t.createdAt).toISOString().split('T')[0];
-    if (dateRange.start && date < dateRange.start) return false;
-    if (dateRange.end && date > dateRange.end) return false;
-    return true;
-  });
+  const handleSort = (field: keyof Transaction) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const filteredTransactions = transactions
+    .filter(t => {
+      if (!dateRange.start && !dateRange.end) return true;
+      const date = new Date(t.createdAt).toISOString().split('T')[0];
+      if (dateRange.start && date < dateRange.start) return false;
+      if (dateRange.end && date > dateRange.end) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const valA = a[sortField];
+      const valB = b[sortField];
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortOrder === 'asc' ? valA - valB : valB - valA;
+      }
+      return sortOrder === 'asc' 
+        ? String(valA).localeCompare(String(valB)) 
+        : String(valB).localeCompare(String(valA));
+    });
 
   return (
     <div className="space-y-6">
@@ -87,7 +111,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30">
           <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Total Valuation</p>
@@ -103,15 +126,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* Ledger Table */}
       <div className="overflow-x-auto bg-[#13263A] rounded-2xl border border-gray-700/50 shadow-2xl">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-gray-700/50 bg-[#0B1C2D]/50 text-[10px] font-black uppercase tracking-widest text-gray-500">
-              <th className="px-6 py-5">Origin/Ref</th>
-              <th className="px-6 py-5">Guest Identification</th>
-              <th className="px-6 py-5">Financial Details</th>
-              <th className="px-6 py-5 text-center">Status</th>
+              <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('reference')}>Origin/Ref</th>
+              <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('guestName')}>Guest Identification</th>
+              <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('source')}>Source Details</th>
+              <th className="px-6 py-5 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>Status</th>
               <th className="px-6 py-5 text-right">Terminal Actions</th>
             </tr>
           </thead>
@@ -120,7 +142,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               <tr key={t.id} className="hover:bg-white/5 transition-colors group">
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`w-2 h-2 rounded-full ${t.unit === 'Zenza' ? 'bg-purple-500' : t.unit === 'Whispers' ? 'bg-blue-400' : 'bg-gold-500 bg-[#C8A862]'}`}></span>
+                    <span className={`w-2 h-2 rounded-full ${t.unit === 'Zenza' ? 'bg-purple-500' : t.unit === 'Whispers' ? 'bg-blue-400' : 'bg-[#C8A862]'}`}></span>
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{t.unit || 'FOLIO'}</span>
                   </div>
                   <div className="text-sm font-black text-white">{t.reference}</div>
@@ -128,10 +150,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </td>
                 <td className="px-6 py-5">
                   <div className="text-sm font-bold text-gray-200">{t.guestName}</div>
-                  <div className="text-[10px] text-gray-500 font-medium">Verified Operator: {t.cashierName}</div>
+                  <div className="text-[10px] text-gray-500 font-medium">Operator: {t.cashierName}</div>
                 </td>
                 <td className="px-6 py-5">
-                  <div className="text-sm font-black text-[#C8A862]">₦{t.totalAmount.toLocaleString()}</div>
+                  <div className="text-[10px] font-black text-[#C8A862] uppercase tracking-widest">{t.source || 'App Entry'}</div>
+                  <div className="text-sm font-black text-white">₦{t.totalAmount.toLocaleString()}</div>
                   <div className="text-[10px] text-gray-600">Method: {t.settlementMethod || 'N/A'}</div>
                 </td>
                 <td className="px-6 py-5 text-center">
@@ -142,7 +165,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   </span>
                 </td>
                 <td className="px-6 py-5 text-right space-x-2">
-                  <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-gray-700/50 hover:bg-gray-600 rounded transition-all">Print</button>
+                  <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] hover:bg-[#C8A862] hover:text-black rounded transition-all">Print Receipt</button>
                   {user.role === UserRole.ADMIN && (
                     <button onClick={() => handleDelete(t.id)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-red-900/20 text-red-400 hover:bg-red-900/40 rounded transition-all">Delete</button>
                   )}

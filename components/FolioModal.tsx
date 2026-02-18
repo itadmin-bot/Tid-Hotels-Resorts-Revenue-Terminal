@@ -65,6 +65,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       const tx = {
         reference: `RES-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'FOLIO',
+        source: 'App',
         guestName: guest.name,
         identityType: guest.idType,
         idNumber: guest.idNumber,

@@ -7,7 +7,8 @@ import {
   sendEmailVerification,
   reload,
   sendPasswordResetEmail,
-  signInWithPopup
+  signInWithPopup,
+  fetchSignInMethodsForEmail
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
@@ -62,13 +63,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     console.error("Auth Error Code:", err.code);
     switch (err.code) {
       case 'auth/unauthorized-domain':
-        return `Domain Error: This domain (${window.location.hostname}) is not authorized in Firebase Console. Please add it to "Authorized domains" in the Firebase Auth settings.`;
+        return `Domain Error: This domain (${window.location.hostname}) is not authorized.`;
       case 'auth/user-not-found':
       case 'auth/wrong-password':
       case 'auth/invalid-credential':
         return 'Email or password is incorrect';
       case 'auth/email-already-in-use':
-        return 'User already exists. Please sign in';
+        return 'An account already exists with this email. Please login using your original sign-up method.';
       case 'auth/popup-closed-by-user':
         return 'Sign-in popup was closed before completion.';
       default:
@@ -91,6 +92,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     setInfo('');
     setLoading(true);
     try {
+      // Check if user exists with password first
+      const providers = await fetchSignInMethodsForEmail(auth, email);
+      if (providers.includes('password')) {
+        setError('An account already exists with this email. Please login using your original sign-up method.');
+        setLoading(false);
+        return;
+      }
+
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
@@ -116,6 +125,26 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
       setError(mapAuthError(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkVerificationStatus = async () => {
+    if (auth.currentUser) {
+      setError('');
+      setLoading(true);
+      try {
+        await reload(auth.currentUser);
+        if (auth.currentUser.emailVerified) {
+          setInfo('Email verified successfully.');
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          setError('Email not verified. Please check your inbox and verify your email.');
+        }
+      } catch (err: any) {
+        setError(mapAuthError(err));
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -185,6 +214,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
            }
         }
       } else if (view === 'SIGN_UP') {
+        // Check if exists with google first
+        const providers = await fetchSignInMethodsForEmail(auth, email);
+        if (providers.includes('google.com')) {
+          setError('An account already exists with this email. Please login using your original sign-up method.');
+          setLoading(false);
+          return;
+        }
+
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
@@ -255,11 +292,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           <h2 className="text-xl font-bold text-white mb-4">Verify Your Email</h2>
           <p className="text-gray-400 mb-6">{info || 'Please check your inbox for a verification link.'}</p>
           <div className="space-y-4">
-            <button onClick={() => reload(auth.currentUser!)} disabled={loading} className="w-full py-3 px-4 bg-[#C8A862] hover:bg-[#B69651] transition-all rounded-lg font-semibold text-[#0B1C2D]">{loading ? 'Checking...' : 'I have verified my email'}</button>
+            <button 
+              onClick={checkVerificationStatus} 
+              disabled={loading} 
+              className="w-full py-3 px-4 bg-[#C8A862] hover:bg-[#B69651] transition-all rounded-lg font-semibold text-[#0B1C2D] disabled:opacity-50"
+            >
+              {loading ? 'Checking Status...' : 'I have verified my email'}
+            </button>
             <button onClick={handleResend} disabled={resendCooldown > 0} className="w-full py-3 px-4 border border-[#C8A862]/30 text-[#C8A862] hover:bg-[#C8A862]/10 transition-all rounded-lg font-semibold disabled:opacity-50">{resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}</button>
             <button onClick={handleLogout} className="w-full py-2 text-gray-500 hover:text-gray-400 text-sm">Sign Out</button>
           </div>
-          {error && <p className="mt-4 text-red-400 text-sm">{error}</p>}
+          {error && <p className="mt-4 text-red-400 text-sm bg-red-900/20 p-2 rounded">{error}</p>}
         </div>
       </div>
     );
