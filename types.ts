@@ -65,6 +65,7 @@ export interface Transaction {
   subtotal: number;
   taxAmount: number;
   serviceCharge: number;
+  discountAmount: number; // Added for flexible discounting
   totalAmount: number;
   paidAmount: number;
   balance: number;

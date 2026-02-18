@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -77,6 +76,12 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                     </div>
                   </div>
                 ))}
+                {transaction.discountAmount > 0 && (
+                  <div className="flex justify-between border-t border-black/5 pt-2 font-bold italic text-red-600">
+                    <span>DISCOUNT APPLIED</span>
+                    <span>-₦{transaction.discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
 
               <div className="text-right text-sm font-black mb-6">
@@ -184,6 +189,12 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                     <span>Valuation Base</span>
                     <span>₦{transaction.subtotal.toLocaleString()}</span>
                   </div>
+                  {transaction.discountAmount > 0 && (
+                    <div className="flex justify-between text-red-600 font-black uppercase text-[10px] tracking-widest">
+                      <span>Discount Benefit</span>
+                      <span>-₦{transaction.discountAmount.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-gray-400 font-black uppercase text-[10px] tracking-widest">
                     <span>VAT (7.5%) - Included</span>
                     <span>₦{transaction.taxAmount.toLocaleString()}</span>

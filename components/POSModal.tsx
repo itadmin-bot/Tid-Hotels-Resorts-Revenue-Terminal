@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { 
   UnitType, 
@@ -8,8 +8,10 @@ import {
   SettlementMethod, 
   TransactionItem,
   AppSettings,
-  MenuItem
+  MenuItem,
+  Transaction
 } from '../types';
+import ReceiptPreview from './ReceiptPreview';
 
 interface POSModalProps {
   user: UserProfile;
@@ -23,8 +25,11 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
   const [items, setItems] = useState<TransactionItem[]>([{ description: '', quantity: 1, price: 0, total: 0 }]);
   const [settlement, setSettlement] = useState<SettlementMethod>(SettlementMethod.POS);
   const [paid, setPaid] = useState(0);
+  const [discount, setDiscount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   useEffect(() => {
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
@@ -41,7 +46,8 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
     };
   }, []);
 
-  const total = items.reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+  const subtotal = items.reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+  const total = Math.max(0, subtotal - discount);
   
   const vatRate = settings?.vat || 0.075;
   const scRate = settings?.serviceCharge || 0.10;
@@ -90,7 +96,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
 
     setIsSubmitting(true);
     try {
-      const tx = {
+      const txData = {
         reference: `POS-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'POS',
         unit,
@@ -100,21 +106,21 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
         subtotal: baseValue,
         taxAmount,
         serviceCharge,
+        discountAmount: discount,
         totalAmount: total,
         paidAmount: paid,
         balance,
         status: balance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
         settlementMethod: settlement,
         createdBy: user.uid,
-        userId: user.uid, // Explicit field for security rules
+        userId: user.uid,
         cashierName: user.displayName,
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
 
-      // Save to a centralized 'transactions' collection for unified cross-browser sync
-      await addDoc(collection(db, 'transactions'), tx);
-      onClose();
+      const docRef = await addDoc(collection(db, 'transactions'), txData);
+      setSavedTransaction({ id: docRef.id, ...txData } as Transaction);
     } catch (err) {
       console.error(err);
       alert('Error saving transaction');
@@ -122,6 +128,80 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
       setIsSubmitting(false);
     }
   };
+
+  const handleSettleMore = async () => {
+    if (!savedTransaction) return;
+    const amount = prompt(`Enter additional payment for ${savedTransaction.reference} (Current Balance: ₦${savedTransaction.balance.toLocaleString()}):`, savedTransaction.balance.toString());
+    if (!amount) return;
+
+    const paidVal = parseFloat(amount);
+    if (isNaN(paidVal) || paidVal <= 0) return;
+
+    const newPaid = savedTransaction.paidAmount + paidVal;
+    const newBalance = Math.max(0, savedTransaction.totalAmount - newPaid);
+
+    try {
+      await updateDoc(doc(db, 'transactions', savedTransaction.id), {
+        paidAmount: newPaid,
+        balance: newBalance,
+        status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
+        updatedAt: Date.now()
+      });
+      setSavedTransaction({
+        ...savedTransaction,
+        paidAmount: newPaid,
+        balance: newBalance,
+        status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID
+      });
+    } catch (err) {
+      alert('Settlement update failed.');
+    }
+  };
+
+  if (savedTransaction) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight">TRANSACTION RECORDED</h2>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-2">{savedTransaction.reference}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+             <button 
+              onClick={() => setShowReceipt(true)}
+              className="px-6 py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl uppercase tracking-widest text-xs hover:bg-[#B69651] transition-all"
+            >
+              Print Receipt
+            </button>
+            <button 
+              onClick={handleSettleMore}
+              disabled={savedTransaction.status === SettlementStatus.SETTLED}
+              className={`px-6 py-4 font-black rounded-xl uppercase tracking-widest text-xs transition-all ${
+                savedTransaction.status === SettlementStatus.SETTLED 
+                ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
+                : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              Settle Balance
+            </button>
+          </div>
+          
+          <button 
+            onClick={onClose}
+            className="w-full py-4 border border-gray-700 text-gray-400 font-bold rounded-xl uppercase tracking-widest text-xs hover:bg-white/5 transition-all"
+          >
+            Done
+          </button>
+
+          {showReceipt && <ReceiptPreview transaction={savedTransaction} onClose={() => setShowReceipt(false)} />}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -226,10 +306,19 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
         </div>
 
         <div className="p-6 bg-[#0B1C2D] border-t border-gray-700 space-y-4">
-          <div className="flex justify-between items-end border-b border-gray-800 pb-4">
+          <div className="grid grid-cols-3 gap-4 border-b border-gray-800 pb-4">
             <div>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Financial Summary</p>
-              <h3 className="text-sm font-bold text-gray-400">Tax & S.C. Included</h3>
+               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Subtotal</p>
+               <span className="text-sm font-bold text-white">₦{subtotal.toLocaleString()}</span>
+            </div>
+            <div className="text-center">
+               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Discount (Flexible)</p>
+               <input 
+                type="number"
+                className="w-full bg-[#13263A] border border-[#C8A862]/20 rounded p-1 text-xs text-center text-[#C8A862] font-black focus:outline-none focus:border-[#C8A862]"
+                value={discount}
+                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+               />
             </div>
             <div className="text-right">
               <span className="text-[10px] text-[#C8A862] font-black uppercase tracking-widest block mb-1">Total Valuation</span>
@@ -256,13 +345,13 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
           </div>
 
           <button 
-            disabled={isSubmitting || total <= 0}
+            disabled={isSubmitting || total < 0 || subtotal <= 0}
             onClick={handleSubmit}
             className={`w-full py-4 font-black rounded-xl transition-all uppercase tracking-widest shadow-lg ${
               !unit ? 'bg-gray-700 text-gray-500 hover:bg-red-900/40' : 'bg-[#C8A862] text-[#0B1C2D] hover:bg-[#B69651] active:scale-95'
             }`}
           >
-            {isSubmitting ? 'Recording Transaction...' : (unit ? 'Complete & Print Record' : 'Select Unit to Proceed')}
+            {isSubmitting ? 'Recording Transaction...' : (unit ? 'Complete & Proceed' : 'Select Unit to Proceed')}
           </button>
         </div>
       </div>

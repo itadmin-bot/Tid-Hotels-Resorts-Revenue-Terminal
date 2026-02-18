@@ -6,6 +6,7 @@ import { BRAND } from '../constants';
 import POSModal from './POSModal';
 import FolioModal from './FolioModal';
 import ReceiptPreview from './ReceiptPreview';
+import ManageTransactionModal from './ManageTransactionModal';
 
 interface DashboardProps {
   user: UserProfile;
@@ -15,6 +16,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showPOS, setShowPOS] = useState(false);
   const [showFolio, setShowFolio] = useState(false);
+  const [managingTransaction, setManagingTransaction] = useState<Transaction | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
@@ -60,34 +62,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         console.error("Delete failed:", err);
         alert('Permission Denied: Unauthorized deletion attempt.');
       }
-    }
-  };
-
-  const handleSettle = async (t: Transaction) => {
-    const amount = prompt(`Enter payment amount for ${t.reference} (Balance: ₦${t.balance.toLocaleString()}):`, t.balance.toString());
-    if (!amount) return;
-
-    const paid = parseFloat(amount);
-    if (isNaN(paid) || paid <= 0) {
-      alert("Invalid payment amount. Please enter a valid numerical value.");
-      return;
-    }
-
-    const newPaidAmount = t.paidAmount + paid;
-    const newBalance = Math.max(0, t.totalAmount - newPaidAmount);
-
-    try {
-      await updateDoc(doc(db, 'transactions', t.id), {
-        paidAmount: newPaidAmount,
-        balance: newBalance,
-        status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
-        updatedAt: Date.now(),
-        settlementMethod: SettlementMethod.TRANSFER 
-      });
-      alert("Account settlement updated successfully.");
-    } catch (err) {
-      console.error("Settlement failed:", err);
-      alert("Failed to update settlement. Please check your network connection.");
     }
   };
 
@@ -164,15 +138,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30">
+        <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30 shadow-xl">
           <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Total Valuation</p>
           <h2 className="text-3xl font-black text-white tracking-tighter">₦{filteredTransactions.reduce((a, b) => a + b.totalAmount, 0).toLocaleString()}</h2>
         </div>
-        <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30">
+        <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30 shadow-xl">
           <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Settled Revenue</p>
           <h2 className="text-3xl font-black text-green-400 tracking-tighter">₦{filteredTransactions.reduce((a, b) => a + b.paidAmount, 0).toLocaleString()}</h2>
         </div>
-        <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30">
+        <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30 shadow-xl">
           <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Outstanding</p>
           <h2 className="text-3xl font-black text-red-500 tracking-tighter">₦{filteredTransactions.reduce((a, b) => a + b.balance, 0).toLocaleString()}</h2>
         </div>
@@ -203,15 +177,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </td>
                 <td className="px-6 py-5">
                   <div className="text-sm font-bold text-gray-200">{t.guestName}</div>
-                  <div className="text-[10px] text-gray-500 font-medium">Operator: {t.cashierName}</div>
+                  <div className="text-[10px] text-gray-500 font-medium truncate max-w-[150px]">{t.email || 'No Email'} • {t.phone || 'No Phone'}</div>
                 </td>
                 <td className="px-6 py-5">
                   <div className="max-w-[200px]">
-                    {t.items.map((item, i) => (
+                    {t.items.slice(0, 2).map((item, i) => (
                       <div key={i} className="text-[10px] text-gray-400 truncate font-medium">
                         • {item.description} <span className="text-gray-600">(x{item.quantity})</span>
                       </div>
                     ))}
+                    {t.items.length > 2 && (
+                      <div className="text-[9px] text-[#C8A862] font-black mt-1 italic">+{t.items.length - 2} MORE ITEMS</div>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-5">
@@ -238,12 +215,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   </span>
                 </td>
                 <td className="px-6 py-5 text-right space-x-2">
-                  <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] hover:bg-[#C8A862] hover:text-black rounded transition-all">Receipt</button>
-                  {t.status === SettlementStatus.UNPAID && (
-                    <button onClick={() => handleSettle(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-green-900/20 text-green-400 hover:bg-green-600 hover:text-white rounded transition-all">Settle</button>
-                  )}
+                  <button 
+                    onClick={() => setManagingTransaction(t)} 
+                    className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
+                  >
+                    Manage
+                  </button>
+                  <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">Receipt</button>
                   {user.role === UserRole.ADMIN && (
-                    <button onClick={() => handleDelete(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-red-900/20 text-red-400 hover:bg-red-900/40 rounded transition-all">Delete</button>
+                    <button onClick={() => handleDelete(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-red-900/20 text-red-400 border border-red-500/20 hover:bg-red-900/40 rounded transition-all">Delete</button>
                   )}
                 </td>
               </tr>
@@ -257,6 +237,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {showPOS && <POSModal user={user} onClose={() => setShowPOS(false)} />}
       {showFolio && <FolioModal user={user} onClose={() => setShowFolio(false)} />}
+      {managingTransaction && (
+        <ManageTransactionModal 
+          transaction={managingTransaction} 
+          onClose={() => setManagingTransaction(null)} 
+        />
+      )}
       {viewingReceipt && <ReceiptPreview transaction={viewingReceipt} onClose={() => setViewingReceipt(null)} />}
     </div>
   );
