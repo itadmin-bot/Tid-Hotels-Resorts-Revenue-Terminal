@@ -60,6 +60,27 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     };
   }, []);
 
+  // Auto-calculate nights when checkIn or checkOut changes
+  useEffect(() => {
+    if (stayPeriod.checkIn && stayPeriod.checkOut) {
+      const start = new Date(stayPeriod.checkIn);
+      const end = new Date(stayPeriod.checkOut);
+      
+      // Calculate difference in time
+      const diffTime = end.getTime() - start.getTime();
+      // Calculate difference in days
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      // Update nights if it's a valid positive number
+      if (diffDays > 0) {
+        setStayPeriod(prev => ({ ...prev, nights: diffDays }));
+      } else {
+        // Fallback to 1 if dates are same or invalid order
+        setStayPeriod(prev => ({ ...prev, nights: 1 }));
+      }
+    }
+  }, [stayPeriod.checkIn, stayPeriod.checkOut]);
+
   const addBookingRow = () => {
     if (rooms.length > 0) {
       setBookings([...bookings, { roomId: rooms[0].id, quantity: 1 }]);
@@ -312,7 +333,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Total Duration (Nights)</label>
-                <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={stayPeriod.nights} onChange={(e) => setStayPeriod({...stayPeriod, nights: parseInt(e.target.value) || 1})} />
+                <input type="number" readOnly className="w-full bg-[#0B1C2D]/50 border border-gray-700 rounded-lg p-3 text-sm text-gray-400 focus:outline-none cursor-not-allowed" value={stayPeriod.nights} />
               </div>
             </div>
           </section>
