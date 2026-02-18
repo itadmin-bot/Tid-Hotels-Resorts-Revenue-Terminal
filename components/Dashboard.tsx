@@ -24,66 +24,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
     const transactionsRef = collection(db, 'transactions');
     
+    // Determine the start of the current day for client-side filtering
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const startTimestamp = startOfToday.getTime();
 
-    let unsubscribe: () => void;
-
     /**
-     * Initializes the subscription. 
-     * If useOrderBy is true, it attempts to use Firestore's native ordering.
-     * If an index error occurs, it restarts with useOrderBy as false and handles sorting locally.
+     * Staff Transaction Subscription:
+     * To avoid the "Index Required" error (composite index on createdBy + createdAt),
+     * we only use a single 'where' filter on 'createdBy'.
+     * Date filtering and sorting are handled client-side for non-admin users.
      */
-    const initSubscription = (useOrderBy: boolean) => {
-      let q;
-      if (isAdminUser) {
-        // Admins track all historical data
-        q = query(transactionsRef, orderBy('createdAt', 'desc'));
-      } else {
-        // Staff see only their own transactions for today
-        if (useOrderBy) {
-          q = query(
-            transactionsRef, 
-            where('createdBy', '==', user.uid), 
-            where('createdAt', '>=', startTimestamp),
-            orderBy('createdAt', 'desc')
-          );
-        } else {
-          // Fallback query without orderBy to avoid index requirement
-          q = query(
-            transactionsRef, 
-            where('createdBy', '==', user.uid), 
-            where('createdAt', '>=', startTimestamp)
-          );
-        }
+    const q = isAdminUser
+      ? query(transactionsRef, orderBy('createdAt', 'desc'))
+      : query(transactionsRef, where('createdBy', '==', user.uid));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      
+      // Post-process data for staff: Filter for today and sort by creation date
+      if (!isAdminUser) {
+        data = data
+          .filter(t => t.createdAt >= startTimestamp)
+          .sort((a, b) => b.createdAt - a.createdAt);
       }
+      
+      setTransactions(data);
+    }, (error: any) => {
+      console.error("Firestore Transaction Subscription Error:", error);
+      // In case of any remaining index issues, provide clear terminal logging
+      if (error.code === 'failed-precondition' || error.message.toLowerCase().includes('index')) {
+        console.warn("Critical: Firestore composite index missing for terminal query. Ensure 'createdBy' and 'createdAt' are indexed if server-side filtering is desired.");
+      }
+    });
 
-      return onSnapshot(q, (snapshot) => {
-        let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-        
-        // Apply client-side sorting if server-side ordering failed/was skipped
-        if (!useOrderBy && !isAdminUser) {
-          data = data.sort((a, b) => b.createdAt - a.createdAt);
-        }
-        
-        setTransactions(data);
-      }, (error) => {
-        // Detect "Index Required" errors (usually 'failed-precondition')
-        if (useOrderBy && (error.code === 'failed-precondition' || error.message.toLowerCase().includes('index'))) {
-          console.warn("Firestore composite index missing for optimized query. Activating client-side fallback...");
-          if (unsubscribe) unsubscribe();
-          unsubscribe = initSubscription(false);
-        } else {
-          console.error("Firestore Transaction Subscription Error:", error);
-        }
-      });
-    };
-
-    unsubscribe = initSubscription(true);
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    return () => unsubscribe();
   }, [user.uid, user.role, user.email]);
 
   const handleDelete = async (t: Transaction) => {

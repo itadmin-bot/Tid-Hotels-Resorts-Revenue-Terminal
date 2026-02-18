@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
@@ -38,6 +39,8 @@ const App: React.FC = () => {
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (!isMounted) return;
+      
+      // Cleanup previous listener
       if (unsubProfile) {
         unsubProfile();
         unsubProfile = undefined;
@@ -50,13 +53,13 @@ const App: React.FC = () => {
         setLoading(true);
         const userRef = doc(db, 'users', currentUser.uid);
 
-        try {
-          // One-time fetch to ensure document exists
-          const snap = await getDoc(userRef);
-          let data: any;
+        // Core Fix: Fully Real-time Profile Synchronization using onSnapshot exclusively
+        unsubProfile = onSnapshot(userRef, async (snapshot) => {
+          if (!isMounted) return;
 
-          if (!snap.exists()) {
-            data = {
+          if (!snapshot.exists()) {
+            // Initialization flow for new users
+            const initialData = {
               uid: currentUser.uid,
               email: currentUser.email,
               role: UserRole.STAFF,
@@ -65,45 +68,39 @@ const App: React.FC = () => {
               createdAt: Date.now(),
               displayName: currentUser.email?.split('@')[0] || 'Operator'
             };
-            await setDoc(userRef, data);
-          } else {
-            data = snap.data();
-          }
-
-          if (isMounted) {
-            setUserProfile({
-              uid: currentUser.uid,
-              email: currentUser.email || '',
-              displayName: data.displayName || 'Operator',
-              role: (data.role as UserRole) || UserRole.STAFF,
-              domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
-              isOnline: true,
-              lastActive: Date.now()
-            });
-            setLoading(false);
-          }
-
-          // Real-time snapshot for cross-browser profile sync
-          unsubProfile = onSnapshot(userRef, (s) => {
-            if (s.exists() && isMounted) {
-              const d = s.data();
-              setUserProfile(prev => prev ? ({ 
-                ...prev, 
-                role: d.role as UserRole, 
-                displayName: d.displayName,
-                lastActive: d.lastActive
-              }) : null);
+            try {
+              // Write initial document - the next snapshot update will trigger the sync block
+              await setDoc(userRef, initialData);
+            } catch (err: any) {
+              console.error("Profile Creation Error:", err);
+              if (isMounted) {
+                setSyncError("Terminal Access Denied");
+                setLoading(false);
+              }
             }
-          }, (err) => {
-            console.error("Profile Sync Error:", err);
-          });
-        } catch (err: any) {
-          console.error("Initial Sync Error:", err);
+          } else {
+            // Synchronize local state with real-time Firestore data
+            const data = snapshot.data();
+            if (isMounted) {
+              setUserProfile({
+                uid: currentUser.uid,
+                email: currentUser.email || '',
+                displayName: data.displayName || 'Operator',
+                role: (data.role as UserRole) || UserRole.STAFF,
+                domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
+                isOnline: data.isOnline ?? true,
+                lastActive: data.lastActive || Date.now()
+              });
+              setLoading(false);
+            }
+          }
+        }, (err) => {
+          console.error("Profile Listener Error:", err);
           if (isMounted) {
-            setSyncError(err.message || "Network Error");
+            setSyncError("Terminal Connection Lost");
             setLoading(false);
           }
-        }
+        });
       } else {
         if (isMounted) {
           setUserProfile(null);

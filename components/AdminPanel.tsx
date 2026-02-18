@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -34,36 +35,36 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [loading, setLoading] = useState(false);
   const [newAccessCode, setNewAccessCode] = useState('');
 
-  // 1. Snapshot Listener: Rooms (All Users)
+  // 1. Snapshot Listener: Rooms (Real-time synchronization for all connected terminals)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'rooms'), (snapshot) => {
       if (snapshot.empty && user.role === UserRole.ADMIN) {
-        // Only trigger initialization if admin
+        // Automatically initialize default room inventory if the collection is empty (Admin only)
         INITIAL_ROOMS.forEach(r => setDoc(doc(db, 'rooms', r.id), { ...r, description: '' }));
       } else {
         const roomData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
         setRooms(roomData);
       }
-    }, (err) => console.error("Rooms Snapshot Error:", err));
+    }, (err) => console.error("Rooms Snapshot Sync Error:", err));
     return () => unsubscribe();
   }, [user.role]);
 
-  // 2. Snapshot Listener: Global Menu (All Users)
+  // 2. Snapshot Listener: Global Menu (Real-time synchronization for all connected terminals)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'menu'), (snapshot) => {
       const menuData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
       setMenuItems(menuData);
-    }, (err) => console.error("Menu Snapshot Error:", err));
+    }, (err) => console.error("Menu Snapshot Sync Error:", err));
     return () => unsubscribe();
   }, []);
 
-  // 3. Snapshot Listener: Global Settings (All Users)
+  // 3. Snapshot Listener: Global Settings (Real-time synchronization for tax and bank details)
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (snapshot.exists()) {
         setSettings(snapshot.data() as AppSettings);
       } else if (user.role === UserRole.ADMIN) {
-        // Initialize if admin and missing
+        // Initialize core system settings if missing (Admin only)
         const defaultSettings: AppSettings = {
           vat: 0.075,
           serviceCharge: 0.10,
@@ -73,18 +74,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         };
         setDoc(doc(db, 'settings', 'master'), defaultSettings);
       }
-    }, (err) => console.error("Settings Snapshot Error:", err));
+    }, (err) => console.error("Settings Snapshot Sync Error:", err));
     return () => unsubscribe();
   }, [user.role]);
 
-  // 4. Snapshot Listener: User List (Admin Only)
+  // 4. Snapshot Listener: User List (Restricted real-time view for Authorized Admins)
   useEffect(() => {
     if (!isAuthorized || user.role !== UserRole.ADMIN) return;
     const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const userData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
       setUsers(userData);
-    }, (err) => console.error("Users Snapshot Error:", err));
+    }, (err) => console.error("Users Snapshot Sync Error:", err));
     return () => unsubscribe();
   }, [isAuthorized, user.role]);
 
@@ -94,6 +95,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     setLoading(true);
     
     try {
+      // One-time check for access code remains appropriate for action verification
       const codeDoc = await getDoc(doc(db, 'accessCodes', 'master'));
       const masterCode = codeDoc.exists() ? codeDoc.data().code : DEFAULT_ADMIN_KEY;
       
@@ -207,7 +209,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">SYSTEM CONFIGURATION</h1>
+          <h1 className="text-2xl font-bold text-white uppercase">System Configuration</h1>
           <p className="text-gray-400 text-sm">Master Control Panel • {user.displayName}</p>
         </div>
         <div className="bg-[#13263A] rounded-lg p-1 flex border border-gray-700 overflow-x-auto gap-1">
