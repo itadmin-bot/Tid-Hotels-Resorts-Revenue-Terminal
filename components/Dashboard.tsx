@@ -21,38 +21,80 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
-    // Correct Subscription Logic: Match Firestore rules exactly
-    // Admin sees everything; Staff sees only their own via where filter
     const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
     const transactionsRef = collection(db, 'transactions');
     
-    // Ensure the query structure aligns with security rules to avoid "insufficient permissions"
-    const q = isAdminUser
-      ? query(transactionsRef, orderBy('createdAt', 'desc'))
-      : query(transactionsRef, where('createdBy', '==', user.uid), orderBy('createdAt', 'desc'));
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const startTimestamp = startOfToday.getTime();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-      setTransactions(data);
-    }, (error) => {
-      console.error("Firestore Transaction Subscription Error:", error);
-      // Log context for debugging permission issues without breaking UI
-      if (error.code === 'permission-denied') {
-        console.warn(`Permission Denied for UID: ${user.uid}. Query mismatch or rule violation.`);
+    let unsubscribe: () => void;
+
+    /**
+     * Initializes the subscription. 
+     * If useOrderBy is true, it attempts to use Firestore's native ordering.
+     * If an index error occurs, it restarts with useOrderBy as false and handles sorting locally.
+     */
+    const initSubscription = (useOrderBy: boolean) => {
+      let q;
+      if (isAdminUser) {
+        // Admins track all historical data
+        q = query(transactionsRef, orderBy('createdAt', 'desc'));
+      } else {
+        // Staff see only their own transactions for today
+        if (useOrderBy) {
+          q = query(
+            transactionsRef, 
+            where('createdBy', '==', user.uid), 
+            where('createdAt', '>=', startTimestamp),
+            orderBy('createdAt', 'desc')
+          );
+        } else {
+          // Fallback query without orderBy to avoid index requirement
+          q = query(
+            transactionsRef, 
+            where('createdBy', '==', user.uid), 
+            where('createdAt', '>=', startTimestamp)
+          );
+        }
       }
-    });
 
-    return () => unsubscribe();
+      return onSnapshot(q, (snapshot) => {
+        let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+        
+        // Apply client-side sorting if server-side ordering failed/was skipped
+        if (!useOrderBy && !isAdminUser) {
+          data = data.sort((a, b) => b.createdAt - a.createdAt);
+        }
+        
+        setTransactions(data);
+      }, (error) => {
+        // Detect "Index Required" errors (usually 'failed-precondition')
+        if (useOrderBy && (error.code === 'failed-precondition' || error.message.toLowerCase().includes('index'))) {
+          console.warn("Firestore composite index missing for optimized query. Activating client-side fallback...");
+          if (unsubscribe) unsubscribe();
+          unsubscribe = initSubscription(false);
+        } else {
+          console.error("Firestore Transaction Subscription Error:", error);
+        }
+      });
+    };
+
+    unsubscribe = initSubscription(true);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [user.uid, user.role, user.email]);
 
   const handleDelete = async (t: Transaction) => {
     if (user.role !== UserRole.ADMIN) return;
-    if (window.confirm('PERMANENT ACTION: Delete this revenue record?')) {
+    
+    if (window.confirm('PERMANENT ACTION: Delete this revenue record from the central ledger?')) {
       try {
         await deleteDoc(doc(db, 'transactions', t.id));
       } catch (err) {
         console.error("Delete failed:", err);
-        alert('Permission Denied: Only root admins can delete ledger entries.');
+        alert('Permission Denied: Unauthorized deletion attempt.');
       }
     }
   };
@@ -63,7 +105,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
     const paid = parseFloat(amount);
     if (isNaN(paid) || paid <= 0) {
-      alert("Invalid payment amount.");
+      alert("Invalid payment amount. Please enter a valid numerical value.");
       return;
     }
 
@@ -76,12 +118,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         balance: newBalance,
         status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
         updatedAt: Date.now(),
-        settlementMethod: SettlementMethod.TRANSFER // Default to transfer for partial settlements
+        settlementMethod: SettlementMethod.TRANSFER 
       });
-      alert("Account updated successfully.");
+      alert("Account settlement updated successfully.");
     } catch (err) {
       console.error("Settlement failed:", err);
-      alert("Failed to update settlement. Check your permissions.");
+      alert("Failed to update settlement. Please check your network connection.");
     }
   };
 
@@ -222,7 +264,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </tbody>
         </table>
         {filteredTransactions.length === 0 && (
-          <div className="p-20 text-center text-gray-600 uppercase text-[11px] font-black tracking-[0.5em] italic">No Transactions Recorded</div>
+          <div className="p-20 text-center text-gray-600 uppercase text-[11px] font-black tracking-[0.5em] italic">No Today's Transactions Recorded</div>
         )}
       </div>
 
