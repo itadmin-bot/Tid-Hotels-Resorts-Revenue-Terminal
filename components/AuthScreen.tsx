@@ -55,8 +55,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     switch (err.code) {
       case 'auth/unauthorized-domain':
         return `Domain Error: This domain is not authorized.`;
-      case 'auth/user-not-found':
-      case 'auth/wrong-password':
       case 'auth/invalid-credential':
         return 'Email or password is incorrect';
       case 'auth/email-already-in-use':
@@ -100,12 +98,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
       return;
     }
 
+    if (view === 'SIGN_UP' && isAdminMode && !accessCode) {
+      setError('Master Access Key is required for Admin registration.');
+      return;
+    }
+
     setLoading(true);
     try {
       if (view === 'FORGOT_PASSWORD') {
         await sendPasswordResetEmail(auth, email);
         setInfo('Password reset link sent! Please check your corporate email inbox.');
-        // Don't switch view immediately so user can see the message
       } else if (view === 'SIGN_IN') {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -120,6 +122,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           return;
         }
 
+        // If trying to sign in as admin, check code
         if (isAdminMode) {
           const codeDoc = await getDoc(doc(db, 'accessCodes', 'master'));
           const masterCode = codeDoc.exists() ? codeDoc.data().code : DEFAULT_ADMIN_KEY;
@@ -132,20 +135,25 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           }
         }
       } else if (view === 'SIGN_UP') {
+        // Step 1: Preliminary creation to get UID
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const role = isAdminMode ? UserRole.ADMIN : UserRole.STAFF;
         
         if (isAdminMode) {
+          // Step 2: Immediate validation of code for Admin Role
           const codeDoc = await getDoc(doc(db, 'accessCodes', 'master'));
           const masterCode = codeDoc.exists() ? codeDoc.data().code : DEFAULT_ADMIN_KEY;
+          
           if (accessCode !== masterCode) {
+            // Delete the account immediately if they tried to bypass with a wrong code
             await userCredential.user.delete();
-            setError('Invalid Admin Access Key during registration.');
+            setError('Unauthorized: Invalid Admin Access Key. Account registration aborted.');
             setLoading(false);
             return;
           }
         }
 
+        // Step 3: Persistence of profile
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           uid: userCredential.user.uid,
           email: userCredential.user.email,
@@ -155,8 +163,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           lastActive: Date.now(),
           isOnline: true
         });
+
         await sendEmailVerification(userCredential.user);
-        setInfo('Verification link sent! Check your inbox (and SPAM folder).');
+        setInfo('Operator account created! Please verify your email via the link sent.');
         setResendCooldown(60);
         setView('SIGN_IN');
       }
@@ -188,7 +197,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
       const result = await signInWithPopup(auth, googleProvider);
       if (!result.user.email?.endsWith(BRAND.domain)) {
         await signOut(auth);
-        setError('Unauthorized domain.');
+        setError('Unauthorized domain. Only Tidé Hotel Group accounts permitted.');
       }
     } catch (err: any) {
       setError(mapAuthError(err));
@@ -209,14 +218,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
             </div>
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Verify Your Account</h2>
+            <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Verify Operator Identity</h2>
             <p className="text-gray-400 text-xs leading-relaxed">
               A verification link was sent to <span className="text-white font-bold">{auth.currentUser?.email}</span>. 
               Please click the link in the email, then return here and click the button below.
             </p>
           </div>
           <div className="bg-[#0B1C2D]/50 border border-[#C8A862]/20 p-4 rounded-xl text-[10px] text-[#C8A862] font-black uppercase tracking-widest leading-relaxed">
-            IMPORTANT: If you don't see the email within 2 minutes, please check your <span className="underline">SPAM</span> or <span className="underline">JUNK</span> folder.
+            SYSTEM NOTE: Check your <span className="underline">SPAM</span> or <span className="underline">JUNK</span> folder if the link is not in your inbox.
           </div>
           
           <div className="space-y-4">
@@ -246,11 +255,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
 
           {error && <p className="text-red-400 text-[11px] font-bold bg-red-900/10 py-2 rounded border border-red-500/20">{error}</p>}
           {info && <p className="text-[#C8A862] text-[11px] font-bold bg-[#C8A862]/10 py-2 rounded border border-[#C8A862]/20">{info}</p>}
-
-          <div className="flex items-center justify-center gap-2 pt-4">
-            <div className="w-2 h-2 bg-[#C8A862] rounded-full animate-ping"></div>
-            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Waiting for signal...</p>
-          </div>
         </div>
         <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Revenue Terminal v2.9.1</p>
       </div>
@@ -261,9 +265,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#0B1C2D] py-12 px-4 font-inter text-center">
         <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-red-500/20 shadow-2xl backdrop-blur-md space-y-6 mb-8">
-          <h2 className="text-2xl font-bold text-white uppercase">Domain Restricted</h2>
+          <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Domain Access Denied</h2>
           <p className="text-gray-400 text-xs leading-relaxed">
-            The TIDÈ Revenue Terminal is strictly for internal use. Please sign in with an official <span className="text-[#C8A862]">{BRAND.domain}</span> account.
+            The TIDÈ Revenue Terminal is strictly for internal staff. Please sign in with an official <span className="text-[#C8A862]">{BRAND.domain}</span> account.
           </p>
           <button onClick={() => signOut(auth)} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg uppercase text-xs tracking-widest">Return to Gateway</button>
         </div>
@@ -286,7 +290,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
             <input 
               type="email" 
               required 
-              className="w-full bg-[#0B1C2D]/50 border border-gray-700/50 rounded-lg py-3.5 px-4 text-white focus:outline-none focus:ring-1 focus:ring-[#C8A862]/30 placeholder-gray-600 transition-all" 
+              className="w-full bg-[#0B1C2D]/50 border border-gray-700/50 rounded-lg py-3.5 px-4 text-white focus:outline-none focus:ring-1 focus:ring-[#C8A862]/30 placeholder-gray-600 transition-all font-medium" 
               placeholder="name@tidehotelgroup.com" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
@@ -329,8 +333,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
               <div className="p-5 bg-[#0B1C2D]/40 border border-gray-700/50 rounded-xl space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">Register as Admin</span>
-                    <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Master Access Key Required</span>
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">Request Admin Access</span>
+                    <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Master Security Key Required</span>
                   </div>
                   <button 
                     type="button"

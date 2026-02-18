@@ -66,16 +66,16 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       const start = new Date(stayPeriod.checkIn);
       const end = new Date(stayPeriod.checkOut);
       
-      // Calculate difference in time
+      // Reset hours to ensure clean date subtraction
+      start.setHours(0,0,0,0);
+      end.setHours(0,0,0,0);
+      
       const diffTime = end.getTime() - start.getTime();
-      // Calculate difference in days
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      // Update nights if it's a valid positive number
       if (diffDays > 0) {
         setStayPeriod(prev => ({ ...prev, nights: diffDays }));
       } else {
-        // Fallback to 1 if dates are same or invalid order
         setStayPeriod(prev => ({ ...prev, nights: 1 }));
       }
     }
@@ -129,7 +129,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
 
   const handleSubmit = async () => {
     if (!guest.name || !stayPeriod.checkIn || !stayPeriod.checkOut || bookings.some(b => !b.roomId)) {
-      alert('Please complete all guest and stay fields.');
+      alert('Missing Data: Please complete guest info and stay duration.');
       return;
     }
 
@@ -194,7 +194,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       setSavedTransaction({ id: docRef.id, ...txData } as Transaction);
     } catch (err) {
       console.error(err);
-      alert('Error saving reservation');
+      alert('Error: Synchronization with ledger failed.');
     } finally {
       setIsSubmitting(false);
     }
@@ -333,7 +333,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 block mb-1 font-bold uppercase tracking-wider">Total Duration (Nights)</label>
-                <input type="number" readOnly className="w-full bg-[#0B1C2D]/50 border border-gray-700 rounded-lg p-3 text-sm text-gray-400 focus:outline-none cursor-not-allowed" value={stayPeriod.nights} />
+                <input type="number" readOnly className="w-full bg-[#0B1C2D]/50 border border-gray-700 rounded-lg p-3 text-sm text-gray-400 focus:outline-none cursor-not-allowed font-bold" value={stayPeriod.nights} />
               </div>
             </div>
           </section>
