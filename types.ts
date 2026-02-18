@@ -45,8 +45,8 @@ export interface MenuItem {
 export interface AppSettings {
   vat: number;
   serviceCharge: number;
-  zenzaBank: BankAccount;
-  whispersBank: BankAccount;
+  zenzaBanks: BankAccount[];
+  whispersBanks: BankAccount[];
   invoiceBanks: BankAccount[];
 }
 

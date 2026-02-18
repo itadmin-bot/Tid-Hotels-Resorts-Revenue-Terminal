@@ -34,11 +34,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [loading, setLoading] = useState(false);
   const [newAccessCode, setNewAccessCode] = useState('');
 
-  // 1. Snapshot Listener: Rooms (Real-time synchronization for all connected terminals)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'rooms'), (snapshot) => {
       if (snapshot.empty && user.role === UserRole.ADMIN) {
-        // Automatically initialize default room inventory if the collection is empty (Admin only)
         INITIAL_ROOMS.forEach(r => setDoc(doc(db, 'rooms', r.id), { ...r, description: '' }));
       } else {
         const roomData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
@@ -48,7 +46,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     return () => unsubscribe();
   }, [user.role]);
 
-  // 2. Snapshot Listener: Global Menu (Real-time synchronization for all connected terminals)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'menu'), (snapshot) => {
       const menuData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
@@ -57,18 +54,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     return () => unsubscribe();
   }, []);
 
-  // 3. Snapshot Listener: Global Settings (Real-time synchronization for tax and bank details)
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (snapshot.exists()) {
-        setSettings(snapshot.data() as AppSettings);
+        const data = snapshot.data();
+        // Migration/Compatibility: If old single objects exist, wrap them in arrays
+        setSettings({
+          vat: data.vat,
+          serviceCharge: data.serviceCharge,
+          zenzaBanks: Array.isArray(data.zenzaBanks) ? data.zenzaBanks : (data.zenzaBank ? [data.zenzaBank] : [ZENZA_BANK]),
+          whispersBanks: Array.isArray(data.whispersBanks) ? data.whispersBanks : (data.whispersBank ? [data.whispersBank] : [WHISPERS_BANK]),
+          invoiceBanks: data.invoiceBanks || INVOICE_BANKS
+        } as AppSettings);
       } else if (user.role === UserRole.ADMIN) {
-        // Initialize core system settings if missing (Admin only)
         const defaultSettings: AppSettings = {
           vat: 0.075,
           serviceCharge: 0.10,
-          zenzaBank: ZENZA_BANK,
-          whispersBank: WHISPERS_BANK,
+          zenzaBanks: [ZENZA_BANK],
+          whispersBanks: [WHISPERS_BANK],
           invoiceBanks: INVOICE_BANKS
         };
         setDoc(doc(db, 'settings', 'master'), defaultSettings);
@@ -77,7 +80,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     return () => unsubscribe();
   }, [user.role]);
 
-  // 4. Snapshot Listener: User List (Restricted real-time view for Authorized Admins)
   useEffect(() => {
     if (!isAuthorized || user.role !== UserRole.ADMIN) return;
     const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
@@ -92,12 +94,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     e.preventDefault();
     setError('');
     setLoading(true);
-    
     try {
-      // One-time check for access code remains appropriate for action verification
       const codeDoc = await getDoc(doc(db, 'accessCodes', 'master'));
       const masterCode = codeDoc.exists() ? codeDoc.data().code : DEFAULT_ADMIN_KEY;
-      
       if (accessCodeInput === masterCode) {
         onAuthorize();
       } else {
@@ -132,19 +131,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   };
 
   const addRoom = async () => {
-    const newRoom = {
-      name: 'New Room',
-      type: 'Standard',
-      price: 0,
-      description: ''
-    };
+    const newRoom = { name: 'New Room', type: 'Standard', price: 0, description: '' };
     await addDoc(collection(db, 'rooms'), newRoom);
   };
 
   const deleteRoom = async (roomId: string) => {
-    if (confirm('Delete this room?')) {
-      await deleteDoc(doc(db, 'rooms', roomId));
-    }
+    if (confirm('Delete this room?')) await deleteDoc(doc(db, 'rooms', roomId));
   };
 
   const updateMenuItem = async (id: string, data: Partial<MenuItem>) => {
@@ -152,44 +144,94 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   };
 
   const addMenuItem = async () => {
-    const newItem = {
-      name: 'New Item',
-      description: '',
-      price: 0,
-      category: 'General',
-      imageUrl: ''
-    };
+    const newItem = { name: 'New Item', description: '', price: 0, category: 'General', imageUrl: '' };
     await addDoc(collection(db, 'menu'), newItem);
   };
 
   const deleteMenuItem = async (id: string) => {
-    if (confirm('Delete this menu item?')) {
-      await deleteDoc(doc(db, 'menu', id));
-    }
+    if (confirm('Delete this menu item?')) await deleteDoc(doc(db, 'menu', id));
   };
 
   const updateGlobalSettings = async (data: Partial<AppSettings>) => {
     await updateDoc(doc(db, 'settings', 'master'), data);
   };
 
-  const addInvoiceBank = () => {
+  const addAccount = (type: 'zenza' | 'whispers' | 'invoice') => {
     if (!settings) return;
-    const newBanks = [...settings.invoiceBanks, { bank: 'New Bank', accountNumber: '0000000000', accountName: 'Account Name' }];
-    updateGlobalSettings({ invoiceBanks: newBanks });
+    const key = type === 'zenza' ? 'zenzaBanks' : type === 'whispers' ? 'whispersBanks' : 'invoiceBanks';
+    const newBanks = [...(settings[key] as BankAccount[]), { bank: 'New Bank', accountNumber: '0000000000', accountName: 'Account Name' }];
+    updateGlobalSettings({ [key]: newBanks });
   };
 
-  const removeInvoiceBank = (index: number) => {
-    if (!settings || !confirm('Remove this invoice account?')) return;
-    const newBanks = settings.invoiceBanks.filter((_, i) => i !== index);
-    updateGlobalSettings({ invoiceBanks: newBanks });
+  const removeAccount = (type: 'zenza' | 'whispers' | 'invoice', index: number) => {
+    if (!settings || !confirm('Remove this account?')) return;
+    const key = type === 'zenza' ? 'zenzaBanks' : type === 'whispers' ? 'whispersBanks' : 'invoiceBanks';
+    const newBanks = (settings[key] as BankAccount[]).filter((_, i) => i !== index);
+    updateGlobalSettings({ [key]: newBanks });
   };
 
-  const updateInvoiceBank = (index: number, field: keyof BankAccount, value: string) => {
+  const updateAccount = (type: 'zenza' | 'whispers' | 'invoice', index: number, field: keyof BankAccount, value: string) => {
     if (!settings) return;
-    const newBanks = [...settings.invoiceBanks];
+    const key = type === 'zenza' ? 'zenzaBanks' : type === 'whispers' ? 'whispersBanks' : 'invoiceBanks';
+    const newBanks = [...(settings[key] as BankAccount[])];
     newBanks[index] = { ...newBanks[index], [field]: value };
-    updateGlobalSettings({ invoiceBanks: newBanks });
+    updateGlobalSettings({ [key]: newBanks });
   };
+
+  const renderBankSection = (title: string, type: 'zenza' | 'whispers' | 'invoice', banks: BankAccount[]) => (
+    <div className="pt-8 border-t border-gray-700/50 space-y-6">
+      <div className="flex justify-between items-center">
+        <h4 className="text-xs font-bold uppercase text-gray-500 tracking-widest">{title}</h4>
+        <button 
+          onClick={() => addAccount(type)}
+          className="px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] text-[10px] font-black rounded border border-[#C8A862]/30 hover:bg-[#C8A862]/20 transition-all uppercase tracking-widest"
+        >
+          + Add Account
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {banks.map((bank, idx) => (
+          <div key={idx} className="bg-[#0B1C2D]/50 border border-gray-700/30 rounded-xl p-4 space-y-3 relative group transition-all hover:border-[#C8A862]/30">
+            <button 
+              onClick={() => removeAccount(type, idx)}
+              className="absolute top-3 right-3 text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+            <div>
+              <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Institution</label>
+              <input 
+                className="w-full bg-transparent border-b border-gray-800 p-1 text-sm text-white font-bold focus:border-[#C8A862] outline-none" 
+                defaultValue={bank.bank} 
+                onBlur={(e) => updateAccount(type, idx, 'bank', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Account String</label>
+              <input 
+                className="w-full bg-transparent border-b border-gray-800 p-1 text-sm text-[#C8A862] font-mono focus:border-[#C8A862] outline-none" 
+                defaultValue={bank.accountNumber} 
+                onBlur={(e) => updateAccount(type, idx, 'accountNumber', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Legal Name</label>
+              <input 
+                className="w-full bg-transparent border-b border-gray-800 p-1 text-[9px] text-gray-400 font-medium uppercase tracking-wider focus:border-[#C8A862] outline-none" 
+                defaultValue={bank.accountName} 
+                onBlur={(e) => updateAccount(type, idx, 'accountName', e.target.value)}
+              />
+            </div>
+          </div>
+        ))}
+        {banks.length === 0 && (
+          <div className="col-span-full py-10 border-2 border-dashed border-gray-800 rounded-2xl flex items-center justify-center text-gray-600 uppercase text-[10px] font-black tracking-widest">
+            No Accounts Registered in this Category
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   if (!isAuthorized) {
     return (
@@ -200,7 +242,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Admin Security Check</h2>
           <p className="text-gray-400 text-sm mb-6">Enter the master access code to proceed.</p>
-          
           <form onSubmit={handleVerifyCode} className="space-y-4">
             <input 
               type="password"
@@ -211,10 +252,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               autoFocus
             />
             {error && <p className="text-red-400 text-xs">{error}</p>}
-            <button 
-              disabled={loading}
-              className="w-full py-3 bg-[#C8A862] text-[#0B1C2D] font-bold rounded-lg hover:bg-[#B69651] transition-all disabled:opacity-50"
-            >
+            <button disabled={loading} className="w-full py-3 bg-[#C8A862] text-[#0B1C2D] font-bold rounded-lg hover:bg-[#B69651] transition-all disabled:opacity-50">
               {loading ? 'Verifying...' : 'Authorize Session'}
             </button>
           </form>
@@ -267,34 +305,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   {rooms.map((room) => (
                     <tr key={room.id}>
                       <td className="py-4">
-                        <input 
-                          className="bg-transparent border-none text-white font-bold focus:outline-none w-full"
-                          defaultValue={room.name}
-                          onBlur={(e) => updateRoom(room.id, { name: e.target.value })}
-                        />
+                        <input className="bg-transparent border-none text-white font-bold focus:outline-none w-full" defaultValue={room.name} onBlur={(e) => updateRoom(room.id, { name: e.target.value })} />
                       </td>
                       <td className="py-4">
-                        <input 
-                          className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full"
-                          placeholder="Add description..."
-                          defaultValue={room.description}
-                          onBlur={(e) => updateRoom(room.id, { description: e.target.value })}
-                        />
+                        <input className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full" placeholder="Add description..." defaultValue={room.description} onBlur={(e) => updateRoom(room.id, { description: e.target.value })} />
                       </td>
                       <td className="py-4">
-                        <input 
-                          className="bg-transparent border-none text-gray-400 focus:outline-none w-full text-sm"
-                          defaultValue={room.type}
-                          onBlur={(e) => updateRoom(room.id, { type: e.target.value })}
-                        />
+                        <input className="bg-transparent border-none text-gray-400 focus:outline-none w-full text-sm" defaultValue={room.type} onBlur={(e) => updateRoom(room.id, { type: e.target.value })} />
                       </td>
                       <td className="py-4">
-                        <input 
-                          type="number"
-                          className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24 text-right"
-                          defaultValue={room.price}
-                          onBlur={(e) => updateRoom(room.id, { price: parseFloat(e.target.value) || 0 })}
-                        />
+                        <input type="number" className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24 text-right" defaultValue={room.price} onBlur={(e) => updateRoom(room.id, { price: parseFloat(e.target.value) || 0 })} />
                       </td>
                       <td className="py-4 text-right">
                         <button onClick={() => deleteRoom(room.id)} className="text-red-400 text-xs hover:underline">Delete</button>
@@ -328,34 +348,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   {menuItems.map((item) => (
                     <tr key={item.id}>
                       <td className="py-4">
-                        <input 
-                          className="bg-transparent border-none text-white font-bold focus:outline-none w-full"
-                          defaultValue={item.name}
-                          onBlur={(e) => updateMenuItem(item.id, { name: e.target.value })}
-                        />
+                        <input className="bg-transparent border-none text-white font-bold focus:outline-none w-full" defaultValue={item.name} onBlur={(e) => updateMenuItem(item.id, { name: e.target.value })} />
                       </td>
                       <td className="py-4">
-                        <input 
-                          className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full"
-                          placeholder="Add description..."
-                          defaultValue={item.description}
-                          onBlur={(e) => updateMenuItem(item.id, { description: e.target.value })}
-                        />
+                        <input className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full" placeholder="Add description..." defaultValue={item.description} onBlur={(e) => updateMenuItem(item.id, { description: e.target.value })} />
                       </td>
                       <td className="py-4">
-                        <input 
-                          className="bg-transparent border-none text-gray-400 focus:outline-none w-full text-sm"
-                          defaultValue={item.category}
-                          onBlur={(e) => updateMenuItem(item.id, { category: e.target.value })}
-                        />
+                        <input className="bg-transparent border-none text-gray-400 focus:outline-none w-full text-sm" defaultValue={item.category} onBlur={(e) => updateMenuItem(item.id, { category: e.target.value })} />
                       </td>
                       <td className="py-4">
-                        <input 
-                          type="number"
-                          className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24 text-right"
-                          defaultValue={item.price}
-                          onBlur={(e) => updateMenuItem(item.id, { price: parseFloat(e.target.value) || 0 })}
-                        />
+                        <input type="number" className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24 text-right" defaultValue={item.price} onBlur={(e) => updateMenuItem(item.id, { price: parseFloat(e.target.value) || 0 })} />
                       </td>
                       <td className="py-4 text-right">
                         <button onClick={() => deleteMenuItem(item.id)} className="text-red-400 text-xs hover:underline">Delete</button>
@@ -427,110 +429,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="text-xs text-gray-500 uppercase block mb-1">VAT (%)</label>
-                  <input 
-                    type="number"
-                    step="0.01"
-                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white"
-                    defaultValue={settings.vat * 100}
-                    onBlur={(e) => updateGlobalSettings({ vat: (parseFloat(e.target.value) || 0) / 100 })}
-                  />
+                  <input type="number" step="0.01" className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white" defaultValue={settings.vat * 100} onBlur={(e) => updateGlobalSettings({ vat: (parseFloat(e.target.value) || 0) / 100 })} />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 uppercase block mb-1">Service Charge (%)</label>
-                  <input 
-                    type="number"
-                    step="0.01"
-                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white"
-                    defaultValue={settings.serviceCharge * 100}
-                    onBlur={(e) => updateGlobalSettings({ serviceCharge: (parseFloat(e.target.value) || 0) / 100 })}
-                  />
+                  <input type="number" step="0.01" className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white" defaultValue={settings.serviceCharge * 100} onBlur={(e) => updateGlobalSettings({ serviceCharge: (parseFloat(e.target.value) || 0) / 100 })} />
                 </div>
               </div>
-            </div>
-            <div className="p-4 bg-blue-900/10 border border-blue-500/20 rounded-lg text-xs text-blue-200">
-              Note: Rates are calculated internally from the total amount.
             </div>
           </div>
         )}
 
         {activeTab === 'ACCOUNTS' && settings && (
           <div className="space-y-12">
-            <h3 className="font-bold text-[#C8A862]">Settlement Accounts</h3>
-            
-            {/* POS Terminal Accounts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase text-gray-500 border-b border-gray-700 pb-2 tracking-widest">Zenza POS Channel</h4>
-                <div className="space-y-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30">
-                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-sm text-white font-bold" placeholder="Bank Name" defaultValue={settings.zenzaBank.bank} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, bank: e.target.value } })} />
-                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-sm text-[#C8A862] font-mono" placeholder="Account Number" defaultValue={settings.zenzaBank.accountNumber} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, accountNumber: e.target.value } })} />
-                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-[10px] text-gray-400 uppercase tracking-wider" placeholder="Account Name" defaultValue={settings.zenzaBank.accountName} onBlur={(e) => updateGlobalSettings({ zenzaBank: { ...settings.zenzaBank, accountName: e.target.value } })} />
-                </div>
-              </div>
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase text-gray-500 border-b border-gray-700 pb-2 tracking-widest">Whispers POS Channel</h4>
-                <div className="space-y-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30">
-                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-sm text-white font-bold" placeholder="Bank Name" defaultValue={settings.whispersBank.bank} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, bank: e.target.value } })} />
-                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-sm text-[#C8A862] font-mono" placeholder="Account Number" defaultValue={settings.whispersBank.accountNumber} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, accountNumber: e.target.value } })} />
-                  <input className="w-full bg-transparent border-b border-gray-800 p-2 text-[10px] text-gray-400 uppercase tracking-wider" placeholder="Account Name" defaultValue={settings.whispersBank.accountName} onBlur={(e) => updateGlobalSettings({ whispersBank: { ...settings.whispersBank, accountName: e.target.value } })} />
-                </div>
-              </div>
-            </div>
-
-            {/* A4 Invoice / Reservation Accounts */}
-            <div className="pt-8 border-t border-gray-700/50 space-y-6">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-bold uppercase text-gray-500 tracking-widest">Reservation & Invoice Accounts (A4 Template)</h4>
-                <button 
-                  onClick={addInvoiceBank}
-                  className="px-3 py-1 bg-[#C8A862]/10 text-[#C8A862] text-[10px] font-black rounded border border-[#C8A862]/30 hover:bg-[#C8A862]/20 transition-all uppercase tracking-widest"
-                >
-                  + Add Invoice Account
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {settings.invoiceBanks.map((bank, idx) => (
-                  <div key={idx} className="bg-[#0B1C2D]/50 border border-gray-700/30 rounded-xl p-4 space-y-3 relative group transition-all hover:border-[#C8A862]/30">
-                    <button 
-                      onClick={() => removeInvoiceBank(idx)}
-                      className="absolute top-3 right-3 text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                    <div>
-                      <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Institution</label>
-                      <input 
-                        className="w-full bg-transparent border-b border-gray-800 p-1 text-sm text-white font-bold focus:border-[#C8A862] outline-none" 
-                        defaultValue={bank.bank} 
-                        onBlur={(e) => updateInvoiceBank(idx, 'bank', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Account String</label>
-                      <input 
-                        className="w-full bg-transparent border-b border-gray-800 p-1 text-sm text-[#C8A862] font-mono focus:border-[#C8A862] outline-none" 
-                        defaultValue={bank.accountNumber} 
-                        onBlur={(e) => updateInvoiceBank(idx, 'accountNumber', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 block">Legal Name</label>
-                      <input 
-                        className="w-full bg-transparent border-b border-gray-800 p-1 text-[9px] text-gray-400 font-medium uppercase tracking-wider focus:border-[#C8A862] outline-none" 
-                        defaultValue={bank.accountName} 
-                        onBlur={(e) => updateInvoiceBank(idx, 'accountName', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                ))}
-                {settings.invoiceBanks.length === 0 && (
-                  <div className="col-span-full py-10 border-2 border-dashed border-gray-800 rounded-2xl flex items-center justify-center text-gray-600 uppercase text-[10px] font-black tracking-widest">
-                    No Secondary Settlement Accounts Registered
-                  </div>
-                )}
-              </div>
-            </div>
+            <h3 className="font-bold text-[#C8A862]">Settlement Accounts Management</h3>
+            {renderBankSection('Zenza POS Accounts', 'zenza', settings.zenzaBanks)}
+            {renderBankSection('Whispers POS Accounts', 'whispers', settings.whispersBanks)}
+            {renderBankSection('General Invoice Accounts', 'invoice', settings.invoiceBanks)}
           </div>
         )}
 
@@ -540,19 +455,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
             <div>
               <label className="text-xs text-gray-500 uppercase block mb-1">New Master Access Code</label>
               <div className="flex gap-2">
-                <input 
-                  type="password"
-                  placeholder="Enter New Code"
-                  className="flex-1 bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white font-mono tracking-widest"
-                  value={newAccessCode}
-                  onChange={(e) => setNewAccessCode(e.target.value)}
-                />
-                <button 
-                  onClick={handleUpdateCode}
-                  className="px-6 py-2 bg-[#C8A862] text-[#0B1C2D] font-bold rounded"
-                >
-                  Save
-                </button>
+                <input type="password" placeholder="Enter New Code" className="flex-1 bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white font-mono tracking-widest" value={newAccessCode} onChange={(e) => setNewAccessCode(e.target.value)} />
+                <button onClick={handleUpdateCode} className="px-6 py-2 bg-[#C8A862] text-[#0B1C2D] font-bold rounded">Save</button>
               </div>
               <p className="text-[10px] text-gray-500 mt-2">Update the key required for Admin registration and panel authorization.</p>
             </div>

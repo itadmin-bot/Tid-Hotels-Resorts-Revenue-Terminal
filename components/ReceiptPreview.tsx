@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Transaction, UnitType, AppSettings } from '../types';
-import { BRAND } from '../constants';
+import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '../constants';
 
 interface ReceiptPreviewProps {
   transaction: Transaction;
@@ -12,13 +11,20 @@ interface ReceiptPreviewProps {
 
 const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose }) => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  
-  // Logic: POS transactions use Docket (80mm), FOLIO transactions use A4 Invoice (210mm).
   const isPos = transaction.type === 'POS';
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
-      if (snapshot.exists()) setSettings(snapshot.data() as AppSettings);
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setSettings({
+          vat: data.vat,
+          serviceCharge: data.serviceCharge,
+          zenzaBanks: Array.isArray(data.zenzaBanks) ? data.zenzaBanks : (data.zenzaBank ? [data.zenzaBank] : [ZENZA_BANK]),
+          whispersBanks: Array.isArray(data.whispersBanks) ? data.whispersBanks : (data.whispersBank ? [data.whispersBank] : [WHISPERS_BANK]),
+          invoiceBanks: data.invoiceBanks || INVOICE_BANKS
+        } as AppSettings);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -28,6 +34,10 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
   };
 
   if (!settings) return null;
+
+  const currentBanks = isPos 
+    ? (transaction.unit === UnitType.ZENZA ? settings.zenzaBanks : settings.whispersBanks)
+    : settings.invoiceBanks;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 overflow-y-auto">
@@ -45,7 +55,6 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
         <div className="flex-1 bg-gray-300 p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center print:bg-white print:p-0 print:shadow-none">
           {isPos ? (
-            /* 80mm DOCKET - Specialized for Walk-in POS transactions */
             <div className="docket-container text-black bg-white p-6 font-mono text-[10px] leading-tight shadow-xl">
               <div className="text-center border-b border-black/10 pb-4 mb-4">
                 <h1 className="text-xl font-bold tracking-tighter">{BRAND.name}</h1>
@@ -101,21 +110,15 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               </div>
 
               <div className="mb-6">
-                <div className="font-bold text-[8px] uppercase tracking-widest opacity-60 mb-1">Settlement Account</div>
-                <div className="p-2 border border-dashed border-black/10 bg-gray-50 text-[9px] space-y-0.5">
-                  {transaction.unit === UnitType.ZENZA ? (
-                    <>
-                      <p className="font-bold">{settings.zenzaBank.bank}</p>
-                      <p>Acc: {settings.zenzaBank.accountNumber}</p>
-                      <p className="truncate">Name: {settings.zenzaBank.accountName}</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-bold">{settings.whispersBank.bank}</p>
-                      <p>Acc: {settings.whispersBank.accountNumber}</p>
-                      <p className="truncate">Name: {settings.whispersBank.accountName}</p>
-                    </>
-                  )}
+                <div className="font-bold text-[8px] uppercase tracking-widest opacity-60 mb-1">Settlement Account(s)</div>
+                <div className="space-y-2">
+                  {currentBanks.map((bank, i) => (
+                    <div key={i} className="p-2 border border-dashed border-black/10 bg-gray-50 text-[9px] space-y-0.5">
+                      <p className="font-bold">{bank.bank}</p>
+                      <p>Acc: {bank.accountNumber}</p>
+                      <p className="truncate">Name: {bank.accountName}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -125,7 +128,6 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               </div>
             </div>
           ) : (
-            /* A4 INVOICE - Specialized for Reservations/Folio management */
             <div className="invoice-container text-black bg-white p-[20mm] font-sans text-sm shadow-2xl">
               <div className="flex justify-between items-start border-b-2 border-black pb-8 mb-8">
                 <div>
