@@ -55,7 +55,6 @@ const App: React.FC = () => {
         
         try {
           // 1. FAST TRACK RESOLUTION: Get the document once immediately
-          // This is much more reliable than onSnapshot for the initial render
           const snap = await getDoc(userRef);
           let profileData: any;
 
@@ -96,7 +95,7 @@ const App: React.FC = () => {
             setLoading(false);
           }
 
-          // 2. BACKGROUND UPDATES: Start the real-time listener quietly
+          // 2. BACKGROUND UPDATES: Start the real-time listener
           unsubProfile = onSnapshot(userRef, (snapshot) => {
             if (snapshot.exists() && isMounted) {
               const data = snapshot.data();
@@ -109,11 +108,15 @@ const App: React.FC = () => {
               }) : null);
             }
           }, (err) => {
-            console.error("Firestore Listener Error:", err);
-            // Don't kill the app if it's already loaded, just log it
-            if (loading) {
-              setSyncError(err.message);
-              setLoading(false);
+            // Transient WebChannel errors are common; only kill if catastrophic
+            if (err.code === 'permission-denied') {
+              console.error("Firestore Permission Denied:", err);
+              if (loading) {
+                setSyncError("Access Denied: Terminal not authorized.");
+                setLoading(false);
+              }
+            } else {
+              console.warn("Firestore Listener Transient Error (retrying...):", err.message);
             }
           });
 
@@ -170,7 +173,7 @@ const App: React.FC = () => {
     return <AuthScreen />;
   }
 
-  // 3. Sync Failure Screen (User logged in but profile inaccessible)
+  // 3. Sync Failure Screen
   if (syncError || (!userProfile && user)) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0B1C2D] p-6">

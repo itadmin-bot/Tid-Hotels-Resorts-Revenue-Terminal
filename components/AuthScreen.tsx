@@ -58,6 +58,24 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  const mapAuthError = (err: any) => {
+    console.error("Auth Error Code:", err.code);
+    switch (err.code) {
+      case 'auth/unauthorized-domain':
+        return `Domain Error: This domain (${window.location.hostname}) is not authorized in Firebase Console. Please add it to "Authorized domains" in the Firebase Auth settings.`;
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+        return 'Email or password is incorrect';
+      case 'auth/email-already-in-use':
+        return 'User already exists. Please sign in';
+      case 'auth/popup-closed-by-user':
+        return 'Sign-in popup was closed before completion.';
+      default:
+        return err.message || 'An error occurred during authentication';
+    }
+  };
+
   const verifyAccessKey = async () => {
     try {
       const codeDoc = await getDoc(doc(db, 'accessCodes', 'master'));
@@ -95,7 +113,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
         });
       }
     } catch (err: any) {
-      setError(err.message || 'Google Sign-In failed');
+      setError(mapAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -115,7 +133,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
       setInfo('Password reset link sent! Please check your inbox.');
       setView('SIGN_IN');
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+      setError(mapAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -159,7 +177,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           return;
         }
 
-        // If admin mode was used during sign-in, update role in Firestore first
         if (isAdminMode) {
            const userRef = doc(db, 'users', user.uid);
            const snap = await getDoc(userRef);
@@ -188,14 +205,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
         setLoading(false);
       }
     } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('Email or password is incorrect');
-      } else if (err.code === 'auth/email-already-in-use') {
-        setError('User already exists. Please sign in');
-      } else {
-        setError(err.message || 'An error occurred during authentication');
-      }
+      setError(mapAuthError(err));
       setLoading(false);
     }
   };
@@ -210,7 +220,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
         setInfo('Verification email resent. Please check your inbox.');
         setResendCooldown(60);
       } catch (err: any) {
-        setError(err.message || 'Failed to resend verification email');
+        setError(mapAuthError(err));
       } finally {
         setLoading(false);
       }
