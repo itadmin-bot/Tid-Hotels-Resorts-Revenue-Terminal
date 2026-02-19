@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType } from '../types';
+import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem } from '../types';
 import { BRAND } from '../constants';
 import POSModal from './POSModal';
 import FolioModal from './FolioModal';
@@ -14,6 +14,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showPOS, setShowPOS] = useState(false);
   const [showFolio, setShowFolio] = useState(false);
   const [managingTransaction, setManagingTransaction] = useState<Transaction | null>(null);
@@ -50,7 +51,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       console.error("Firestore Transaction Subscription Error:", error);
     });
 
-    return () => unsubscribe();
+    // Subscribe to menu for inventory reporting
+    const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      setMenuItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
+    });
+
+    return () => {
+      unsubscribe();
+      unsubMenu();
+    };
   }, [user.uid, user.role, user.email]);
 
   const handleDelete = async (t: Transaction) => {
@@ -95,22 +104,27 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     });
 
   const downloadReport = () => {
-    const headers = ['Reference', 'Date', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
-    const rows = filteredTransactions.map(t => [
-      `"${t.reference}"`,
-      new Date(t.createdAt).toLocaleDateString(),
-      t.type,
-      t.unit || 'Hotel Folio',
-      t.source || 'App',
-      `"${t.guestName}"`,
-      `"${t.items.map(i => `${i.description} (x${i.quantity})`).join('; ')}"`,
-      t.totalAmount,
-      t.paidAmount,
-      t.balance,
-      t.status,
-      t.settlementMethod || 'N/A',
-      `"${t.cashierName}"`
-    ]);
+    // Adding 'Payment Method' and explicit 'Transaction Date' for enhanced compliance
+    const headers = ['Reference', 'Transaction Date', 'Time', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
+    const rows = filteredTransactions.map(t => {
+      const dt = new Date(t.createdAt);
+      return [
+        `"${t.reference}"`,
+        dt.toLocaleDateString(),
+        dt.toLocaleTimeString(),
+        t.type,
+        t.unit || 'Hotel Folio',
+        t.source || 'App',
+        `"${t.guestName}"`,
+        `"${t.items.map(i => `${i.description} (x${i.quantity})`).join('; ')}"`,
+        t.totalAmount,
+        t.paidAmount,
+        t.balance,
+        t.status,
+        t.settlementMethod || 'N/A', // Payment Method correctly mapped
+        `"${t.cashierName}"`
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -118,7 +132,34 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const a = document.createElement('a');
     a.href = url;
     const filterSuffix = unitFilter === 'ALL' ? 'COMPLETE' : unitFilter;
-    a.download = `TIDE_REPORT_${filterSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `TIDE_REVENUE_REPORT_${filterSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadInventoryReport = () => {
+    const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Price (N)', 'Total Item Revenue (N)'];
+    const rows = menuItems.map(m => {
+      const sold = m.soldCount || 0;
+      const remaining = m.initialStock - sold;
+      return [
+        `"${m.name}"`,
+        `"${m.category}"`,
+        m.unit,
+        m.initialStock,
+        sold,
+        remaining,
+        m.price,
+        sold * m.price
+      ];
+    });
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `TIDE_STOCK_INVENTORY_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -188,9 +229,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </button>
             <button 
               onClick={downloadReport} 
+              className="px-4 py-2 bg-blue-600/10 text-blue-400 text-[10px] font-black uppercase rounded-lg border border-blue-600/20 hover:bg-blue-600 hover:text-white transition-all shadow-lg"
+            >
+              Export Transactions
+            </button>
+            <button 
+              onClick={downloadInventoryReport} 
               className="px-4 py-2 bg-green-600/10 text-green-500 text-[10px] font-black uppercase rounded-lg border border-green-600/20 hover:bg-green-600 hover:text-white transition-all shadow-lg"
             >
-              Export Report ({filteredTransactions.length})
+              Export Inventory
             </button>
           </div>
         </div>

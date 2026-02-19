@@ -1,6 +1,7 @@
 import React from 'react';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { UserProfile, UserRole, AppSettings } from '../types';
 import { BRAND } from '../constants';
 
@@ -12,6 +13,23 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewChange }) => {
+  const handleSignOut = async () => {
+    try {
+      // Explicitly mark operator as offline before session termination
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { 
+        isOnline: false, 
+        lastActive: Date.now() 
+      }).catch(console.warn);
+      
+      await signOut(auth);
+    } catch (err) {
+      console.error("Logout Error:", err);
+      // Fallback sign out if doc update fails
+      await signOut(auth);
+    }
+  };
+
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-[#13263A] border-r border-gray-700/50 p-6 no-print">
       <div className="mb-10">
@@ -57,8 +75,16 @@ const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewCha
             <div className="text-[10px] text-gray-500 uppercase tracking-wider">{user.role}</div>
           </div>
         </div>
+        
+        {user.onlineSince && (
+          <div className="mb-4 p-3 bg-[#0B1C2D] border border-gray-800 rounded-lg">
+            <div className="text-[9px] text-gray-600 font-black uppercase tracking-widest mb-1">Session Initialized</div>
+            <div className="text-[10px] text-[#C8A862] font-bold">{new Date(user.onlineSince).toLocaleString()}</div>
+          </div>
+        )}
+
         <button 
-          onClick={() => signOut(auth)}
+          onClick={handleSignOut}
           className="w-full px-4 py-2 border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-bold rounded transition-all"
         >
           Sign Out

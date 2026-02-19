@@ -31,6 +31,8 @@ export interface Room {
   type: string;
   price: number;
   description?: string;
+  totalInventory: number;
+  bookedCount: number;
 }
 
 export interface MenuItem {
@@ -41,14 +43,36 @@ export interface MenuItem {
   category: string;
   unit: UnitType | 'ALL';
   imageUrl?: string;
+  initialStock: number;
+  soldCount: number;
+  lowStockThreshold?: number;
+}
+
+export interface AppNotification {
+  id: string;
+  type: 'LOW_STOCK' | 'SOLD_OUT' | 'SECURITY';
+  message: string;
+  timestamp: number;
+  isRead: boolean;
+  unit?: string;
+}
+
+export interface TaxConfig {
+  id: string;
+  name: string;
+  rate: number;
+  type: 'VAT' | 'SC' | 'OTHER';
+  visibleOnReceipt: boolean;
 }
 
 export interface AppSettings {
   hotelName: string;
   hotelSubName: string;
   hotelAddress: string;
-  vat: number;
-  serviceCharge: number;
+  vat: number; // Legacy, kept for compatibility
+  serviceCharge: number; // Legacy, kept for compatibility
+  isTaxInclusive: boolean;
+  taxes: TaxConfig[];
   zenzaBanks: BankAccount[];
   whispersBanks: BankAccount[];
   invoiceBanks: BankAccount[];
@@ -64,8 +88,8 @@ export interface Transaction {
   id: string;
   reference: string;
   type: 'POS' | 'FOLIO';
-  unit?: UnitType; // Source Unit
-  source: string; // System Source (App, Walk-in, Third-party)
+  unit?: UnitType;
+  source: string;
   guestName: string;
   identityType?: string;
   idNumber?: string;
@@ -75,16 +99,16 @@ export interface Transaction {
   subtotal: number;
   taxAmount: number;
   serviceCharge: number;
-  discountAmount: number; // Added for flexible discounting
+  discountAmount: number;
   totalAmount: number;
   paidAmount: number;
-  payments?: TransactionPayment[]; // Breakdown of split payments
+  payments?: TransactionPayment[];
   balance: number;
   status: SettlementStatus;
-  settlementMethod?: SettlementMethod; // Primary or legacy method
-  selectedBank?: BankAccount; // Assigned bank account for this transaction
+  settlementMethod?: SettlementMethod;
+  selectedBank?: BankAccount;
   createdBy: string;
-  userId: string; // Explicitly for rule matching
+  userId: string;
   cashierName: string;
   createdAt: number;
   updatedAt: number;
@@ -98,6 +122,7 @@ export interface Transaction {
 }
 
 export interface TransactionItem {
+  itemId?: string;
   description: string;
   quantity: number;
   price: number;
@@ -111,5 +136,6 @@ export interface UserProfile {
   role: UserRole;
   domainVerified: boolean;
   lastActive?: number;
+  onlineSince?: number;
   isOnline?: boolean;
 }

@@ -176,6 +176,9 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
     }
   };
 
+  // Filter out items that have no stock or have not been stocked yet for new additions
+  const availableStockCatalog = menuCatalog.filter(m => m.initialStock > (m.soldCount || 0));
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-[#13263A] w-full max-w-2xl rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col max-h-[90vh] no-print">
@@ -220,9 +223,9 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                       onChange={(e) => handleMenuSelect(idx, e.target.value)}
                       defaultValue=""
                     >
-                      <option value="" disabled>-- Quick Select Menu --</option>
-                      {menuCatalog.map(m => (
-                        <option key={m.id} value={m.id}>{m.name} (₦{m.price.toLocaleString()})</option>
+                      <option value="" disabled>-- Select Stocked Menu Item --</option>
+                      {availableStockCatalog.map(m => (
+                        <option key={m.id} value={m.id}>{m.name} (₦{m.price.toLocaleString()}) - {m.initialStock - (m.soldCount || 0)} left</option>
                       ))}
                     </select>
                     {items.length > 1 && (

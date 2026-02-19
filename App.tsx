@@ -6,7 +6,7 @@ import AuthScreen from './components/AuthScreen';
 import Dashboard from './components/Dashboard';
 import Sidebar from './components/Sidebar';
 import AdminPanel from './components/AdminPanel';
-import { UserProfile, UserRole, AppSettings } from './types';
+import { UserProfile, UserRole, AppSettings, TaxConfig } from './types';
 import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from './constants';
 
 const App: React.FC = () => {
@@ -55,7 +55,7 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Real-time Settings and Dynamic Title
+  // Real-time Settings Listener
   useEffect(() => {
     if (!user) {
       setSettings(null);
@@ -65,12 +65,19 @@ const App: React.FC = () => {
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
+        const defaultTaxes: TaxConfig[] = [
+          { id: 'vat', name: 'VAT', rate: 0.075, type: 'VAT', visibleOnReceipt: true },
+          { id: 'sc', name: 'Service Charge', rate: 0.10, type: 'SC', visibleOnReceipt: false }
+        ];
+
         const updatedSettings: AppSettings = {
           hotelName: data.hotelName || BRAND.name,
           hotelSubName: data.hotelSubName || 'Hotels & Resorts',
           hotelAddress: data.hotelAddress || BRAND.address,
           vat: data.vat || 0.075,
           serviceCharge: data.serviceCharge || 0.10,
+          isTaxInclusive: data.isTaxInclusive ?? true,
+          taxes: data.taxes || defaultTaxes,
           zenzaBanks: data.zenzaBanks || [ZENZA_BANK],
           whispersBanks: data.whispersBanks || [WHISPERS_BANK],
           invoiceBanks: data.invoiceBanks || INVOICE_BANKS
@@ -84,21 +91,33 @@ const App: React.FC = () => {
     return () => unsubSettings();
   }, [user]);
 
-  // Real-time Presence Heartbeat
+  // Real-time Presence Heartbeat (Immediate Login Timestamp)
   useEffect(() => {
     if (!user || !isVerified || !userProfile?.domainVerified) return;
 
     const userRef = doc(db, 'users', user.uid);
-    
-    // Initial heartbeat
-    updateDoc(userRef, { isOnline: true, lastActive: Date.now() }).catch(console.warn);
+    const now = Date.now();
 
-    // Periodic heartbeat every 30 seconds
+    // Ensure session start is captured immediately for the live terminal list
+    const sessionData: any = { 
+      isOnline: true, 
+      lastActive: now
+    };
+    
+    // Set onlineSince if it's missing or from a significantly older session
+    if (!userProfile?.onlineSince || (now - userProfile.onlineSince > 12 * 60 * 60 * 1000)) {
+      sessionData.onlineSince = now;
+    }
+
+    updateDoc(userRef, sessionData).catch(err => {
+      console.warn("Presence heartbeat initialization failed:", err);
+    });
+
+    // Periodic heartbeat every 30 seconds to maintain "Live Now" status
     const heartbeatInterval = window.setInterval(() => {
       updateDoc(userRef, { isOnline: true, lastActive: Date.now() }).catch(console.warn);
     }, 30000);
 
-    // Cleanup: Set offline on unmount/signout
     const handleUnload = () => {
       updateDoc(userRef, { isOnline: false, lastActive: Date.now() }).catch(console.warn);
     };
@@ -110,7 +129,7 @@ const App: React.FC = () => {
       window.removeEventListener('beforeunload', handleUnload);
       handleUnload();
     };
-  }, [user, isVerified, userProfile?.domainVerified]);
+  }, [user, isVerified, userProfile?.uid, userProfile?.domainVerified]);
 
   useEffect(() => {
     let unsubProfile: (() => void) | undefined;
@@ -141,6 +160,7 @@ const App: React.FC = () => {
               role: UserRole.STAFF,
               isOnline: true,
               lastActive: Date.now(),
+              onlineSince: Date.now(),
               createdAt: Date.now(),
               displayName: currentUser.email?.split('@')[0] || 'Operator'
             };
@@ -163,8 +183,10 @@ const App: React.FC = () => {
                 role: (data.role as UserRole) || UserRole.STAFF,
                 domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
                 isOnline: data.isOnline ?? false,
-                lastActive: data.lastActive || Date.now()
-              });
+                lastActive: data.lastActive || Date.now(),
+                onlineSince: data.onlineSince || data.lastActive || Date.now(),
+                createdAt: data.createdAt || data.lastActive || Date.now()
+              } as UserProfile);
               setLoading(false);
             }
           }

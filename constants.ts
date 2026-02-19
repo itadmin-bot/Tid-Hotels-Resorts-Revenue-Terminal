@@ -41,15 +41,16 @@ export const INVOICE_BANKS: BankAccount[] = [
   }
 ];
 
+// Initialize rooms with required totalInventory and bookedCount properties as per Room interface in types.ts
 export const INITIAL_ROOMS: Room[] = [
-  { id: '1', name: 'The Sojourn Room', type: 'Standard', price: 45000 },
-  { id: '2', name: 'The Harmony Studio', type: 'Studio', price: 55000 },
-  { id: '3', name: 'The Serenity Studio', type: 'Studio', price: 65000 },
-  { id: '4', name: 'The Narrative Suite', type: 'Suite', price: 85000 },
-  { id: '5', name: 'The Odyssey Suite', type: 'Suite', price: 105000 },
-  { id: '6', name: 'The Tidé Signature Suite', type: 'Signature', price: 155000 },
-  { id: '7', name: 'The Tranquil Room', type: 'Standard', price: 42000 },
-  { id: '8', name: 'Tranquil Grand', type: 'Grand', price: 48000 }
+  { id: '1', name: 'The Sojourn Room', type: 'Standard', price: 45000, totalInventory: 10, bookedCount: 0 },
+  { id: '2', name: 'The Harmony Studio', type: 'Studio', price: 55000, totalInventory: 10, bookedCount: 0 },
+  { id: '3', name: 'The Serenity Studio', type: 'Studio', price: 65000, totalInventory: 10, bookedCount: 0 },
+  { id: '4', name: 'The Narrative Suite', type: 'Suite', price: 85000, totalInventory: 10, bookedCount: 0 },
+  { id: '5', name: 'The Odyssey Suite', type: 'Suite', price: 105000, totalInventory: 10, bookedCount: 0 },
+  { id: '6', name: 'The Tidé Signature Suite', type: 'Signature', price: 155000, totalInventory: 10, bookedCount: 0 },
+  { id: '7', name: 'The Tranquil Room', type: 'Standard', price: 42000, totalInventory: 10, bookedCount: 0 },
+  { id: '8', name: 'Tranquil Grand', type: 'Grand', price: 48000, totalInventory: 10, bookedCount: 0 }
 ];
 
 export const TAX_RATES = {
