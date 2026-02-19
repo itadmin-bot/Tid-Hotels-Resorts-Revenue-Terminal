@@ -99,7 +99,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                             </span>
                             <span className="shrink-0 font-black text-[11px]">₦{item.total.toLocaleString()}</span>
                           </div>
-                          {notes && <div className="font-bold text-[9px] italic opacity-70 mt-0.5 leading-tight">>> {notes}</div>}
+                          {notes && <div className="font-bold text-[9px] italic opacity-70 mt-0.5 leading-tight">{'>> '}{notes}</div>}
                         </div>
                       );
                     })}
