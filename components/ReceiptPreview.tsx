@@ -59,7 +59,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
   return (
     <>
-      {/* On-screen Preview */}
+      {/* On-screen UI Overlay */}
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 overflow-y-auto no-print">
         <div className="flex flex-col h-full w-full max-w-4xl p-4">
           <div className="flex justify-between items-center mb-6">
@@ -76,25 +76,25 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           <div className="flex-1 bg-gray-300 p-2 md:p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center">
             <div className="bg-white p-0 shadow-2xl h-fit border-none flex justify-center w-full md:w-auto">
               {isPos ? (
-                <div className="text-black bg-white p-4 font-mono text-[11px] leading-tight w-[80mm] flex flex-col items-center">
+                <div className="text-black bg-white p-6 font-mono text-[11px] leading-tight w-[80mm] flex flex-col items-center">
                   <div className="w-full">
                     <div className="text-center mb-2">
                       <h1 className="text-lg font-black tracking-tighter uppercase mb-0 leading-none">{settings.hotelName}</h1>
                       <p className="text-[9px] font-bold opacity-70 uppercase leading-none mt-1">{settings.hotelAddress}</p>
                     </div>
-                    <div className="border-b border-black border-dashed mb-1"></div>
-                    <div className="grid grid-cols-2 gap-x-1 uppercase text-[10px] mb-1 font-bold">
+                    <div className="border-b border-black border-dashed mb-2"></div>
+                    <div className="grid grid-cols-2 gap-x-1 uppercase text-[10px] mb-2 font-bold">
                       <p>REF: #{transaction.reference.split('-').pop()}</p>
                       <p className="text-right">{new Date(transaction.createdAt).toLocaleDateString()}</p>
                       <p>UNIT: {transaction.unit?.toUpperCase()}</p>
                       <p className="text-right">OP: {transaction.cashierName.split(' ')[0].toUpperCase()}</p>
                     </div>
-                    <div className="border-b border-black border-dashed mb-1"></div>
-                    <div className="mb-1">
+                    <div className="border-b border-black border-dashed mb-2"></div>
+                    <div className="mb-2">
                       {transaction.items.map((item, idx) => {
                         const { name, notes } = formatItemDescription(item.description);
                         return (
-                          <div key={idx} className="mb-1">
+                          <div key={idx} className="mb-2">
                             <div className="flex justify-between items-start">
                               <span className="font-black uppercase text-[10px] flex-1 leading-tight mr-2">
                                 {name} x{item.quantity}
@@ -106,7 +106,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                         );
                       })}
                     </div>
-                    <div className="border-t border-black border-dotted pt-1 mb-1">
+                    <div className="border-t border-black border-dotted pt-1 mb-2">
                       <div className="flex justify-between text-[10px] font-bold">
                         <span>GROSS:</span>
                         <span>₦{transaction.subtotal.toLocaleString()}</span>
@@ -116,27 +116,27 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                         <span>₦{transaction.taxAmount.toLocaleString()}</span>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center py-1 border-y border-black mb-1">
+                    <div className="flex justify-between items-center py-2 border-y border-black mb-2">
                       <span className="text-[11px] font-black uppercase">TOTAL:</span>
                       <span className="text-lg font-black">₦{transaction.totalAmount.toLocaleString()}</span>
                     </div>
                     
                     {transaction.balance > 0 && (
-                      <div className="mb-1 pt-1">
-                        <div className="text-[9px] font-black uppercase text-gray-500 mb-0.5">Instructions:</div>
+                      <div className="mb-2 pt-1">
+                        <div className="text-[9px] font-black uppercase text-gray-500 mb-1">Instructions:</div>
                         {currentBanks.map((bank, i) => (
-                          <div key={i} className="flex justify-between text-[8px] font-bold leading-tight">
+                          <div key={i} className="flex justify-between text-[8px] font-bold leading-tight mb-0.5">
                             <span>{bank.bank.toUpperCase()}:</span>
                             <span>{bank.accountNumber}</span>
                           </div>
                         ))}
-                        <div className="flex justify-between items-center mt-1 border-t border-black border-dotted pt-0.5">
-                          <span className="text-[9px] font-black uppercase">BALANCE:</span>
-                          <span className="text-[12px] font-black">₦{transaction.balance.toLocaleString()}</span>
+                        <div className="flex justify-between items-center mt-2 border-t border-black border-dotted pt-1">
+                          <span className="text-[10px] font-black uppercase">BALANCE:</span>
+                          <span className="text-[13px] font-black">₦{transaction.balance.toLocaleString()}</span>
                         </div>
                       </div>
                     )}
-                    <div className="text-center italic text-[8px] font-black border-t border-black pt-1 uppercase">*** Verified Revenue Record ***</div>
+                    <div className="text-center italic text-[8px] font-black border-t border-black pt-2 uppercase">*** Verified Record ***</div>
                   </div>
                 </div>
               ) : (
@@ -205,28 +205,28 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         </div>
       </div>
 
-      {/* Printer-Specific Docket (Hidden On Screen) */}
+      {/* Printer-Only Docket (Strictly 80mm) */}
       {isPos && (
-        <div className="receipt-container print-only text-black bg-white">
-          <div style={{textAlign: 'center', marginBottom: '1mm'}}>
+        <div className="thermal-docket print-only text-black bg-white">
+          <div style={{textAlign: 'center', marginBottom: '1mm', padding: '0 2mm'}}>
             <h1 style={{fontSize: '14px', fontWeight: '900', margin: '0', letterSpacing: '-0.5px', textTransform: 'uppercase'}}>{settings.hotelName}</h1>
             <p style={{fontSize: '8px', fontWeight: '900', margin: '0', lineHeight: '1.0', textTransform: 'uppercase'}}>{settings.hotelAddress}</p>
           </div>
           <div style={{borderBottom: '1px dashed black', margin: '1mm 0'}}></div>
-          <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900', padding: '0 2mm'}}>
             <span>REF: #{transaction.reference.split('-').pop()}</span>
             <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
           </div>
-          <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900', padding: '0 2mm'}}>
             <span>UNIT: {transaction.unit?.toUpperCase()}</span>
             <span>OP: {transaction.cashierName.split(' ')[0].toUpperCase()}</span>
           </div>
           <div style={{borderBottom: '1px dashed black', margin: '1mm 0'}}></div>
-          <div style={{marginBottom: '1mm'}}>
+          <div style={{marginBottom: '1mm', padding: '0 2mm'}}>
             {transaction.items.map((item, idx) => {
               const { name, notes } = formatItemDescription(item.description);
               return (
-                <div key={idx} style={{marginBottom: '0.5mm'}}>
+                <div key={idx} style={{marginBottom: '1mm'}}>
                   <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: '900', lineHeight: '1.0'}}>
                     <span style={{flex: 1, paddingRight: '2mm', textTransform: 'uppercase'}}>{name} x{item.quantity}</span>
                     <span style={{whiteSpace: 'nowrap'}}>₦{item.total.toLocaleString()}</span>
@@ -240,7 +240,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               );
             })}
           </div>
-          <div style={{borderTop: '1px dotted black', paddingTop: '1mm', fontSize: '9px', fontWeight: '900'}}>
+          <div style={{borderTop: '1px dotted black', paddingTop: '1mm', fontSize: '9px', fontWeight: '900', padding: '0 2mm'}}>
             <div style={{display: 'flex', justifyContent: 'space-between'}}>
               <span>GROSS:</span>
               <span>₦{transaction.subtotal.toLocaleString()}</span>
@@ -250,15 +250,15 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <span>₦{transaction.taxAmount.toLocaleString()}</span>
             </div>
           </div>
-          <div style={{display: 'flex', justifyContent: 'space-between', margin: '1mm 0', borderTop: '1px solid black', borderBottom: '1px solid black', padding: '1mm 0', fontSize: '12px', fontWeight: '900'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', margin: '1mm 0', borderTop: '1px solid black', borderBottom: '1px solid black', padding: '1mm 2mm', fontSize: '12px', fontWeight: '900'}}>
             <span>TOTAL:</span>
             <span>₦{transaction.totalAmount.toLocaleString()}</span>
           </div>
           
           {transaction.balance > 0 && (
-            <div style={{fontSize: '8px', fontWeight: '900', borderTop: '1px dashed black', paddingTop: '1mm', marginTop: '0'}}>
+            <div style={{fontSize: '8px', fontWeight: '900', borderTop: '1px dashed black', paddingTop: '1mm', marginTop: '0', padding: '0 2mm'}}>
               {currentBanks.map((bank, i) => (
-                <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '8px'}}>
+                <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '8px', marginBottom: '0.5mm'}}>
                   <span>{bank.bank.toUpperCase()}:</span>
                   <span>{bank.accountNumber}</span>
                 </div>
@@ -271,12 +271,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           )}
           
           <div style={{textAlign: 'center', marginTop: '2mm', paddingTop: '1mm', borderTop: '1px solid black', fontSize: '7px', fontWeight: '900', textTransform: 'uppercase'}}>*** Verified Record ***</div>
+          {/* Minimal Spacer for Clean Cut */}
+          <div style={{height: '5mm'}}></div>
         </div>
       )}
 
-      {/* Folio A4 Print (Hidden On Screen) */}
+      {/* Printer-Only Folio (A4 Style) */}
       {!isPos && (
-        <div className="receipt-container print-only">
+        <div className="thermal-docket print-only" style={{ width: '210mm', padding: '10mm' }}>
           <div style={{borderBottom: '2px solid black', paddingBottom: '10px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between'}}>
              <div>
                 <h1 style={{fontSize: '24px', fontWeight: '900', margin: '0'}}>{settings.hotelName}</h1>

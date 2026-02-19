@@ -25,54 +25,62 @@
             animation: progress 2s infinite ease-in-out;
         }
         
+        @page {
+            size: 80mm auto;
+            margin: 0 !important;
+        }
+
         @media print {
+            /* 1. Reset Environment */
             html, body {
                 width: 80mm !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                background: white !important;
-                color: black !important;
+                background: #fff !important;
+                color: #000 !important;
                 overflow: visible !important;
                 height: auto !important;
                 min-height: auto !important;
+                -webkit-print-color-adjust: exact !important;
             }
 
-            /* Isolate printable area only */
+            /* 2. Hide everything by default */
             body * {
                 visibility: hidden !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
                 box-shadow: none !important;
                 border-radius: 0 !important;
                 transform: none !important;
-                transition: none !important;
             }
 
-            .receipt-container, 
-            .receipt-container * {
+            /* 3. Restore only the Docket Container */
+            .thermal-docket, 
+            .thermal-docket * {
                 visibility: visible !important;
+                height: auto !important;
             }
 
-            .receipt-container {
+            /* 4. Force strict 80mm layout */
+            .thermal-docket {
                 display: block !important;
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 80mm !important;
-                margin: 0 auto !important;
+                max-width: 80mm !important;
+                margin: 0 !important;
                 padding: 0 !important;
-                border: none !important;
-                box-shadow: none !important;
-                border-radius: 0 !important;
-                overflow: visible !important;
+                background: white !important;
+                z-index: 99999 !important;
+                overflow: hidden !important;
             }
 
             .no-print {
                 display: none !important;
             }
-        }
-
-        @page {
-            size: 80mm auto;
-            margin: 0 !important;
         }
 
         .print-only { display: none; }
