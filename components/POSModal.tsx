@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { 
-  UnitType, 
   UserProfile, 
+  UnitType, 
   SettlementStatus, 
   SettlementMethod, 
+  MenuItem, 
+  AppSettings, 
+  Transaction, 
   TransactionItem,
-  AppSettings,
-  MenuItem,
-  Transaction,
   TransactionPayment
 } from '../types';
 import ReceiptPreview from './ReceiptPreview';
@@ -20,35 +20,45 @@ interface POSModalProps {
 }
 
 const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
+  const [menu, setMenu] = useState<MenuItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [menuCatalog, setMenuCatalog] = useState<MenuItem[]>([]);
-  const [unit, setUnit] = useState<UnitType | ''>('');
-  const [items, setItems] = useState<TransactionItem[]>([{ description: '', quantity: 1, price: 0, total: 0 }]);
-  
-  // Split Payments
+  const [unit, setUnit] = useState<UnitType>(UnitType.ZENZA);
+  const [cart, setCart] = useState<{item: MenuItem, quantity: number}[]>([]);
+  const [guest, setGuest] = useState({ name: 'Walk-in Guest', email: '', phone: '' });
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.POS, amount: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationError, setValidationError] = useState('');
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
-  const [showReceipt, setShowReceipt] = useState(false);
 
   useEffect(() => {
+    const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      setMenu(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
+    });
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (snapshot.exists()) setSettings(snapshot.data() as AppSettings);
     });
-    
-    const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
-      setMenuCatalog(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
-    });
-
-    return () => {
-      unsubSettings();
-      unsubMenu();
-    };
+    return () => { unsubMenu(); unsubSettings(); };
   }, []);
 
-  const subtotal = items.reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+  const addToCart = (item: MenuItem) => {
+    const existing = cart.find(c => c.item.id === item.id);
+    if (existing) {
+      setCart(cart.map(c => c.item.id === item.id ? { ...c, quantity: c.quantity + 1 } : c));
+    } else {
+      setCart([...cart, { item, quantity: 1 }]);
+    }
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(cart.filter(c => c.item.id !== id));
+  };
+
+  const updateQuantity = (id: string, q: number) => {
+    if (q <= 0) return removeFromCart(id);
+    setCart(cart.map(c => c.item.id === id ? { ...c, quantity: q } : c));
+  };
+
+  const subtotal = cart.reduce((acc, c) => acc + (c.item.price * c.quantity), 0);
   const total = Math.max(0, subtotal - discount);
   
   const vatRate = settings?.vat || 0.075;
@@ -62,33 +72,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
   const totalPaid = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
   const balance = total - totalPaid;
 
-  const addItem = () => setItems([...items, { description: '', quantity: 1, price: 0, total: 0 }]);
-  
-  const handleMenuSelect = (index: number, itemId: string) => {
-    const selected = menuCatalog.find(m => m.id === itemId);
-    if (selected) {
-      updateItem(index, 'description', selected.name);
-      updateItem(index, 'price', selected.price);
-    }
-  };
-
-  const updateItem = (index: number, field: keyof TransactionItem, value: any) => {
-    const newItems = [...items];
-    (newItems[index] as any)[field] = value;
-    if (field === 'quantity' || field === 'price') {
-      newItems[index].total = (newItems[index].quantity || 0) * (newItems[index].price || 0);
-    }
-    setItems(newItems);
-  };
-
-  const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
-  };
-
-  const addPaymentRow = () => setPayments([...payments, { method: SettlementMethod.CASH, amount: 0 }]);
-  const removePaymentRow = (idx: number) => setPayments(payments.filter((_, i) => i !== idx));
+  const addPaymentRow = () => setPayments([...payments, { method: SettlementMethod.POS, amount: 0 }]);
   const updatePayment = (idx: number, field: keyof TransactionPayment, value: any) => {
     const newPayments = [...payments];
     (newPayments[idx] as any)[field] = value;
@@ -96,18 +80,18 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
   };
 
   const handleSubmit = async () => {
-    setValidationError('');
-    if (!unit) {
-      setValidationError('Please select Zenza or Whisper to proceed with walk-in booking.');
-      return;
-    }
-    if (items.some(i => !i.description || i.price <= 0)) {
-      alert('Please fill all item details correctly.');
-      return;
-    }
-
+    if (cart.length === 0) return alert('Cannot process empty cart.');
     setIsSubmitting(true);
     try {
+      const items: TransactionItem[] = cart.map(c => ({
+        description: c.item.name,
+        quantity: c.quantity,
+        price: c.item.price,
+        total: c.item.price * c.quantity
+      }));
+
+      const selectedBank = unit === UnitType.ZENZA ? settings?.zenzaBanks?.[0] : settings?.whispersBanks?.[0];
+      
       const finalPayments: TransactionPayment[] = payments
         .filter(p => (p.amount || 0) > 0)
         .map(p => ({
@@ -120,8 +104,10 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
         reference: `POS-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'POS',
         unit,
-        source: 'Walk-in',
-        guestName: 'Walk-In Customer',
+        source: 'App',
+        guestName: guest.name,
+        email: guest.email,
+        phone: guest.phone,
         items,
         subtotal: baseValue,
         taxAmount,
@@ -133,6 +119,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
         balance,
         status: balance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
         settlementMethod: finalPayments.length > 0 ? finalPayments[0].method : SettlementMethod.POS,
+        selectedBank: selectedBank || null,
         createdBy: user.uid,
         userId: user.uid,
         cashierName: user.displayName,
@@ -144,88 +131,25 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
       setSavedTransaction({ id: docRef.id, ...txData } as Transaction);
     } catch (err) {
       console.error(err);
-      alert('Error saving transaction');
+      alert('Error: Synchronization failed.');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleSettleMore = async () => {
-    if (!savedTransaction) return;
-    const amountStr = prompt(`Enter payment for ${savedTransaction.reference} (Bal: ₦${savedTransaction.balance.toLocaleString()}):`, savedTransaction.balance.toString());
-    if (!amountStr) return;
-
-    const amount = parseFloat(amountStr);
-    if (isNaN(amount) || amount <= 0) return;
-
-    const method = prompt('Method (POS, CASH, TRANSFER):', 'POS')?.toUpperCase() as SettlementMethod;
-    if (![SettlementMethod.POS, SettlementMethod.CASH, SettlementMethod.TRANSFER].includes(method)) return;
-
-    const newPayment = { method, amount, timestamp: Date.now() };
-    const updatedPayments = [...(savedTransaction.payments || []), newPayment];
-    const newPaid = savedTransaction.paidAmount + amount;
-    const newBalance = Math.max(0, savedTransaction.totalAmount - newPaid);
-
-    try {
-      await updateDoc(doc(db, 'transactions', savedTransaction.id), {
-        paidAmount: newPaid,
-        payments: updatedPayments,
-        balance: newBalance,
-        status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
-        updatedAt: Date.now()
-      });
-      setSavedTransaction({
-        ...savedTransaction,
-        paidAmount: newPaid,
-        payments: updatedPayments,
-        balance: newBalance,
-        status: newBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID
-      });
-    } catch (err) {
-      alert('Settlement update failed.');
     }
   };
 
   if (savedTransaction) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col p-8 text-center space-y-6">
-          <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+        <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
+             <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
           </div>
-          <div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">TRANSACTION RECORDED</h2>
-            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-2">{savedTransaction.reference}</p>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tight">TRANSACTION SYNCED</h2>
+          <p className="text-gray-400 text-xs tracking-widest font-bold">REFERENCE: {savedTransaction.reference}</p>
+          <div className="flex gap-4">
+             <button onClick={onClose} className="flex-1 py-4 bg-[#C8A862] text-black font-bold rounded-xl uppercase text-xs tracking-widest">Done</button>
           </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-             <button 
-              onClick={() => setShowReceipt(true)}
-              className="px-6 py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl uppercase tracking-widest text-xs hover:bg-[#B69651] transition-all"
-            >
-              Print Receipt
-            </button>
-            <button 
-              onClick={handleSettleMore}
-              disabled={savedTransaction.status === SettlementStatus.SETTLED}
-              className={`px-6 py-4 font-black rounded-xl uppercase tracking-widest text-xs transition-all ${
-                savedTransaction.status === SettlementStatus.SETTLED 
-                ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-                : 'bg-green-600 text-white hover:bg-green-700'
-              }`}
-            >
-              Settle Balance
-            </button>
-          </div>
-          
-          <button 
-            onClick={onClose}
-            className="w-full py-4 border border-gray-700 text-gray-400 font-bold rounded-xl uppercase tracking-widest text-xs hover:bg-white/5 transition-all"
-          >
-            Done
-          </button>
-
-          {showReceipt && <ReceiptPreview transaction={savedTransaction} onClose={() => setShowReceipt(false)} />}
+          <ReceiptPreview transaction={savedTransaction} onClose={onClose} />
         </div>
       </div>
     );
@@ -233,153 +157,166 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-[#13263A] w-full max-w-2xl rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        <div className="p-6 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-[#C8A862]">WALK-IN POINT OF SALE</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+      <div className="bg-[#13263A] w-full max-w-6xl h-[90vh] rounded-2xl border border-gray-700 overflow-hidden flex flex-col md:flex-row shadow-2xl">
+        {/* Left: Menu Dispatch */}
+        <div className="flex-[3] flex flex-col border-r border-gray-700/50 overflow-hidden">
+          <div className="p-6 border-b border-gray-700/50 flex justify-between items-center bg-[#0B1C2D]/30">
+            <div>
+              <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tight">WALK-IN POS DISPATCH</h2>
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Revenue Authority Terminal</p>
+            </div>
+            <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700">
+              <button 
+                disabled={cart.length > 0}
+                onClick={() => setUnit(UnitType.ZENZA)}
+                className={`px-4 py-2 text-[10px] font-black uppercase rounded transition-all ${unit === UnitType.ZENZA ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-white disabled:opacity-50'}`}
+              >
+                Zenza
+              </button>
+              <button 
+                disabled={cart.length > 0}
+                onClick={() => setUnit(UnitType.WHISPERS)}
+                className={`px-4 py-2 text-[10px] font-black uppercase rounded transition-all ${unit === UnitType.WHISPERS ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white disabled:opacity-50'}`}
+              >
+                Whispers
+              </button>
+            </div>
+            {cart.length > 0 && <span className="text-[9px] text-[#C8A862] font-black animate-pulse uppercase tracking-widest">UNIT LOCKED</span>}
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {menu.map(item => (
+              <button 
+                key={item.id} 
+                onClick={() => addToCart(item)}
+                className="bg-[#0B1C2D]/50 border border-gray-700/30 p-4 rounded-xl text-left hover:border-[#C8A862]/50 transition-all flex flex-col justify-between group active:scale-95"
+              >
+                <div>
+                  <div className="text-[10px] text-gray-500 font-black uppercase mb-1">{item.category}</div>
+                  <div className="text-sm font-bold text-white group-hover:text-[#C8A862] line-clamp-2 leading-tight">{item.name}</div>
+                </div>
+                <div className="mt-4 text-[#C8A862] font-black">₦{item.price.toLocaleString()}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {validationError && (
-            <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg text-sm font-bold animate-pulse">
-              {validationError}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Operating Unit <span className="text-red-500">*</span></label>
-              <select 
-                required
-                className={`w-full bg-[#0B1C2D] border rounded p-3 text-white transition-all ${!unit ? 'border-red-500/50 ring-1 ring-red-500/20' : 'border-gray-700'}`}
-                value={unit}
-                onChange={(e) => {
-                  setUnit(e.target.value as UnitType);
-                  if (e.target.value) setValidationError('');
-                }}
-              >
-                <option value="" disabled>-- Select Unit --</option>
-                <option value={UnitType.ZENZA}>Zenza</option>
-                <option value={UnitType.WHISPERS}>Whispers</option>
-              </select>
-            </div>
+        {/* Right: Order Summary */}
+        <div className="flex-[2] bg-[#0B1C2D]/50 flex flex-col overflow-hidden">
+          <div className="p-6 border-b border-gray-700/50 flex justify-between items-center">
+            <h3 className="text-xs font-black text-white uppercase tracking-widest">MANIFEST SUMMARY</h3>
+            <button onClick={onClose} className="text-gray-500 hover:text-white text-xl font-bold">&times;</button>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center border-b border-gray-700 pb-2">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Line Items</label>
-              <button onClick={addItem} className="text-[#C8A862] text-xs font-bold hover:underline bg-[#C8A862]/10 px-3 py-1 rounded">+ New Item</button>
-            </div>
-            
+          
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <div className="space-y-3">
-              {items.map((item, idx) => (
-                <div key={idx} className="bg-[#0B1C2D]/50 p-3 rounded-lg border border-gray-700/50 space-y-3">
-                  <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-12 md:col-span-8">
-                       <select 
-                        className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-xs text-gray-400 mb-2"
-                        onChange={(e) => handleMenuSelect(idx, e.target.value)}
-                        defaultValue=""
-                       >
-                         <option value="" disabled>-- Select from Menu --</option>
-                         {menuCatalog.map(m => (
-                           <option key={m.id} value={m.id}>{m.name} (₦{m.price.toLocaleString()})</option>
-                         ))}
-                       </select>
-                       <input 
-                        placeholder="Or custom description..."
-                        className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-white"
-                        value={item.description}
-                        onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-4 md:col-span-1">
+              {cart.map(c => (
+                <div key={c.item.id} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5 group">
+                  <div className="flex-1">
+                    <div className="text-xs font-bold text-white">{c.item.name}</div>
+                    <div className="text-[10px] text-gray-500">₦{c.item.price.toLocaleString()}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => updateQuantity(c.item.id, c.quantity - 1)} className="w-6 h-6 rounded bg-gray-800 flex items-center justify-center text-white">-</button>
+                    <span className="text-xs font-bold w-4 text-center">{c.quantity}</span>
+                    <button onClick={() => updateQuantity(c.item.id, c.quantity + 1)} className="w-6 h-6 rounded bg-gray-800 flex items-center justify-center text-white">+</button>
+                  </div>
+                  <div className="text-xs font-black text-[#C8A862] w-20 text-right">₦{(c.item.price * c.quantity).toLocaleString()}</div>
+                  <button 
+                    onClick={() => removeFromCart(c.item.id)}
+                    className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1"
+                    title="Remove item"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+              ))}
+              {cart.length === 0 && (
+                <div className="text-center py-20 text-gray-600 text-[10px] font-black uppercase tracking-widest italic opacity-50">Empty Manifest</div>
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div className="space-y-4 pt-6 border-t border-gray-700/50">
+                <input 
+                  className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-xs text-white outline-none focus:border-[#C8A862]" 
+                  placeholder="Guest Name (Default: Walk-in)" 
+                  value={guest.name} 
+                  onChange={(e) => setGuest({...guest, name: e.target.value})} 
+                />
+
+                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                   <div className="flex-1">
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1">Apply Discount (₦)</label>
                       <input 
                         type="number"
-                        placeholder="Qty"
-                        className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-center text-white"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(idx, 'quantity', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-[#C8A862] font-black outline-none focus:border-[#C8A862]"
+                        value={discount || ''}
+                        onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
                       />
-                    </div>
-                    <div className="col-span-6 md:col-span-2">
+                   </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
+                    <span>Split Settlement</span>
+                    <button onClick={addPaymentRow} className="text-[#C8A862] hover:underline">+ Split</button>
+                  </div>
+                  {payments.map((p, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <select 
+                        className="flex-1 bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#C8A862]"
+                        value={p.method}
+                        onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}
+                      >
+                        <option value={SettlementMethod.POS}>POS</option>
+                        <option value={SettlementMethod.CASH}>Cash</option>
+                        <option value={SettlementMethod.TRANSFER}>Transfer</option>
+                      </select>
                       <input 
-                        type="number"
-                        placeholder="Price"
-                        className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm text-right text-white"
-                        value={item.price}
-                        onChange={(e) => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
+                        type="number" 
+                        placeholder="Amount"
+                        className="w-24 bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-[10px] text-[#C8A862] font-black text-right outline-none focus:border-[#C8A862]"
+                        value={p.amount}
+                        onChange={(e) => updatePayment(idx, 'amount', parseFloat(e.target.value) || 0)}
                       />
                     </div>
-                    <div className="col-span-2 md:col-span-1 flex items-center justify-center">
-                      <button onClick={() => removeItem(idx)} className="text-red-500 hover:text-red-400">&times;</button>
+                  ))}
+                </div>
+
+                <div className="pt-4 space-y-2">
+                  <div className="flex justify-between text-xs text-gray-500 font-bold uppercase tracking-tighter">
+                    <span>Gross Ledger Val</span>
+                    <span>₦{subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-black text-white uppercase tracking-tight pt-1">
+                    <span>Net Valuation</span>
+                    <span>₦{total.toLocaleString()}</span>
+                  </div>
+                  <div className="pt-2 border-t border-gray-700/30">
+                    <div className="flex justify-between text-xs text-green-400 font-bold uppercase">
+                      <span>Settled Amount</span>
+                      <span>₦{totalPaid.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-red-500 font-bold uppercase">
+                      <span>Outstanding</span>
+                      <span>₦{balance.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-gray-700">
-             <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Settlement (Split Payment)</label>
-                <button onClick={addPaymentRow} className="text-green-500 text-xs font-bold hover:underline">+ Add Payment Row</button>
-             </div>
-             <div className="space-y-2">
-                {payments.map((p, idx) => (
-                  <div key={idx} className="flex gap-2 items-center bg-white/5 p-2 rounded-lg">
-                    <select 
-                      className="bg-[#0B1C2D] border border-gray-700 rounded p-2 text-xs text-white flex-1"
-                      value={p.method}
-                      onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}
-                    >
-                      <option value={SettlementMethod.POS}>POS</option>
-                      <option value={SettlementMethod.CASH}>Cash</option>
-                      <option value={SettlementMethod.TRANSFER}>Transfer</option>
-                    </select>
-                    <input 
-                      type="number"
-                      placeholder="Amount"
-                      className="bg-[#0B1C2D] border border-gray-700 rounded p-2 text-xs text-white w-28 text-right"
-                      value={p.amount}
-                      onChange={(e) => updatePayment(idx, 'amount', parseFloat(e.target.value) || 0)}
-                    />
-                    {payments.length > 1 && (
-                      <button onClick={() => removePaymentRow(idx)} className="text-red-500 font-bold px-2">&times;</button>
-                    )}
-                  </div>
-                ))}
-             </div>
+          <div className="p-6 bg-[#0B1C2D] border-t border-gray-700/50">
+            <button 
+              disabled={isSubmitting || cart.length === 0} 
+              onClick={handleSubmit}
+              className="w-full py-5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all uppercase tracking-[0.2em] shadow-xl text-xs disabled:opacity-50"
+            >
+              {isSubmitting ? 'SYCHRONIZING...' : 'COMMIT TRANSACTION'}
+            </button>
           </div>
-        </div>
-
-        <div className="p-6 bg-[#0B1C2D] border-t border-gray-700 space-y-4">
-          <div className="grid grid-cols-2 gap-4 border-b border-gray-800 pb-4">
-            <div>
-               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Valuation Total</p>
-               <span className="text-2xl font-black text-white">₦{total.toLocaleString()}</span>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] text-[#C8A862] font-black uppercase tracking-widest block mb-1">Total Paid</span>
-              <span className="text-2xl font-black text-green-400">₦{totalPaid.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div className="text-center">
-            <div className={`p-3 text-xl font-black rounded-xl border ${balance > 0 ? 'text-red-400 border-red-500/20 bg-red-500/5' : 'text-gray-500 border-gray-700 bg-gray-700/5'}`}>
-              ₦{balance.toLocaleString()} {balance > 0 ? 'Outstanding' : 'Balanced'}
-            </div>
-          </div>
-
-          <button 
-            disabled={isSubmitting || total < 0 || subtotal <= 0}
-            onClick={handleSubmit}
-            className={`w-full py-4 font-black rounded-xl transition-all uppercase tracking-widest shadow-lg ${
-              !unit ? 'bg-gray-700 text-gray-500 hover:bg-red-900/40' : 'bg-[#C8A862] text-[#0B1C2D] hover:bg-[#B69651] active:scale-95'
-            }`}
-          >
-            {isSubmitting ? 'Recording Transaction...' : (unit ? 'Complete & Proceed' : 'Select Unit to Proceed')}
-          </button>
         </div>
       </div>
     </div>

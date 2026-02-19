@@ -84,6 +84,24 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 ))}
               </div>
 
+              <div className="space-y-1 text-[9px] border-b border-dashed border-black/10 pb-2 mb-2">
+                <div className="flex justify-between">
+                  <span>GROSS:</span>
+                  <span>₦{transaction.subtotal.toLocaleString()}</span>
+                </div>
+                {transaction.discountAmount > 0 && (
+                  <div className="flex justify-between text-red-600">
+                    <span>DISCOUNT:</span>
+                    <span>-₦{transaction.discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>VAT ({((settings?.vat || 0) * 100).toFixed(1)}% Inc):</span>
+                  <span>₦{transaction.taxAmount.toLocaleString()}</span>
+                </div>
+                {/* Note: Service Charge hidden on POS as per instructions */}
+              </div>
+
               <div className="text-right text-sm font-black mb-4 uppercase">Grand Total: ₦{transaction.totalAmount.toLocaleString()}</div>
 
               <div className="border-t border-black/10 pt-3 space-y-1 mb-6 uppercase">
@@ -119,7 +137,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 </div>
               </div>
 
-              <div className="text-center italic text-[8px] opacity-50">Revenue Authority Verified</div>
+              <div className="text-center italic text-[8px] opacity-50">Revenue Authority Verified • TIDÈ</div>
             </div>
           ) : (
             <div className="invoice-container text-black bg-white p-[20mm] font-sans text-sm shadow-2xl">
@@ -167,21 +185,48 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               </table>
 
               <div className="flex justify-end mb-12">
-                <div className="w-64 space-y-2 border-t-2 border-black pt-4">
-                  <div className="flex justify-between text-xs text-gray-500 uppercase font-black"><span>Total Bill</span><span>₦{transaction.totalAmount.toLocaleString()}</span></div>
-                  <div className="flex justify-between text-xs text-green-600 font-black"><span>Total Paid</span><span>₦{transaction.paidAmount.toLocaleString()}</span></div>
-                  <div className="flex justify-between text-lg text-red-600 font-black border-t border-black/10 pt-2"><span>Balance</span><span>₦{transaction.balance.toLocaleString()}</span></div>
+                <div className="w-80 space-y-2 border-t-2 border-black pt-4">
+                  <div className="flex justify-between text-[11px] text-gray-500 uppercase font-black">
+                    <span>Gross Value</span>
+                    <span>₦{transaction.subtotal.toLocaleString()}</span>
+                  </div>
+                  {transaction.discountAmount > 0 && (
+                    <div className="flex justify-between text-[11px] text-red-600 font-black">
+                      <span>Discount Adjustment</span>
+                      <span>-₦{transaction.discountAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-[11px] text-gray-600 font-black">
+                    <span>VAT ({( (settings?.vat || 0) * 100).toFixed(1)}%)</span>
+                    <span>₦{transaction.taxAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-gray-600 font-black">
+                    <span>Service Charge ({( (settings?.serviceCharge || 0) * 100).toFixed(1)}%)</span>
+                    <span>₦{transaction.serviceCharge.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-lg text-black font-black border-t border-black/10 pt-2">
+                    <span>Folio Total</span>
+                    <span>₦{transaction.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-green-600 font-black pt-1">
+                    <span>Paid to Date</span>
+                    <span>₦{transaction.paidAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-red-600 font-black border-t-2 border-dashed border-gray-200 pt-1">
+                    <span>Outstanding Balance</span>
+                    <span>₦{transaction.balance.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-8 text-[10px]">
                 <div className="bg-gray-50 p-4 rounded border border-black/5">
-                  <p className="font-black uppercase tracking-widest mb-2">Split Payment History</p>
+                  <p className="font-black uppercase tracking-widest mb-2">Settlement Registry</p>
                   <div className="space-y-1 font-bold">
                     {transaction.payments && transaction.payments.length > 0 ? (
                       transaction.payments.map((p, i) => (
                         <div key={i} className="flex justify-between border-b border-dashed border-gray-200 pb-1">
-                          <span>{p.method}</span>
+                          <span>{p.method} • {new Date(p.timestamp).toLocaleDateString()}</span>
                           <span>₦{p.amount.toLocaleString()}</span>
                         </div>
                       ))
@@ -194,10 +239,12 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   </div>
                 </div>
                 <div className="text-right flex flex-col justify-end">
-                  <p className="font-black uppercase tracking-widest mb-1">Payment Instructions</p>
+                  <p className="font-black uppercase tracking-widest mb-1">Corporate Accounts</p>
                   {currentBanks.map((bank, i) => (
-                    <p key={i} className="text-[9px] text-gray-600 uppercase font-bold">{bank.bank} • {bank.accountNumber}</p>
+                    <p key={i} className="text-[9px] text-gray-600 uppercase font-bold">{bank.bank} • {bank.accountNumber} • {bank.accountName}</p>
                   ))}
+                  <div className="h-4"></div>
+                  <p className="text-[8px] italic opacity-40 uppercase">This is a verified revenue authority document.</p>
                 </div>
               </div>
             </div>
