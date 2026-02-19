@@ -59,9 +59,10 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
   return (
     <>
+      {/* On-screen Preview */}
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 overflow-y-auto no-print">
         <div className="flex flex-col h-full w-full max-w-4xl p-4">
-          <div className="flex justify-between items-center mb-6 no-print">
+          <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-[#C8A862] rounded-full"></div>
               <h3 className="text-white font-bold tracking-widest uppercase text-sm">Revenue Documentation</h3>
@@ -72,14 +73,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             </div>
           </div>
 
-          <div className="flex-1 bg-gray-300 p-2 md:p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center no-print">
+          <div className="flex-1 bg-gray-300 p-2 md:p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center">
             <div className="bg-white p-0 shadow-2xl h-fit border-none flex justify-center w-full md:w-auto">
               {isPos ? (
-                <div className="text-black bg-white p-4 font-mono text-[12px] leading-tight w-[80mm] flex flex-col items-center">
+                <div className="text-black bg-white p-4 font-mono text-[11px] leading-tight w-[80mm] flex flex-col items-center">
                   <div className="w-full">
                     <div className="text-center mb-2">
-                      <h1 className="text-lg font-black tracking-tighter uppercase mb-0">{settings.hotelName}</h1>
-                      <p className="text-[9px] font-bold opacity-70 uppercase leading-none">{settings.hotelAddress}</p>
+                      <h1 className="text-lg font-black tracking-tighter uppercase mb-0 leading-none">{settings.hotelName}</h1>
+                      <p className="text-[9px] font-bold opacity-70 uppercase leading-none mt-1">{settings.hotelAddress}</p>
                     </div>
                     <div className="border-b border-black border-dashed mb-1"></div>
                     <div className="grid grid-cols-2 gap-x-1 uppercase text-[10px] mb-1 font-bold">
@@ -95,10 +96,10 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                         return (
                           <div key={idx} className="mb-1">
                             <div className="flex justify-between items-start">
-                              <span className="font-black uppercase text-[11px] flex-1 leading-none mr-2">
+                              <span className="font-black uppercase text-[10px] flex-1 leading-tight mr-2">
                                 {name} x{item.quantity}
                               </span>
-                              <span className="shrink-0 font-black text-[11px]">₦{item.total.toLocaleString()}</span>
+                              <span className="shrink-0 font-black text-[10px]">₦{item.total.toLocaleString()}</span>
                             </div>
                             {notes && <div className="font-bold text-[8px] italic opacity-70 mt-0.5 leading-none">{'>'}{notes}</div>}
                           </div>
@@ -106,32 +107,32 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       })}
                     </div>
                     <div className="border-t border-black border-dotted pt-1 mb-1">
-                      <div className="flex justify-between text-[11px] font-bold">
+                      <div className="flex justify-between text-[10px] font-bold">
                         <span>GROSS:</span>
                         <span>₦{transaction.subtotal.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between text-[11px] font-bold">
+                      <div className="flex justify-between text-[10px] font-bold">
                         <span>VAT:</span>
                         <span>₦{transaction.taxAmount.toLocaleString()}</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center py-1 border-y border-black mb-1">
-                      <span className="text-[12px] font-black uppercase">TOTAL:</span>
-                      <span className="text-xl font-black">₦{transaction.totalAmount.toLocaleString()}</span>
+                      <span className="text-[11px] font-black uppercase">TOTAL:</span>
+                      <span className="text-lg font-black">₦{transaction.totalAmount.toLocaleString()}</span>
                     </div>
                     
                     {transaction.balance > 0 && (
-                      <div className="mb-2 pt-1">
-                        <div className="text-[9px] font-black uppercase text-gray-500 mb-0.5">Payment Instructions:</div>
+                      <div className="mb-1 pt-1">
+                        <div className="text-[9px] font-black uppercase text-gray-500 mb-0.5">Instructions:</div>
                         {currentBanks.map((bank, i) => (
-                          <div key={i} className="flex justify-between text-[9px] font-bold leading-tight">
+                          <div key={i} className="flex justify-between text-[8px] font-bold leading-tight">
                             <span>{bank.bank.toUpperCase()}:</span>
                             <span>{bank.accountNumber}</span>
                           </div>
                         ))}
                         <div className="flex justify-between items-center mt-1 border-t border-black border-dotted pt-0.5">
-                          <span className="text-[10px] font-black uppercase">BALANCE:</span>
-                          <span className="text-[14px] font-black">₦{transaction.balance.toLocaleString()}</span>
+                          <span className="text-[9px] font-black uppercase">BALANCE:</span>
+                          <span className="text-[12px] font-black">₦{transaction.balance.toLocaleString()}</span>
                         </div>
                       </div>
                     )}
@@ -204,136 +205,138 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         </div>
       </div>
 
-      <div className="print-only">
-        {isPos ? (
-          <div className="docket-container">
-            <div style={{textAlign: 'center', marginBottom: '1px'}}>
-              <h1 style={{fontSize: '15px', fontWeight: '900', margin: '0', letterSpacing: '-0.5px', textTransform: 'uppercase'}}>{settings.hotelName}</h1>
-              <p style={{fontSize: '8px', fontWeight: '900', margin: '0', lineHeight: '1.0', textTransform: 'uppercase'}}>{settings.hotelAddress}</p>
-            </div>
-            <div style={{borderBottom: '1px dashed black', margin: '1px 0'}}></div>
-            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900'}}>
-              <span>REF: #{transaction.reference.split('-').pop()}</span>
-              <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
-            </div>
-            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900'}}>
-              <span>UNIT: {transaction.unit?.toUpperCase()}</span>
-              <span>OP: {transaction.cashierName.split(' ')[0].toUpperCase()}</span>
-            </div>
-            <div style={{borderBottom: '1px dashed black', margin: '1px 0'}}></div>
-            <div style={{marginBottom: '1px'}}>
-              {transaction.items.map((item, idx) => {
-                const { name, notes } = formatItemDescription(item.description);
-                return (
-                  <div key={idx} style={{marginBottom: '1px'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900', lineHeight: '1.0'}}>
-                      <span style={{flex: 1, paddingRight: '4px', textTransform: 'uppercase'}}>{name} x{item.quantity}</span>
-                      <span style={{whiteSpace: 'nowrap'}}>₦{item.total.toLocaleString()}</span>
-                    </div>
-                    {notes && (
-                      <div style={{fontSize: '7px', fontStyle: 'italic', fontWeight: '900', opacity: 0.8, marginTop: '0', textTransform: 'uppercase'}}>
-                        {'>'}{notes}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{borderTop: '1px dotted black', paddingTop: '1px', fontSize: '9px', fontWeight: '900'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                <span>GROSS:</span>
-                <span>₦{transaction.subtotal.toLocaleString()}</span>
-              </div>
-              <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                <span>VAT:</span>
-                <span>₦{transaction.taxAmount.toLocaleString()}</span>
-              </div>
-            </div>
-            <div style={{display: 'flex', justifyContent: 'space-between', margin: '1px 0', borderTop: '1px solid black', borderBottom: '1px solid black', padding: '1px 0', fontSize: '12px', fontWeight: '900'}}>
-              <span>TOTAL:</span>
-              <span>₦{transaction.totalAmount.toLocaleString()}</span>
-            </div>
-            
-            {transaction.balance > 0 && (
-              <div style={{fontSize: '8px', fontWeight: '900', borderTop: '1px dashed black', paddingTop: '1px', marginTop: '0'}}>
-                {currentBanks.map((bank, i) => (
-                  <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '8px'}}>
-                    <span>{bank.bank.toUpperCase()}:</span>
-                    <span>{bank.accountNumber}</span>
-                  </div>
-                ))}
-                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', borderTop: '1px dotted black', marginTop: '1px', paddingTop: '1px'}}>
-                  <span>BALANCE:</span>
-                  <span>₦{transaction.balance.toLocaleString()}</span>
-                </div>
-              </div>
-            )}
-            
-            <div style={{textAlign: 'center', marginTop: '2px', paddingTop: '1px', borderTop: '1px solid black', fontSize: '7px', fontWeight: '900', textTransform: 'uppercase'}}>*** Verified Record ***</div>
+      {/* Printer-Specific Docket (Hidden On Screen) */}
+      {isPos && (
+        <div className="receipt-container print-only text-black bg-white">
+          <div style={{textAlign: 'center', marginBottom: '1mm'}}>
+            <h1 style={{fontSize: '14px', fontWeight: '900', margin: '0', letterSpacing: '-0.5px', textTransform: 'uppercase'}}>{settings.hotelName}</h1>
+            <p style={{fontSize: '8px', fontWeight: '900', margin: '0', lineHeight: '1.0', textTransform: 'uppercase'}}>{settings.hotelAddress}</p>
           </div>
-        ) : (
-          <div className="invoice-container">
-            <div style={{borderBottom: '2px solid black', paddingBottom: '10px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between'}}>
-               <div>
-                  <h1 style={{fontSize: '24px', fontWeight: '900', margin: '0'}}>{settings.hotelName}</h1>
-                  <p style={{fontSize: '10px', margin: '4px 0'}}>{settings.hotelAddress}</p>
-               </div>
-               <div style={{textAlign: 'right'}}>
-                  <h2 style={{fontSize: '18px', color: '#888', margin: '0'}}>Reservation Folio</h2>
-                  <p style={{fontSize: '14px', fontWeight: '900', margin: '4px 0'}}>REF: {transaction.reference}</p>
-               </div>
-            </div>
-            <div style={{marginBottom: '20px'}}>
-              <h3 style={{fontSize: '10px', fontWeight: '900', color: '#888', margin: '0'}}>Guest Information</h3>
-              <p style={{fontSize: '16px', fontWeight: '900', margin: '2px 0'}}>{transaction.guestName}</p>
-              <p style={{fontSize: '12px', margin: '2px 0'}}>{transaction.email} • {transaction.phone}</p>
-            </div>
-            <table style={{width: '100%', borderCollapse: 'collapse', marginBottom: '20px'}}>
-               <thead>
-                 <tr style={{backgroundColor: '#000', color: '#fff', fontSize: '11px'}}>
-                   <th style={{padding: '10px', textAlign: 'left'}}>Description</th>
-                   <th style={{padding: '10px', textAlign: 'center'}}>Qty</th>
-                   <th style={{padding: '10px', textAlign: 'right'}}>Total</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {transaction.items.map((item, idx) => (
-                   <tr key={idx} style={{borderBottom: '1px solid #eee', fontSize: '12px', fontWeight: '700'}}>
-                     <td style={{padding: '10px'}}>{item.description}</td>
-                     <td style={{padding: '10px', textAlign: 'center'}}>{item.quantity}</td>
-                     <td style={{padding: '10px', textAlign: 'right'}}>₦{item.total.toLocaleString()}</td>
-                   </tr>
-                 ))}
-               </tbody>
-            </table>
-            <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '20px', borderTop: '2px solid black', paddingTop: '10px'}}>
-               <div style={{flex: 1}}>
-                  {transaction.balance > 0 && (
-                    <div style={{fontSize: '10px', fontWeight: '900'}}>
-                      <div style={{color: '#888', marginBottom: '5px'}}>SETTLEMENT ACCOUNTS</div>
-                      {currentBanks.map((bank, i) => (
-                        <div key={i} style={{marginBottom: '5px'}}>
-                          <div style={{fontSize: '12px'}}>{bank.bank}: {bank.accountNumber}</div>
-                          <div style={{color: '#666'}}>{bank.accountName}</div>
-                        </div>
-                      ))}
+          <div style={{borderBottom: '1px dashed black', margin: '1mm 0'}}></div>
+          <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900'}}>
+            <span>REF: #{transaction.reference.split('-').pop()}</span>
+            <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
+          </div>
+          <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '900'}}>
+            <span>UNIT: {transaction.unit?.toUpperCase()}</span>
+            <span>OP: {transaction.cashierName.split(' ')[0].toUpperCase()}</span>
+          </div>
+          <div style={{borderBottom: '1px dashed black', margin: '1mm 0'}}></div>
+          <div style={{marginBottom: '1mm'}}>
+            {transaction.items.map((item, idx) => {
+              const { name, notes } = formatItemDescription(item.description);
+              return (
+                <div key={idx} style={{marginBottom: '0.5mm'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: '900', lineHeight: '1.0'}}>
+                    <span style={{flex: 1, paddingRight: '2mm', textTransform: 'uppercase'}}>{name} x{item.quantity}</span>
+                    <span style={{whiteSpace: 'nowrap'}}>₦{item.total.toLocaleString()}</span>
+                  </div>
+                  {notes && (
+                    <div style={{fontSize: '7px', fontStyle: 'italic', fontWeight: '900', opacity: 0.8, marginTop: '0', textTransform: 'uppercase'}}>
+                      {'>'}{notes}
                     </div>
                   )}
-               </div>
-               <div style={{width: '250px'}}>
-                 <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: '900'}}>
-                   <span>Total:</span>
-                   <span>₦{transaction.totalAmount.toLocaleString()}</span>
-                 </div>
-                 <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: '900', color: 'red', marginTop: '4px'}}>
-                   <span>Outstanding:</span>
-                   <span>₦{transaction.balance.toLocaleString()}</span>
-                 </div>
-               </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{borderTop: '1px dotted black', paddingTop: '1mm', fontSize: '9px', fontWeight: '900'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between'}}>
+              <span>GROSS:</span>
+              <span>₦{transaction.subtotal.toLocaleString()}</span>
+            </div>
+            <div style={{display: 'flex', justifyContent: 'space-between'}}>
+              <span>VAT:</span>
+              <span>₦{transaction.taxAmount.toLocaleString()}</span>
             </div>
           </div>
-        )}
-      </div>
+          <div style={{display: 'flex', justifyContent: 'space-between', margin: '1mm 0', borderTop: '1px solid black', borderBottom: '1px solid black', padding: '1mm 0', fontSize: '12px', fontWeight: '900'}}>
+            <span>TOTAL:</span>
+            <span>₦{transaction.totalAmount.toLocaleString()}</span>
+          </div>
+          
+          {transaction.balance > 0 && (
+            <div style={{fontSize: '8px', fontWeight: '900', borderTop: '1px dashed black', paddingTop: '1mm', marginTop: '0'}}>
+              {currentBanks.map((bank, i) => (
+                <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '8px'}}>
+                  <span>{bank.bank.toUpperCase()}:</span>
+                  <span>{bank.accountNumber}</span>
+                </div>
+              ))}
+              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', borderTop: '1px dotted black', marginTop: '1mm', paddingTop: '1mm'}}>
+                <span>BALANCE:</span>
+                <span>₦{transaction.balance.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+          
+          <div style={{textAlign: 'center', marginTop: '2mm', paddingTop: '1mm', borderTop: '1px solid black', fontSize: '7px', fontWeight: '900', textTransform: 'uppercase'}}>*** Verified Record ***</div>
+        </div>
+      )}
+
+      {/* Folio A4 Print (Hidden On Screen) */}
+      {!isPos && (
+        <div className="receipt-container print-only">
+          <div style={{borderBottom: '2px solid black', paddingBottom: '10px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between'}}>
+             <div>
+                <h1 style={{fontSize: '24px', fontWeight: '900', margin: '0'}}>{settings.hotelName}</h1>
+                <p style={{fontSize: '10px', margin: '4px 0'}}>{settings.hotelAddress}</p>
+             </div>
+             <div style={{textAlign: 'right'}}>
+                <h2 style={{fontSize: '18px', color: '#888', margin: '0'}}>Reservation Folio</h2>
+                <p style={{fontSize: '14px', fontWeight: '900', margin: '4px 0'}}>REF: {transaction.reference}</p>
+             </div>
+          </div>
+          <div style={{marginBottom: '20px'}}>
+            <h3 style={{fontSize: '10px', fontWeight: '900', color: '#888', margin: '0'}}>Guest Information</h3>
+            <p style={{fontSize: '16px', fontWeight: '900', margin: '2px 0'}}>{transaction.guestName}</p>
+            <p style={{fontSize: '12px', margin: '2px 0'}}>{transaction.email} • {transaction.phone}</p>
+          </div>
+          <table style={{width: '100%', borderCollapse: 'collapse', marginBottom: '20px'}}>
+             <thead>
+               <tr style={{backgroundColor: '#000', color: '#fff', fontSize: '11px'}}>
+                 <th style={{padding: '10px', textAlign: 'left'}}>Description</th>
+                 <th style={{padding: '10px', textAlign: 'center'}}>Qty</th>
+                 <th style={{padding: '10px', textAlign: 'right'}}>Total</th>
+               </tr>
+             </thead>
+             <tbody>
+               {transaction.items.map((item, idx) => (
+                 <tr key={idx} style={{borderBottom: '1px solid #eee', fontSize: '12px', fontWeight: '700'}}>
+                   <td style={{padding: '10px'}}>{item.description}</td>
+                   <td style={{padding: '10px', textAlign: 'center'}}>{item.quantity}</td>
+                   <td style={{padding: '10px', textAlign: 'right'}}>₦{item.total.toLocaleString()}</td>
+                 </tr>
+               ))}
+             </tbody>
+          </table>
+          <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '20px', borderTop: '2px solid black', paddingTop: '10px'}}>
+             <div style={{flex: 1}}>
+                {transaction.balance > 0 && (
+                  <div style={{fontSize: '10px', fontWeight: '900'}}>
+                    <div style={{color: '#888', marginBottom: '5px'}}>SETTLEMENT ACCOUNTS</div>
+                    {currentBanks.map((bank, i) => (
+                      <div key={i} style={{marginBottom: '5px'}}>
+                        <div style={{fontSize: '12px'}}>{bank.bank}: {bank.accountNumber}</div>
+                        <div style={{color: '#666'}}>{bank.accountName}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+             </div>
+             <div style={{width: '250px'}}>
+               <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: '900'}}>
+                 <span>Total:</span>
+                 <span>₦{transaction.totalAmount.toLocaleString()}</span>
+               </div>
+               <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: '900', color: 'red', marginTop: '4px'}}>
+                 <span>Outstanding:</span>
+                 <span>₦{transaction.balance.toLocaleString()}</span>
+               </div>
+             </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

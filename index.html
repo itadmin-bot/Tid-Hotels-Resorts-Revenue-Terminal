@@ -26,80 +26,55 @@
         }
         
         @media print {
-            /* Hide all UI elements except root */
-            body > *:not(#root) { display: none !important; }
-            .no-print { display: none !important; }
-            
-            /* Reset body for thermal roll */
             html, body {
+                width: 80mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 background: white !important;
                 color: black !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                width: 80mm !important;
-                height: auto !important;
-                min-height: auto !important;
                 overflow: visible !important;
-                -webkit-print-color-adjust: exact !important;
-            }
-
-            /* Define roll width and auto height */
-            @page {
-                size: 80mm auto;
-                margin: 0 !important;
-            }
-
-            #root {
-                width: 80mm !important;
-                display: block !important;
-                margin: 0 auto !important;
-                padding: 0 !important;
                 height: auto !important;
                 min-height: auto !important;
             }
 
-            /* Global print resets for all elements */
-            * {
-                color: black !important;
-                background: transparent !important;
+            /* Isolate printable area only */
+            body * {
+                visibility: hidden !important;
                 box-shadow: none !important;
-                text-shadow: none !important;
-                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                transform: none !important;
+                transition: none !important;
             }
 
-            /* Compact 80mm Docket Container */
-            .docket-container {
+            .receipt-container, 
+            .receipt-container * {
+                visibility: visible !important;
+            }
+
+            .receipt-container {
                 display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
                 width: 80mm !important;
                 margin: 0 auto !important;
-                padding: 0 2mm !important; /* Tiny safety margin for feed */
-                font-family: 'Courier New', Courier, monospace !important;
-                height: auto !important;
-                min-height: auto !important;
-                overflow: visible !important;
-                line-height: 1.1 !important;
+                padding: 0 !important;
                 border: none !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                overflow: visible !important;
             }
 
-            /* Standard A4 Invoice */
-            .invoice-container {
-                display: block !important;
-                width: 210mm !important;
-                margin: 0 auto !important;
-                padding: 10mm !important;
-                font-family: 'Inter', sans-serif !important;
-                height: auto !important;
-            }
-
-            .print-only {
-                display: block !important;
-                visibility: visible !important;
-                position: static !important;
-                width: 100% !important;
-                margin: 0 auto !important;
-                text-align: center !important;
+            .no-print {
+                display: none !important;
             }
         }
+
+        @page {
+            size: 80mm auto;
+            margin: 0 !important;
+        }
+
         .print-only { display: none; }
     </style>
     <script type="importmap">
