@@ -24,15 +24,13 @@
         .animate-progress {
             animation: progress 2s infinite ease-in-out;
         }
-        
         @media print {
-            /* Hide everything that isn't the print container */
-            body > *:not(#root) { display: none !important; }
             .no-print { display: none !important; }
+            .print-only { display: block !important; }
             
-            html, body {
-                background: white !important;
-                color: black !important;
+            body, html { 
+                background: white !important; 
+                color: black !important; 
                 margin: 0 !important;
                 padding: 0 !important;
                 width: 80mm !important;
@@ -41,43 +39,33 @@
             }
 
             @page {
-                size: 80mm auto; /* Standard Thermal 80mm */
                 margin: 0 !important;
+                size: 80mm auto; /* 80mm thermal width, dynamic length */
             }
 
-            /* Force all text to black for high-contrast thermal printing */
-            * {
-                color: black !important;
-                background: transparent !important;
-                box-shadow: none !important;
-                text-shadow: none !important;
-                -webkit-print-color-adjust: exact !important;
-            }
-
+            /* Ensure only the active document prints */
+            #root > div:not(.print-active) { display: none !important; }
+            
             .docket-container {
-                display: block !important;
-                width: 76mm !important; /* Slightly narrower than 80mm for margins */
-                max-width: 76mm !important;
-                margin: 0 auto !important;
-                padding: 4mm 0 !important;
-                font-family: 'Courier New', Courier, monospace !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 1mm !important;
                 border: none !important;
+                background: white !important;
+                font-family: 'Courier New', Courier, monospace !important;
+                display: block !important;
+                height: auto !important;
             }
 
             .invoice-container {
-                display: block !important;
                 width: 210mm !important;
                 margin: 0 auto !important;
                 padding: 10mm !important;
-                font-family: 'Inter', sans-serif !important;
+                background: white !important;
             }
 
-            .print-only {
-                display: block !important;
-                visibility: visible !important;
-                position: static !important;
-                width: 100% !important;
-            }
+            /* Remove browser shadows and borders on print */
+            * { box-shadow: none !important; border-radius: 0 !important; }
         }
         .print-only { display: none; }
     </style>
