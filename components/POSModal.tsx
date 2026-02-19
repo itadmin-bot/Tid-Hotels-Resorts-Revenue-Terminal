@@ -24,6 +24,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [unit, setUnit] = useState<UnitType | null>(null);
   const [menuFilter, setMenuFilter] = useState<UnitType | 'ALL'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<{item: MenuItem, quantity: number}[]>([]);
   const [guest, setGuest] = useState({ name: 'Walk-in Guest', email: '', phone: '' });
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.POS, amount: 0 }]);
@@ -194,8 +195,9 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
   }
 
   const filteredMenuItems = menu.filter(item => {
-    if (menuFilter === 'ALL') return true;
-    return item.unit === menuFilter || item.unit === 'ALL';
+    const matchesUnit = menuFilter === 'ALL' || item.unit === menuFilter || item.unit === 'ALL';
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesUnit && matchesSearch;
   });
 
   return (
@@ -203,24 +205,48 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
       <div className="bg-[#13263A] w-full max-w-6xl h-[90vh] rounded-2xl border border-gray-700 overflow-hidden flex flex-col md:flex-row shadow-2xl">
         {/* Left: Menu Dispatch */}
         <div className="flex-[3] flex flex-col border-r border-gray-700/50 overflow-hidden">
-          <div className="p-6 border-b border-gray-700/50 flex justify-between items-center bg-[#0B1C2D]/30">
-            <div>
-              <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tight">WALK-IN POS DISPATCH</h2>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Active Revenue Source: {unit}</p>
+          <div className="p-6 border-b border-gray-700/50 bg-[#0B1C2D]/30 space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tight">WALK-IN POS DISPATCH</h2>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Active Revenue Source: {unit}</p>
+              </div>
+              <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700 opacity-50">
+                 <span className="px-4 py-2 text-[10px] font-black uppercase text-[#C8A862]">Locked: {unit}</span>
+              </div>
             </div>
-            <div className="flex gap-2 items-center">
-              <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700 mr-4">
+
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              {/* Search Bar */}
+              <div className="relative flex-1 w-full">
+                <input 
+                  type="text"
+                  placeholder="SEARCH MENU..."
+                  className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg py-2.5 px-10 text-xs text-white font-bold tracking-widest uppercase focus:outline-none focus:border-[#C8A862] transition-colors"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <svg className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Unit Filters */}
+              <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700 shrink-0">
                 <button 
                   onClick={() => setMenuFilter(UnitType.ZENZA)}
                   className={`px-3 py-1.5 text-[9px] font-black uppercase rounded transition-all ${menuFilter === UnitType.ZENZA ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
                 >
-                  Zenza Items
+                  Zenza
                 </button>
                 <button 
                   onClick={() => setMenuFilter(UnitType.WHISPERS)}
                   className={`px-3 py-1.5 text-[9px] font-black uppercase rounded transition-all ${menuFilter === UnitType.WHISPERS ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
                 >
-                  Whispers Items
+                  Whispers
                 </button>
                 <button 
                   onClick={() => setMenuFilter('ALL')}
@@ -229,17 +255,16 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
                   All Items
                 </button>
               </div>
-              <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700 opacity-50">
-                 <span className="px-4 py-2 text-[10px] font-black uppercase text-[#C8A862]">Locked: {unit}</span>
-              </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {/* Menu Items Container - Grid with vertical scrolling */}
+          <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-max">
             {filteredMenuItems.map(item => (
               <button 
                 key={item.id} 
                 onClick={() => addToCart(item)}
-                className="bg-[#0B1C2D]/50 border border-gray-700/30 p-4 rounded-xl text-left hover:border-[#C8A862]/50 transition-all flex flex-col justify-between group active:scale-95"
+                className="bg-[#0B1C2D]/50 border border-gray-700/30 p-4 rounded-xl text-left hover:border-[#C8A862]/50 transition-all flex flex-col justify-between group active:scale-95 min-h-[140px]"
               >
                 <div>
                   <div className="flex justify-between items-start mb-1">
@@ -250,13 +275,16 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
                       </span>
                     )}
                   </div>
-                  <div className="text-sm font-bold text-white group-hover:text-[#C8A862] line-clamp-2 leading-tight">{item.name}</div>
+                  <div className="text-sm font-bold text-white group-hover:text-[#C8A862] line-clamp-2 leading-tight uppercase tracking-tight">{item.name}</div>
                 </div>
                 <div className="mt-4 text-[#C8A862] font-black">₦{item.price.toLocaleString()}</div>
               </button>
             ))}
             {filteredMenuItems.length === 0 && (
-              <div className="col-span-full py-20 text-center text-gray-600 uppercase text-[10px] font-black tracking-widest italic opacity-50">No Items Found for {menuFilter}</div>
+              <div className="col-span-full py-20 text-center">
+                <p className="text-gray-600 uppercase text-[10px] font-black tracking-widest italic opacity-50 mb-2">No Matching Items Found</p>
+                <button onClick={() => {setSearchQuery(''); setMenuFilter('ALL');}} className="text-[#C8A862] text-[9px] font-black uppercase underline tracking-widest">Clear Filters</button>
+              </div>
             )}
           </div>
         </div>
@@ -273,7 +301,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
               {cart.map(c => (
                 <div key={c.item.id} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5 group">
                   <div className="flex-1">
-                    <div className="text-xs font-bold text-white">{c.item.name}</div>
+                    <div className="text-xs font-bold text-white uppercase truncate pr-4">{c.item.name}</div>
                     <div className="text-[10px] text-gray-500">₦{c.item.price.toLocaleString()}</div>
                   </div>
                   <div className="flex items-center gap-2">
