@@ -119,6 +119,30 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <span className="text-[12px] font-black uppercase">GRAND TOTAL:</span>
                       <span className="text-xl font-black">₦{transaction.totalAmount.toLocaleString()}</span>
                     </div>
+                    
+                    {transaction.balance > 0 && (
+                      <div className="mb-4 pt-2">
+                        <div className="text-[10px] font-black uppercase text-gray-500 mb-1">Settlement Instructions:</div>
+                        {currentBanks.map((bank, i) => (
+                          <div key={i} className="bg-gray-50 border border-gray-100 p-2 rounded mb-1">
+                            <div className="flex justify-between text-[10px] font-bold">
+                              <span>BANK:</span>
+                              <span className="uppercase">{bank.bank}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-black">
+                              <span>ACCOUNT:</span>
+                              <span>{bank.accountNumber}</span>
+                            </div>
+                            <div className="text-[8px] font-bold text-gray-500 uppercase mt-0.5 truncate">{bank.accountName}</div>
+                          </div>
+                        ))}
+                        <div className="flex justify-between items-center mt-2 border-t border-black border-dotted pt-1">
+                          <span className="text-[10px] font-black uppercase">BALANCE DUE:</span>
+                          <span className="text-[14px] font-black text-red-600">₦{transaction.balance.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="text-center italic text-[9px] font-black border-t border-black pt-2">*** VERIFIED REVENUE RECORD ***</div>
                   </div>
                 </div>
@@ -152,8 +176,25 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       ))}
                     </tbody>
                   </table>
-                  <div className="flex justify-end pt-4 border-t-2 border-black">
-                    <div className="w-64 space-y-2">
+                  
+                  <div className="flex justify-between items-start pt-4 border-t-2 border-black">
+                    <div className="flex-1 pr-12">
+                      {transaction.balance > 0 && (
+                        <div className="space-y-4">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Settlement Accounts</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            {currentBanks.map((bank, i) => (
+                              <div key={i} className="border border-gray-100 p-4 rounded-xl bg-gray-50">
+                                <div className="text-[9px] font-black text-gray-400 uppercase mb-1">{bank.bank}</div>
+                                <div className="text-sm font-black tracking-widest mb-1">{bank.accountNumber}</div>
+                                <div className="text-[9px] font-bold text-gray-500 uppercase">{bank.accountName}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-64 space-y-2 shrink-0">
                       <div className="flex justify-between text-lg font-black">
                         <span>Folio Total</span>
                         <span>₦{transaction.totalAmount.toLocaleString()}</span>
@@ -171,7 +212,6 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         </div>
       </div>
 
-      {/* Hidden print-only container strictly for the printer */}
       <div className="print-only">
         {isPos ? (
           <div className="docket-container">
@@ -213,12 +253,25 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <span>TOTAL:</span>
               <span>₦{transaction.totalAmount.toLocaleString()}</span>
             </div>
-            <div style={{fontSize: '12px', fontWeight: '900', borderTop: '1px dashed black', paddingTop: '4px'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '14px'}}>
-                <span>BALANCE:</span>
-                <span>₦{transaction.balance.toLocaleString()}</span>
+            
+            {transaction.balance > 0 && (
+              <div style={{fontSize: '11px', fontWeight: '900', borderTop: '1px dashed black', paddingTop: '4px', marginTop: '4px'}}>
+                <div style={{marginBottom: '4px', fontSize: '10px', color: '#666'}}>PAY TO:</div>
+                {currentBanks.map((bank, i) => (
+                  <div key={i} style={{marginBottom: '4px'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                      <span>{bank.bank}</span>
+                      <span>{bank.accountNumber}</span>
+                    </div>
+                  </div>
+                ))}
+                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '14px', borderTop: '1px dotted black', marginTop: '4px', paddingTop: '2px'}}>
+                  <span>BALANCE:</span>
+                  <span>₦{transaction.balance.toLocaleString()}</span>
+                </div>
               </div>
-            </div>
+            )}
+            
             <div style={{textAlign: 'center', marginTop: '10px', paddingTop: '4px', borderTop: '1px solid black', fontSize: '10px', fontWeight: '900'}}>*** VERIFIED REVENUE RECORD ***</div>
           </div>
         ) : (
@@ -256,9 +309,22 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                  ))}
                </tbody>
             </table>
-            <div style={{display: 'flex', justifyContent: 'flex-end'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '20px', borderTop: '2px solid black', paddingTop: '10px'}}>
+               <div style={{flex: 1}}>
+                  {transaction.balance > 0 && (
+                    <div style={{fontSize: '10px', fontWeight: '900'}}>
+                      <div style={{color: '#888', marginBottom: '5px'}}>SETTLEMENT ACCOUNTS</div>
+                      {currentBanks.map((bank, i) => (
+                        <div key={i} style={{marginBottom: '5px'}}>
+                          <div style={{fontSize: '12px'}}>{bank.bank}: {bank.accountNumber}</div>
+                          <div style={{color: '#666'}}>{bank.accountName}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+               </div>
                <div style={{width: '250px'}}>
-                 <div style={{display: 'flex', justifyContent: 'space-between', borderTop: '2px solid black', paddingTop: '8px', fontSize: '18px', fontWeight: '900'}}>
+                 <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: '900'}}>
                    <span>Total:</span>
                    <span>₦{transaction.totalAmount.toLocaleString()}</span>
                  </div>
