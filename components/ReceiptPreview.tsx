@@ -48,7 +48,6 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
   const currentBanks = transaction.selectedBank ? [transaction.selectedBank] : bankList;
 
-  // Helper to split name and instructions for better kitchen visibility
   const formatItemDescription = (desc: string) => {
     if (!desc.includes(' (')) return { name: desc, notes: '' };
     const parts = desc.split(' (');
@@ -73,41 +72,42 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         </div>
 
         <div className="flex-1 bg-gray-300 p-2 md:p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center">
-          <div className="bg-white p-0 shadow-2xl print:shadow-none print-active h-fit">
+          {/* Print container with h-fit to prevent trailing empty space */}
+          <div className="bg-white p-0 border-none shadow-none print-active h-fit overflow-hidden">
             {isPos ? (
-              <div className="docket-container text-black bg-white p-0 font-mono text-[11px] leading-tight border-none">
-                {/* Condensed Header */}
-                <div className="text-center mb-1">
+              <div className="docket-container text-black bg-white p-0 font-mono text-[11px] leading-tight border-none shadow-none">
+                {/* Header Section */}
+                <div className="text-center mb-2">
                   <h1 className="text-lg font-black tracking-tighter uppercase leading-none">{settings.hotelName}</h1>
                   <p className="text-[8px] font-bold opacity-80 uppercase leading-none mt-1">{settings.hotelAddress}</p>
                 </div>
 
-                {/* Metadata - Very Compact */}
-                <div className="grid grid-cols-2 gap-x-2 uppercase mb-1 text-[10px] border-b border-black pb-0.5">
-                  <p className="font-black">#{transaction.reference.split('-').pop()}</p>
+                {/* Metadata Summary */}
+                <div className="grid grid-cols-2 gap-x-1 uppercase text-[9px] border-b border-black pb-0.5 mb-1">
+                  <p className="font-black truncate">REF: {transaction.reference.split('-').pop()}</p>
                   <p className="text-right">{new Date(transaction.createdAt).toLocaleDateString()}</p>
-                  <p className="opacity-70">U: {transaction.unit}</p>
-                  <p className="text-right opacity-70">O: {transaction.cashierName.split(' ')[0]}</p>
+                  <p className="opacity-70">UNIT: {transaction.unit}</p>
+                  <p className="text-right opacity-70">OPS: {transaction.cashierName.split(' ')[0]}</p>
                 </div>
 
-                {/* Items Section - Tight Spacing */}
+                {/* Order Lines */}
                 <div className="mb-1">
-                  <div className="font-black flex justify-between border-b border-black pb-0.5 mb-1 text-[10px]">
-                    <span>ITEM (QTY)</span>
-                    <span>TOTAL</span>
+                  <div className="font-black flex justify-between border-b border-black pb-0.5 mb-1 text-[9px]">
+                    <span>ITEM/QTY</span>
+                    <span className="text-right">TOTAL</span>
                   </div>
                   {transaction.items.map((item, idx) => {
                     const { name, notes } = formatItemDescription(item.description);
                     return (
-                      <div key={idx} className="mb-1 pb-1 border-b border-dotted border-black/20 last:border-0">
+                      <div key={idx} className="mb-0.5 pb-0.5 border-b border-dotted border-black/10 last:border-0">
                         <div className="flex justify-between items-start">
-                          <span className="font-bold uppercase text-[11px] flex-1 leading-none">
-                            {name} <span className="font-black text-[11px]">x{item.quantity}</span>
+                          <span className="font-bold uppercase text-[10px] flex-1 leading-none mr-2">
+                            {name} <span className="font-black">x{item.quantity}</span>
                           </span>
-                          <span className="shrink-0 ml-2 font-black">₦{item.total.toLocaleString()}</span>
+                          <span className="shrink-0 font-black">₦{item.total.toLocaleString()}</span>
                         </div>
                         {notes && (
-                          <div className="font-black text-[9px] leading-none mt-0.5 uppercase text-black italic">
+                          <div className="font-black text-[9px] leading-none mt-0.5 uppercase italic">
                             {'>> '}{notes}
                           </div>
                         )}
@@ -117,13 +117,13 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 </div>
 
                 {/* Financial Summary */}
-                <div className="space-y-0.5 text-[10px] mb-1 font-bold">
+                <div className="space-y-0.5 text-[10px] mb-1 font-bold border-t border-dotted border-black pt-1">
                   <div className="flex justify-between">
                     <span>GROSS:</span>
                     <span>₦{transaction.subtotal.toLocaleString()}</span>
                   </div>
                   {transaction.discountAmount > 0 && (
-                    <div className="flex justify-between text-[10px]">
+                    <div className="flex justify-between">
                       <span>DISC:</span>
                       <span>-₦{transaction.discountAmount.toLocaleString()}</span>
                     </div>
@@ -134,14 +134,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   </div>
                 </div>
 
-                {/* Total - Clear without large gap */}
-                <div className="flex justify-between items-center mb-1 border-y border-black py-0.5">
+                {/* Grand Total - Prominent */}
+                <div className="flex justify-between items-center mb-2 border-t border-b border-black py-1">
                   <span className="text-[11px] font-black uppercase">GRAND TOTAL:</span>
                   <span className="text-base font-black">₦{transaction.totalAmount.toLocaleString()}</span>
                 </div>
 
-                {/* Payments Section */}
-                <div className="space-y-0.5 mb-1 uppercase text-[10px]">
+                {/* Payment & Balance */}
+                <div className="space-y-0.5 mb-1 uppercase text-[9px]">
                   {transaction.payments && transaction.payments.length > 0 ? (
                     transaction.payments.map((p, i) => (
                       <div key={i} className="flex justify-between font-bold">
@@ -155,31 +155,29 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <span>₦{transaction.paidAmount.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-black text-[12px] border-t border-dotted border-black pt-0.5 mt-0.5">
+                  <div className="flex justify-between font-black text-[11px] border-t border-dotted border-black pt-0.5 mt-0.5">
                     <span>BALANCE:</span>
                     <span>₦{transaction.balance.toLocaleString()}</span>
                   </div>
                 </div>
 
-                {/* Bank Details for Unpaid */}
+                {/* Settlement Instructions */}
                 {transaction.balance > 0 && (
-                  <div className="mb-1 border border-dotted border-black p-0.5">
-                    <p className="font-black text-[8px] uppercase tracking-tighter opacity-70 mb-0.5">Payment Details:</p>
+                  <div className="mb-2 border border-dotted border-black p-1">
+                    <p className="font-black text-[8px] uppercase opacity-70 mb-0.5 underline">Settlement Info:</p>
                     {currentBanks.map((bank, i) => (
-                      <div key={i} className="text-[9px] font-bold leading-none mb-0.5 last:mb-0">
-                        <p>{bank.bank}: {bank.accountNumber}</p>
-                      </div>
+                      <p key={i} className="text-[9px] font-bold leading-tight">{bank.bank}: {bank.accountNumber}</p>
                     ))}
                   </div>
                 )}
 
-                {/* Footer - Final content block */}
-                <div className="text-center italic text-[9px] font-black border-t border-black pt-0.5 mt-1">
-                  VERIFIED DOCUMENT • TIDÈ
+                {/* Vertical end point indicator */}
+                <div className="text-center italic text-[8px] font-black border-t border-black pt-1 mt-1">
+                  *** VERIFIED REVENUE RECORD ***
                 </div>
               </div>
             ) : (
-              <div className="invoice-container text-black bg-white p-[10mm] md:p-[20mm] font-sans text-sm">
+              <div className="invoice-container text-black bg-white p-[10mm] md:p-[20mm] font-sans text-sm shadow-none border-none">
                 <div className="flex justify-between items-start border-b-2 border-black pb-8 mb-8">
                   <div>
                     <h1 className="text-3xl font-black tracking-tighter mb-1 uppercase">{settings.hotelName}</h1>

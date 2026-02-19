@@ -33,29 +33,31 @@
                 color: black !important; 
                 margin: 0 !important;
                 padding: 0 !important;
-                width: 100% !important;
+                width: 80mm !important;
                 height: auto !important;
+                overflow: visible !important;
             }
 
             @page {
                 margin: 0 !important;
-                size: 80mm auto; /* Enforces 80mm width and dynamic height */
+                size: 80mm auto; /* Strict 80mm width, height based on content */
             }
 
-            /* Ensure only the active document prints */
+            /* Ensure only the active document prints and occupies full page width */
             #root > div:not(.print-active) { display: none !important; }
             
             .docket-container {
                 width: 80mm !important;
                 max-width: 80mm !important;
                 margin: 0 !important;
-                padding: 2mm !important;
+                padding: 4mm 2mm !important; /* Standard padding for thermal bleed */
                 border: none !important;
+                box-shadow: none !important;
                 background: white !important;
                 font-family: 'Courier New', Courier, monospace !important;
-                overflow: hidden !important;
                 display: block !important;
                 height: auto !important;
+                overflow: hidden !important;
             }
 
             .invoice-container {
@@ -64,6 +66,9 @@
                 padding: 10mm !important;
                 background: white !important;
             }
+
+            /* Strip all non-essential UI elements for print */
+            * { box-shadow: none !important; border-radius: 0 !important; }
         }
         .print-only { display: none; }
     </style>
