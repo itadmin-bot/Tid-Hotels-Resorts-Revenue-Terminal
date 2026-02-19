@@ -39,35 +39,63 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
   }, []);
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    const printWindow = window.open('', '_blank', 'width=800,height=900');
     if (!printWindow || !settings) return;
 
-    const contentId = isPos ? 'thermal-pos-docket' : 'thermal-folio-docket';
+    const contentId = isPos ? 'thermal-pos-docket' : 'a4-folio-invoice';
     const content = document.getElementById(contentId)?.innerHTML;
+
+    // Use specific styles for 80mm vs A4
+    const style = isPos ? `
+      @page { size: 80mm auto; margin: 0 !important; }
+      html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #ffffff !important; -webkit-print-color-adjust: exact; }
+      .print-shell { width: 80mm !important; margin: 0 auto !important; padding: 6mm 4mm !important; box-sizing: border-box !important; font-family: 'Courier New', Courier, monospace !important; color: #000 !important; font-size: 12px !important; line-height: 1.2 !important; background: #fff !important; }
+      .center { text-align: center !important; width: 100%; }
+      .bold { font-weight: 900 !important; }
+      .uppercase { text-transform: uppercase !important; }
+      .divider { border-top: 1px dashed #000; margin: 3mm 0; width: 100%; }
+      .item-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5mm; }
+      .item-name { flex: 1; padding-right: 2mm; text-align: left; }
+      .item-total { white-space: nowrap; text-align: right; font-weight: bold; }
+      .total-box { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 2mm 0; margin: 3mm 0; font-size: 15px; font-weight: 900; display: flex; justify-content: space-between; }
+      .bank-info { font-size: 10px; line-height: 1.3; margin-top: 2mm; text-align: left; }
+      .cut-spacer { height: 15mm; width: 100%; }
+    ` : `
+      @page { size: A4; margin: 15mm !important; }
+      html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #ffffff !important; -webkit-print-color-adjust: exact; font-family: 'Inter', sans-serif !important; }
+      .print-shell { width: 100% !important; padding: 0 !important; box-sizing: border-box !important; color: #000 !important; }
+      .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10mm; margin-bottom: 10mm; }
+      .hotel-info { flex: 1; }
+      .hotel-name { font-size: 32px; font-weight: 900; color: #C8A862; font-style: italic; margin-bottom: 2mm; }
+      .hotel-sub { font-size: 10px; font-weight: bold; letter-spacing: 0.3em; margin-bottom: 4mm; text-transform: uppercase; color: #666; }
+      .hotel-addr { font-size: 11px; color: #444; max-width: 300px; line-height: 1.5; }
+      .invoice-meta { text-align: right; }
+      .invoice-title { font-size: 24px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 2mm; text-transform: uppercase; }
+      .meta-row { font-size: 11px; font-weight: bold; margin-bottom: 1mm; }
+      .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #888; border-bottom: 1px solid #eee; padding-bottom: 1mm; margin-bottom: 4mm; }
+      .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 10mm; margin-bottom: 10mm; }
+      .guest-box, .stay-box { font-size: 13px; line-height: 1.6; }
+      .table { width: 100%; border-collapse: collapse; margin-bottom: 10mm; }
+      .table th { text-align: left; font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 4mm; border-bottom: 2px solid #000; background: #f9f9f9; }
+      .table td { padding: 4mm; border-bottom: 1px solid #eee; font-size: 12px; }
+      .totals { margin-left: auto; width: 300px; }
+      .total-row { display: flex; justify-content: space-between; padding: 2mm 0; font-size: 12px; }
+      .grand-total { border-top: 2px solid #000; margin-top: 2mm; padding-top: 4mm; font-size: 18px; font-weight: 900; }
+      .footer { margin-top: 20mm; border-top: 1px solid #eee; padding-top: 10mm; display: flex; gap: 10mm; }
+      .bank-list { flex: 1; font-size: 10px; }
+      .signature-box { width: 200px; border-top: 1px solid #000; margin-top: 15mm; text-align: center; font-size: 10px; font-weight: 900; padding-top: 2mm; }
+    `;
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${settings.hotelName.replace(/\s+/g, '_')}_POS_${transaction.reference}</title>
-          <style>
-            @page { size: 80mm auto; margin: 0 !important; }
-            html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #ffffff !important; -webkit-print-color-adjust: exact; }
-            .docket-shell { width: 80mm !important; margin: 0 auto !important; padding: 6mm 4mm !important; box-sizing: border-box !important; font-family: 'Courier New', Courier, monospace !important; color: #000 !important; font-size: 12px !important; line-height: 1.2 !important; background: #fff !important; }
-            .center { text-align: center !important; width: 100%; }
-            .bold { font-weight: 900 !important; }
-            .uppercase { text-transform: uppercase !important; }
-            .divider { border-top: 1px dashed #000; margin: 3mm 0; width: 100%; }
-            .item-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5mm; }
-            .item-name { flex: 1; padding-right: 2mm; text-align: left; }
-            .item-total { white-space: nowrap; text-align: right; font-weight: bold; }
-            .total-box { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 2mm 0; margin: 3mm 0; font-size: 15px; font-weight: 900; display: flex; justify-content: space-between; }
-            .bank-info { font-size: 10px; line-height: 1.3; margin-top: 2mm; text-align: left; }
-            .cut-spacer { height: 15mm; width: 100%; }
-          </style>
+          <title>${settings.hotelName.replace(/\s+/g, '_')}_${transaction.reference}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+          <style>${style}</style>
         </head>
         <body>
-          <div class="docket-shell">${content}<div class="cut-spacer"></div></div>
+          <div class="print-shell">${content}</div>
           <script>window.focus(); setTimeout(() => { window.print(); window.close(); }, 600);</script>
         </body>
       </html>
@@ -89,85 +117,199 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
     return { name: parts[0], notes: parts[1].replace(')', '') };
   };
 
-  // Taxation display logic
   const taxesToDisplay = settings.taxes.filter(t => t.visibleOnReceipt);
   const subtotalForReceipt = transaction.subtotal;
 
   return (
     <>
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 overflow-y-auto no-print">
-        <div className="flex flex-col h-full w-full max-w-4xl p-4">
+        <div className="flex flex-col h-full w-full max-w-5xl p-4">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-[#C8A862] rounded-full"></div>
-              <h3 className="text-white font-bold tracking-widest uppercase text-sm">Revenue Authority Dispatch</h3>
+              <h3 className="text-white font-bold tracking-widest uppercase text-sm">Revenue Authority Dispatch Hub</h3>
             </div>
             <div className="flex gap-4">
-              <button onClick={handlePrint} className="px-8 py-2 bg-[#C8A862] text-black font-bold rounded shadow-lg transition-transform hover:scale-105 active:scale-95">Print 80mm Docket</button>
-              <button onClick={onClose} className="px-8 py-2 border border-gray-600 text-white rounded transition-colors hover:bg-gray-800">Close Hub</button>
+              <button onClick={handlePrint} className="px-8 py-2.5 bg-[#C8A862] text-black font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest">
+                Print {isPos ? 'Thermal Docket' : 'Corporate A4 Folio'}
+              </button>
+              <button onClick={onClose} className="px-8 py-2.5 border border-gray-600 text-white rounded-lg transition-colors hover:bg-gray-800 font-bold text-xs uppercase tracking-widest">Close Hub</button>
             </div>
           </div>
 
-          <div className="flex-1 bg-[#0B1C2D] p-2 md:p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center border border-white/5">
-            <div className="bg-white p-8 shadow-2xl h-fit w-[80mm] text-black font-mono">
-                <div className="text-center">
-                  <h1 className="text-xl font-black uppercase mb-1">{settings.hotelName}</h1>
-                  <p className="text-[10px] font-bold uppercase leading-tight">{settings.hotelAddress}</p>
-                </div>
-                <div className="border-b border-black border-dashed my-3"></div>
-                <div className="flex justify-between text-[11px] font-bold uppercase">
-                  <span>Ref: #{transaction.reference.split('-').pop()}</span>
-                  <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
-                </div>
-                <div className="flex justify-between text-[11px] font-bold uppercase mb-2">
-                  <span>Unit: {transaction.unit || 'FOLIO'}</span>
-                  <span>Op: {transaction.cashierName.split(' ')[0]}</span>
-                </div>
-                <div className="border-b border-black border-dashed my-3"></div>
-                <div className="space-y-2">
-                  {transaction.items.map((item, idx) => {
-                    const { name, notes } = formatItemDescription(item.description);
-                    return (
-                      <div key={idx}>
-                        <div className="flex justify-between text-[12px] font-bold uppercase">
-                          <span className="flex-1 pr-2">{name} (x{item.quantity})</span>
-                          <span>₦{item.total.toLocaleString()}</span>
-                        </div>
-                        {notes && (
-                          <div className="text-[10px] text-gray-600 font-bold uppercase italic pl-2 border-l border-gray-300 ml-1">
-                            * {notes}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="border-t border-black border-dotted pt-2 mt-3 space-y-1">
-                  <div className="flex justify-between text-[11px] font-bold">
-                    <span>SUBTOTAL:</span>
-                    <span>₦{subtotalForReceipt.toLocaleString()}</span>
+          <div className="flex-1 bg-[#0B1C2D] p-4 md:p-8 rounded-2xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center border border-white/5">
+            {isPos ? (
+              /* Thermal Preview (Small) */
+              <div className="bg-white p-8 shadow-2xl h-fit w-[80mm] text-black font-mono">
+                  <div className="text-center">
+                    <h1 className="text-xl font-black uppercase mb-1">{settings.hotelName}</h1>
+                    <p className="text-[10px] font-bold uppercase leading-tight">{settings.hotelAddress}</p>
                   </div>
-                  {taxesToDisplay.map(tax => {
-                    const taxAmount = subtotalForReceipt * tax.rate;
-                    return (
-                      <div key={tax.id} className="flex justify-between text-[11px] font-bold">
-                        <span>{tax.name} ({(tax.rate * 100).toFixed(1)}%):</span>
-                        <span>₦{taxAmount.toLocaleString()}</span>
+                  <div className="border-b border-black border-dashed my-3"></div>
+                  <div className="flex justify-between text-[11px] font-bold uppercase">
+                    <span>Ref: #{transaction.reference.split('-').pop()}</span>
+                    <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="border-b border-black border-dashed my-3"></div>
+                  <div className="space-y-2 mb-4">
+                    {transaction.items.map((item, idx) => {
+                      const { name, notes } = formatItemDescription(item.description);
+                      return (
+                        <div key={idx}>
+                          <div className="flex justify-between text-[12px] font-bold uppercase">
+                            <span className="flex-1 pr-2">{name} (x{item.quantity})</span>
+                            <span>₦{item.total.toLocaleString()}</span>
+                          </div>
+                          {notes && <div className="text-[9px] text-gray-500 italic">* {notes}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="border-y border-black py-2 my-3 flex justify-between text-lg font-black uppercase">
+                    <span>TOTAL:</span>
+                    <span>₦{transaction.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="text-[10px] space-y-1 mb-4">
+                    {currentBanks.map((b, i) => (
+                      <div key={i} className="font-bold">{b.bank}: {b.accountNumber}</div>
+                    ))}
+                  </div>
+                  <div className="text-center italic text-[9px] font-black border-t border-black pt-4 uppercase">Verified Revenue Record</div>
+              </div>
+            ) : (
+              /* A4 Preview (Large) */
+              <div className="bg-white p-12 shadow-2xl h-fit w-[210mm] text-black font-inter min-h-[297mm]">
+                  <div className="flex justify-between border-b-2 border-black pb-8 mb-8">
+                    <div>
+                      <h1 className="text-4xl font-black italic text-[#C8A862] uppercase tracking-tighter mb-1">{settings.hotelName}</h1>
+                      <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-gray-400 mb-4">{settings.hotelSubName}</p>
+                      <p className="text-xs text-gray-600 max-w-[300px] leading-relaxed uppercase">{settings.hotelAddress}</p>
+                    </div>
+                    <div className="text-right">
+                      <h2 className="text-2xl font-black uppercase mb-4 tracking-tight">Reservation Folio</h2>
+                      <div className="space-y-1 text-xs font-bold uppercase">
+                        <p><span className="text-gray-400">Reference:</span> {transaction.reference}</p>
+                        <p><span className="text-gray-400">Date Issued:</span> {new Date(transaction.createdAt).toLocaleDateString()}</p>
+                        <p><span className="text-gray-400">Operator:</span> {transaction.cashierName}</p>
                       </div>
-                    );
-                  })}
-                </div>
-                <div className="border-y border-black py-2 my-3 flex justify-between text-lg font-black uppercase">
-                  <span>TOTAL:</span>
-                  <span>₦{transaction.totalAmount.toLocaleString()}</span>
-                </div>
-                <div className="text-center italic text-[10px] font-black border-t border-black pt-4 uppercase">*** Verified Revenue Record ***</div>
-            </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-12 mb-10">
+                    <div>
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-1 mb-3">Guest Particulars</h3>
+                      <div className="space-y-1">
+                        <p className="text-lg font-black uppercase">{transaction.guestName}</p>
+                        <p className="text-xs text-gray-600 font-medium">{transaction.email || 'NO EMAIL RECORDED'}</p>
+                        <p className="text-xs text-gray-600 font-medium">{transaction.phone || 'NO PHONE RECORDED'}</p>
+                        <p className="text-[10px] font-bold uppercase text-gray-400 mt-2">{transaction.identityType}: {transaction.idNumber || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-1 mb-3">Stay Details</h3>
+                      {transaction.roomDetails ? (
+                        <div className="space-y-1">
+                          <p className="text-sm font-black uppercase">{transaction.roomDetails.roomName}</p>
+                          <div className="flex justify-between text-xs font-bold py-1">
+                            <span className="text-gray-500 uppercase">Check-In:</span>
+                            <span>{new Date(transaction.roomDetails.checkIn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                          </div>
+                          <div className="flex justify-between text-xs font-bold py-1">
+                            <span className="text-gray-500 uppercase">Check-Out:</span>
+                            <span>{new Date(transaction.roomDetails.checkOut).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                          </div>
+                          <div className="flex justify-between text-xs font-black py-1 border-t border-gray-50 mt-1">
+                            <span className="text-gray-500 uppercase tracking-widest text-[9px]">Duration:</span>
+                            <span>{transaction.roomDetails.nights} NIGHTS</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">No room mapping found for this folio.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <table className="w-full mb-10">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="text-left py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Description of Service</th>
+                        <th className="text-center py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Qty</th>
+                        <th className="text-right py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Rate (₦)</th>
+                        <th className="text-right py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Amount (₦)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {transaction.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="py-4 px-4 text-xs font-bold uppercase">{item.description}</td>
+                          <td className="py-4 px-4 text-xs text-center font-bold">{item.quantity}</td>
+                          <td className="py-4 px-4 text-xs text-right font-bold">{(item.price).toLocaleString()}</td>
+                          <td className="py-4 px-4 text-xs text-right font-black">{(item.total).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="ml-auto w-72 space-y-2 border-t-2 border-black pt-4">
+                    <div className="flex justify-between text-xs font-bold uppercase">
+                      <span className="text-gray-400">Subtotal:</span>
+                      <span>₦{subtotalForReceipt.toLocaleString()}</span>
+                    </div>
+                    {taxesToDisplay.map(tax => (
+                      <div key={tax.id} className="flex justify-between text-xs font-bold uppercase">
+                        <span className="text-gray-400">{tax.name}:</span>
+                        <span>₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {transaction.discountAmount > 0 && (
+                      <div className="flex justify-between text-xs font-bold uppercase text-red-500">
+                        <span>Adjustment:</span>
+                        <span>-₦{transaction.discountAmount.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xl font-black uppercase pt-4 border-t border-gray-100">
+                      <span>Total:</span>
+                      <span>₦{transaction.totalAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-black uppercase text-green-600 pt-1">
+                      <span>Paid:</span>
+                      <span>₦{transaction.paidAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-black uppercase text-red-600 pt-2 border-t border-gray-100">
+                      <span>Balance:</span>
+                      <span>₦{transaction.balance.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-20 pt-10 border-t border-gray-100 flex gap-8">
+                    <div className="flex-1">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Official Settlement Channels</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {currentBanks.map((b, i) => (
+                          <div key={i} className="text-[11px] font-black uppercase bg-gray-50 p-2 rounded">
+                            {b.bank} • <span className="text-[#C8A862]">{b.accountNumber}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="w-64 text-center">
+                       <div className="h-16 border-b border-black mb-2"></div>
+                       <p className="text-[10px] font-black uppercase tracking-widest">Operator Authorization</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-10 text-center text-[9px] font-bold text-gray-400 uppercase tracking-[0.5em]">
+                    This is an official revenue record generated by {settings.hotelName} Central Ledger.
+                  </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
+      {/* HIDDEN PRINT ASSETS */}
       <div className="hidden" aria-hidden="true">
+        {/* Thermal POS Docket HTML */}
         <div id="thermal-pos-docket">
           <div className="center bold uppercase" style={{fontSize: '16px'}}>{settings.hotelName}</div>
           <div className="center bold uppercase" style={{fontSize: '9px', marginTop: '1mm'}}>{settings.hotelAddress}</div>
@@ -194,66 +336,102 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             );
           })}
           <div className="divider" style={{borderStyle: 'dotted'}}></div>
-          <div className="item-row bold" style={{fontSize: '11px'}}>
-            <span>SUBTOTAL:</span>
-            <span>₦{subtotalForReceipt.toLocaleString()}</span>
-          </div>
-          {taxesToDisplay.map(tax => (
-            <div key={tax.id} className="item-row bold" style={{fontSize: '11px'}}>
-              <span>{tax.name.toUpperCase()} ({(tax.rate * 100).toFixed(1)}%):</span>
-              <span>₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
-            </div>
-          ))}
           <div className="total-box uppercase">
             <span>TOTAL:</span>
             <span>₦{transaction.totalAmount.toLocaleString()}</span>
           </div>
-          {transaction.balance > 0 && (
-            <div className="bank-info">
-              <div className="bold uppercase" style={{marginBottom: '1mm', textDecoration: 'underline'}}>Payment Instructions:</div>
-              {currentBanks.map((bank, i) => (
-                <div key={i} className="bold uppercase">{bank.bank}: {bank.accountNumber}</div>
-              ))}
-              <div className="item-row uppercase bold" style={{fontSize: '14px', marginTop: '2mm', borderTop: '1px dotted #000', paddingTop: '1mm'}}>
-                <span>BALANCE:</span>
-                <span>₦{transaction.balance.toLocaleString()}</span>
-              </div>
-            </div>
-          )}
+          <div className="bank-info">
+            {currentBanks.map((bank, i) => (
+              <div key={i} className="bold uppercase">{bank.bank}: {bank.accountNumber}</div>
+            ))}
+          </div>
           <div className="divider" style={{marginTop: '4mm'}}></div>
-          <div className="center bold uppercase" style={{fontSize: '9px'}}>Verified Revenue Authorization</div>
+          <div className="center bold uppercase" style={{fontSize: '9px'}}>Official Revenue Record</div>
         </div>
 
-        <div id="thermal-folio-docket">
-          <div className="center bold uppercase" style={{fontSize: '16px'}}>{settings.hotelName}</div>
-          <div className="center bold uppercase" style={{fontSize: '11px', margin: '2mm 0'}}>RESERVATION FOLIO</div>
-          <div className="divider"></div>
-          <div className="item-row uppercase bold"><span>REF: {transaction.reference}</span></div>
-          <div className="item-row uppercase bold"><span>GUEST: {transaction.guestName.toUpperCase()}</span></div>
-          <div className="item-row uppercase bold"><span>DATE: {new Date(transaction.createdAt).toLocaleDateString()}</span></div>
-          <div className="divider"></div>
-          {transaction.items.map((item, idx) => (
-            <div key={idx} style={{marginBottom: '3mm'}}>
-              <div className="bold uppercase">{item.description}</div>
-              <div className="item-row" style={{fontSize: '11px'}}>
-                <span>QTY: {item.quantity}</span>
-                <span className="bold">₦{item.total.toLocaleString()}</span>
+        {/* Professional A4 Folio/Invoice HTML */}
+        <div id="a4-folio-invoice">
+          <div className="header">
+            <div className="hotel-info">
+              <div className="hotel-name">{settings.hotelName}</div>
+              <div className="hotel-sub">{settings.hotelSubName}</div>
+              <div className="hotel-addr uppercase">{settings.hotelAddress}</div>
+            </div>
+            <div className="invoice-meta">
+              <div className="invoice-title">Reservation Folio</div>
+              <div className="meta-row uppercase">Ref: {transaction.reference}</div>
+              <div className="meta-row uppercase">Date: {new Date(transaction.createdAt).toLocaleDateString()}</div>
+              <div className="meta-row uppercase">Cashier: {transaction.cashierName}</div>
+            </div>
+          </div>
+
+          <div className="grid">
+            <div className="guest-box">
+              <div className="section-title">Guest Details</div>
+              <div className="bold uppercase" style={{fontSize: '16px', marginBottom: '2mm'}}>{transaction.guestName}</div>
+              <div className="uppercase">{transaction.email || 'No email registered'}</div>
+              <div className="uppercase">{transaction.phone || 'No phone registered'}</div>
+              <div className="uppercase" style={{marginTop: '2mm', fontSize: '11px', color: '#666'}}>{transaction.identityType}: {transaction.idNumber || 'N/A'}</div>
+            </div>
+            <div className="stay-box">
+              <div className="section-title">Stay Information</div>
+              {transaction.roomDetails ? (
+                <div className="uppercase">
+                  <div className="bold" style={{marginBottom: '2mm'}}>{transaction.roomDetails.roomName}</div>
+                  <div className="item-row"><span>Check-In:</span> <span className="bold">{new Date(transaction.roomDetails.checkIn).toLocaleDateString()}</span></div>
+                  <div className="item-row"><span>Check-Out:</span> <span className="bold">{new Date(transaction.roomDetails.checkOut).toLocaleDateString()}</span></div>
+                  <div className="item-row" style={{marginTop: '2mm', borderTop: '1px solid #eee', paddingTop: '1mm'}}><span>Nights:</span> <span className="bold">{transaction.roomDetails.nights}</span></div>
+                </div>
+              ) : <div className="bold">Reservation Mapping Data N/A</div>}
+            </div>
+          </div>
+
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{width: '60%'}}>Service Description</th>
+                <th style={{textAlign: 'center'}}>Qty</th>
+                <th style={{textAlign: 'right'}}>Rate (₦)</th>
+                <th style={{textAlign: 'right'}}>Amount (₦)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transaction.items.map((item, idx) => (
+                <tr key={idx}>
+                  <td className="uppercase bold">{item.description}</td>
+                  <td className="bold" style={{textAlign: 'center'}}>{item.quantity}</td>
+                  <td className="bold" style={{textAlign: 'right'}}>{item.price.toLocaleString()}</td>
+                  <td className="bold" style={{textAlign: 'right'}}>{item.total.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="totals">
+            <div className="total-row uppercase"><span>Subtotal:</span> <span className="bold">₦{subtotalForReceipt.toLocaleString()}</span></div>
+            {taxesToDisplay.map(tax => (
+              <div key={tax.id} className="total-row uppercase"><span>{tax.name}:</span> <span className="bold">₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span></div>
+            ))}
+            {transaction.discountAmount > 0 && (
+              <div className="total-row uppercase" style={{color: 'red'}}><span>Adjustment:</span> <span className="bold">-₦{transaction.discountAmount.toLocaleString()}</span></div>
+            )}
+            <div className="total-row grand-total uppercase"><span>Total Amount:</span> <span>₦{transaction.totalAmount.toLocaleString()}</span></div>
+            <div className="total-row uppercase" style={{fontSize: '14px', color: '#008000'}}><span>Amount Paid:</span> <span className="bold">₦{transaction.paidAmount.toLocaleString()}</span></div>
+            <div className="total-row uppercase" style={{fontSize: '16px', color: 'red', borderTop: '1px solid #eee', marginTop: '2mm', paddingTop: '2mm'}}><span>Outstanding:</span> <span>₦{transaction.balance.toLocaleString()}</span></div>
+          </div>
+
+          <div className="footer">
+            <div className="bank-list">
+              <div className="section-title">Settlement Instructions</div>
+              {currentBanks.map((bank, i) => (
+                <div key={i} className="bold uppercase" style={{marginBottom: '1mm', fontSize: '12px'}}>{bank.bank} • {bank.accountNumber} • {bank.accountName}</div>
+              ))}
+              <div style={{marginTop: '10mm', fontSize: '9px', color: '#999', textTransform: 'uppercase'}} className="bold italic">
+                Verified Corporate Folio Dispatch. Generated by {settings.hotelName} Revenue Authority.
               </div>
             </div>
-          ))}
-          <div className="divider"></div>
-          <div className="total-box uppercase"><span>VALUATION:</span><span>₦{transaction.totalAmount.toLocaleString()}</span></div>
-          <div className="item-row uppercase bold" style={{color: '#000', fontSize: '13px'}}><span>OUTSTANDING:</span><span>₦{transaction.balance.toLocaleString()}</span></div>
-          {transaction.balance > 0 && (
-            <div className="bank-info" style={{marginTop: '4mm'}}>
-              <div className="center bold uppercase" style={{fontSize: '9px', borderBottom: '1px dotted #000', marginBottom: '1mm'}}>Settlement Channels</div>
-              {currentBanks.map((bank, i) => (
-                <div key={i} className="bold uppercase">{bank.bank}: {bank.accountNumber}</div>
-              ))}
-            </div>
-          )}
-          <div className="divider" style={{marginTop: '5mm'}}></div>
-          <div className="center bold uppercase" style={{fontSize: '9px'}}>Official Folio Record</div>
+            <div className="signature-box uppercase">Operator Signature</div>
+          </div>
         </div>
       </div>
     </>

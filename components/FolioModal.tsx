@@ -138,8 +138,14 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const balance = finalTotal - totalPaid;
 
   const handleSubmit = async () => {
-    if (!guest.name || !stayPeriod.checkIn || !stayPeriod.checkOut || bookings.some(b => !b.roomId)) {
-      alert('Incomplete Manifest: Please finalize guest data and room selections.');
+    // SECURITY PROTOCOL: Enforce mandatory fields for Corporate Folios
+    if (!guest.name || !guest.idNumber || !guest.email) {
+      alert('Security Protocol: Full Name, ID Card Number, and Corporate Email are mandatory for all Reservation Folios before authorization.');
+      return;
+    }
+
+    if (!stayPeriod.checkIn || !stayPeriod.checkOut || bookings.some(b => !b.roomId)) {
+      alert('Incomplete Manifest: Please finalize stay period and room selections.');
       return;
     }
 
@@ -242,8 +248,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
             <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Guest Identity</h3>
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[9px] font-bold text-gray-500 uppercase">Guest Full Name</label>
-                <input placeholder="Enter full legal name" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none font-bold" value={guest.name} onChange={(e) => setGuest({...guest, name: e.target.value})} />
+                <label className="text-[9px] font-bold text-gray-500 uppercase">Guest Full Name <span className="text-red-500">*</span></label>
+                <input placeholder="Enter full legal name" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none font-bold focus:border-[#C8A862]" value={guest.name} onChange={(e) => setGuest({...guest, name: e.target.value})} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -258,6 +264,18 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                    <div className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-[#C8A862] font-black uppercase tracking-widest text-center">{stayPeriod.nights} Calculated Nights</div>
                 </div>
               </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Corporate/Personal Email <span className="text-red-500">*</span></label>
+                  <input type="email" placeholder="guest@example.com" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" value={guest.email} onChange={(e) => setGuest({...guest, email: e.target.value})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Mobile Number</label>
+                  <input placeholder="+234 ..." className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" value={guest.phone} onChange={(e) => setGuest({...guest, phone: e.target.value})} />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-gray-500 uppercase">ID Protocol</label>
@@ -269,8 +287,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">ID Number</label>
-                  <input placeholder="Document Reference" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={guest.idNumber} onChange={(e) => setGuest({...guest, idNumber: e.target.value})} />
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">ID Number <span className="text-red-500">*</span></label>
+                  <input placeholder="Document Reference" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" value={guest.idNumber} onChange={(e) => setGuest({...guest, idNumber: e.target.value})} />
                 </div>
               </div>
             </div>
@@ -377,9 +395,16 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               </div>
             </div>
           </div>
-          <button disabled={isSubmitting || !guest.name} onClick={handleSubmit} className="w-full py-5 bg-[#C8A862] text-black font-black rounded-xl uppercase tracking-widest text-xs shadow-xl active:scale-[0.98] disabled:opacity-50">
+          <button 
+            disabled={isSubmitting || !guest.name || !guest.idNumber || !guest.email} 
+            onClick={handleSubmit} 
+            className="w-full py-5 bg-[#C8A862] text-black font-black rounded-xl uppercase tracking-widest text-xs shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:grayscale transition-all"
+          >
             {isSubmitting ? 'GENERATING FOLIO...' : 'GENERATE CORPORATE FOLIO'}
           </button>
+          {(!guest.name || !guest.idNumber || !guest.email) && (
+            <p className="text-[9px] text-red-500/60 font-black uppercase text-center mt-3 tracking-widest">Compulsory: Full Name, ID, & Email required</p>
+          )}
         </div>
       </div>
     </div>
