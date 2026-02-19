@@ -33,6 +33,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [newAccessCode, setNewAccessCode] = useState('');
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Local clock to refresh "Online" status calculations in real-time
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'rooms'), (snapshot) => {
@@ -392,37 +401,42 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/30">
-                  {users.map((u) => (
-                    <tr key={u.uid} className="hover:bg-white/5 transition-colors">
-                      <td className="py-4">
-                        <div className="font-bold text-sm">{u.displayName}</div>
-                        <div className="text-[10px] text-gray-500">{u.email}</div>
-                      </td>
-                      <td className="py-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.role === UserRole.ADMIN ? 'bg-purple-900/40 text-purple-400' : 'bg-blue-900/40 text-blue-400'}`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${u.isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`}></div>
-                          <span className="text-xs">{u.isOnline ? 'Online' : 'Offline'}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 text-xs text-gray-400">
-                        {u.lastActive ? new Date(u.lastActive).toLocaleString() : 'Never'}
-                      </td>
-                      <td className="py-4 text-right">
-                        {u.uid !== user.uid && (
-                          <button onClick={async () => {
-                            if (confirm(`Change ${u.displayName} role?`)) {
-                              await updateDoc(doc(db, 'users', u.uid), { role: u.role === UserRole.ADMIN ? UserRole.STAFF : UserRole.ADMIN });
-                            }
-                          }} className="text-xs text-[#C8A862] hover:underline">Toggle Role</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {users.map((u) => {
+                    // Calculate real-time online status: within 60 seconds of current tick
+                    const isActuallyOnline = u.lastActive && (currentTime - u.lastActive) < 60000;
+                    
+                    return (
+                      <tr key={u.uid} className="hover:bg-white/5 transition-colors">
+                        <td className="py-4">
+                          <div className="font-bold text-sm">{u.displayName}</div>
+                          <div className="text-[10px] text-gray-500">{u.email}</div>
+                        </td>
+                        <td className="py-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.role === UserRole.ADMIN ? 'bg-purple-900/40 text-purple-400' : 'bg-blue-900/40 text-blue-400'}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="py-4">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isActuallyOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`}></div>
+                            <span className="text-xs">{isActuallyOnline ? 'Online' : 'Offline'}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 text-xs text-gray-400">
+                          {u.lastActive ? new Date(u.lastActive).toLocaleString() : 'Never'}
+                        </td>
+                        <td className="py-4 text-right">
+                          {u.uid !== user.uid && (
+                            <button onClick={async () => {
+                              if (confirm(`Change ${u.displayName} role?`)) {
+                                await updateDoc(doc(db, 'users', u.uid), { role: u.role === UserRole.ADMIN ? UserRole.STAFF : UserRole.ADMIN });
+                              }
+                            }} className="text-xs text-[#C8A862] hover:underline">Toggle Role</button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

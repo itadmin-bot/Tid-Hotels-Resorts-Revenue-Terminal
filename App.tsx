@@ -54,6 +54,34 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [user]);
 
+  // Real-time Presence Heartbeat
+  useEffect(() => {
+    if (!user || !isVerified || !userProfile?.domainVerified) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    
+    // Initial heartbeat
+    updateDoc(userRef, { isOnline: true, lastActive: Date.now() }).catch(console.warn);
+
+    // Periodic heartbeat every 30 seconds
+    const heartbeatInterval = window.setInterval(() => {
+      updateDoc(userRef, { isOnline: true, lastActive: Date.now() }).catch(console.warn);
+    }, 30000);
+
+    // Cleanup: Set offline on unmount/signout
+    const handleUnload = () => {
+      updateDoc(userRef, { isOnline: false, lastActive: Date.now() }).catch(console.warn);
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      window.removeEventListener('beforeunload', handleUnload);
+      handleUnload();
+    };
+  }, [user, isVerified, userProfile?.domainVerified]);
+
   useEffect(() => {
     let unsubProfile: (() => void) | undefined;
     let isMounted = true;
@@ -98,19 +126,13 @@ const App: React.FC = () => {
           } else {
             const data = snapshot.data();
             if (isMounted) {
-              // Automatically ensure online status and update heartbeat when profile is loaded
-              // Fix: Added check for !data.lastActive to prevent "Never" status for existing users
-              if (!data.isOnline || !data.lastActive || (Date.now() - (data.lastActive || 0) > 60000)) {
-                updateDoc(userRef, { isOnline: true, lastActive: Date.now() }).catch(console.warn);
-              }
-
               setUserProfile({
                 uid: currentUser.uid,
                 email: currentUser.email || '',
                 displayName: data.displayName || 'Operator',
                 role: (data.role as UserRole) || UserRole.STAFF,
                 domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
-                isOnline: true,
+                isOnline: data.isOnline ?? false,
                 lastActive: data.lastActive || Date.now()
               });
               setLoading(false);
