@@ -108,7 +108,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                         </div>
                         {notes && (
                           <div className="font-black text-[9px] leading-none mt-0.5 uppercase text-black italic">
-                            >> {notes}
+                            {'>> '}{notes}
                           </div>
                         )}
                       </div>
