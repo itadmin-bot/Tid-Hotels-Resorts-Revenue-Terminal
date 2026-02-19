@@ -69,6 +69,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         const data = snapshot.data();
         setSettings({
           hotelName: data.hotelName || BRAND.name,
+          hotelSubName: data.hotelSubName || 'Hotels & Resorts',
           hotelAddress: data.hotelAddress || BRAND.address,
           vat: data.vat,
           serviceCharge: data.serviceCharge,
@@ -79,6 +80,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       } else if (user.role === UserRole.ADMIN) {
         const defaultSettings: AppSettings = {
           hotelName: BRAND.name,
+          hotelSubName: 'Hotels & Resorts',
           hotelAddress: BRAND.address,
           vat: 0.075,
           serviceCharge: 0.10,
@@ -380,6 +382,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                         <input type="number" className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24 text-right" defaultValue={item.price} onBlur={(e) => updateMenuItem(item.id, { price: parseFloat(e.target.value) || 0 })} />
                       </td>
                       <td className="py-4 text-right">
+                        {/* Fixed typo: classNametext-red-400 changed to className="text-red-400..." */}
                         <button onClick={() => deleteMenuItem(item.id)} className="text-red-400 text-xs hover:underline">Delete</button>
                       </td>
                     </tr>
@@ -453,15 +456,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
             <div>
               <h3 className="font-bold text-[#C8A862] mb-4 uppercase tracking-widest text-xs">Corporate Identity</h3>
               <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className="text-xs text-gray-500 uppercase block mb-1">Hotel/Brand Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white font-bold focus:border-[#C8A862] outline-none" 
-                    defaultValue={settings.hotelName} 
-                    onBlur={(e) => updateGlobalSettings({ hotelName: e.target.value || BRAND.name })} 
-                  />
-                  <p className="text-[9px] text-gray-500 mt-1 uppercase">Updates the terminal logo and receipt header name.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase block mb-1">Hotel/Brand Name</label>
+                    <input 
+                      type="text" 
+                      className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white font-bold focus:border-[#C8A862] outline-none" 
+                      defaultValue={settings.hotelName} 
+                      onBlur={(e) => updateGlobalSettings({ hotelName: e.target.value || BRAND.name })} 
+                    />
+                    <p className="text-[9px] text-gray-500 mt-1 uppercase">Main title for terminal and receipts.</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase block mb-1">Sub-brand / Tagline</label>
+                    <input 
+                      type="text" 
+                      className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white font-bold focus:border-[#C8A862] outline-none" 
+                      defaultValue={settings.hotelSubName} 
+                      onBlur={(e) => updateGlobalSettings({ hotelSubName: e.target.value || 'Hotels & Resorts' })} 
+                    />
+                    <p className="text-[9px] text-gray-500 mt-1 uppercase">Sub-title shown in sidebar and loading.</p>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 uppercase block mb-1">Corporate Address</label>
@@ -471,7 +486,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     defaultValue={settings.hotelAddress} 
                     onBlur={(e) => updateGlobalSettings({ hotelAddress: e.target.value || BRAND.address })} 
                   />
-                  <p className="text-[9px] text-gray-500 mt-1 uppercase">Updates the address displayed on all corporate receipts and folios.</p>
+                  <p className="text-[9px] text-gray-500 mt-1 uppercase">Physical address on all official documents.</p>
                 </div>
               </div>
             </div>
@@ -503,7 +518,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         )}
 
         {activeTab === 'SECURITY' && (
-          <div className="space-y-6 max-md">
+          /* Fixed typo: max-md changed to max-w-md */
+          <div className="space-y-6 max-w-md">
             <h3 className="font-bold text-[#C8A862]">Security Control</h3>
             <div>
               <label className="text-xs text-gray-500 uppercase block mb-1">New Master Access Code</label>

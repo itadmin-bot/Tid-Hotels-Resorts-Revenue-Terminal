@@ -57,11 +57,17 @@ const App: React.FC = () => {
 
   // Real-time Settings and Dynamic Title
   useEffect(() => {
+    if (!user) {
+      setSettings(null);
+      return;
+    }
+
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         const updatedSettings: AppSettings = {
           hotelName: data.hotelName || BRAND.name,
+          hotelSubName: data.hotelSubName || 'Hotels & Resorts',
           hotelAddress: data.hotelAddress || BRAND.address,
           vat: data.vat || 0.075,
           serviceCharge: data.serviceCharge || 0.10,
@@ -72,9 +78,11 @@ const App: React.FC = () => {
         setSettings(updatedSettings);
         document.title = `${updatedSettings.hotelName} - Revenue Terminal`;
       }
+    }, (err) => {
+      console.warn("Settings snapshot listener restricted:", err);
     });
     return () => unsubSettings();
-  }, []);
+  }, [user]);
 
   // Real-time Presence Heartbeat
   useEffect(() => {
@@ -188,7 +196,10 @@ const App: React.FC = () => {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0B1C2D]">
         <div className="flex flex-col items-center gap-8">
-          <div className="text-[#C8A862] animate-pulse text-4xl font-black italic tracking-tighter uppercase">{settings?.hotelName || BRAND.name}</div>
+          <div className="text-center">
+            <div className="text-[#C8A862] animate-pulse text-4xl font-black italic tracking-tighter uppercase">{settings?.hotelName || BRAND.name}</div>
+            <div className="text-[10px] text-gray-500 uppercase tracking-[0.4em] font-bold mt-1">{settings?.hotelSubName || 'Hotels & Resorts'}</div>
+          </div>
           <div className="w-64 h-1 bg-gray-800 rounded-full relative overflow-hidden">
             <div className="absolute top-0 left-0 h-full bg-[#C8A862] animate-progress w-2/3"></div>
           </div>

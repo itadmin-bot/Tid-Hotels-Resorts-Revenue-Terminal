@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { Transaction, UnitType, AppSettings } from '../types';
 import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '../constants';
 
@@ -14,6 +14,9 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
   const isPos = transaction.type === 'POS';
 
   useEffect(() => {
+    // Only subscribe to settings if we have an active session to prevent permission-denied errors
+    if (!auth.currentUser) return;
+
     const unsubscribe = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
@@ -27,6 +30,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           invoiceBanks: data.invoiceBanks || INVOICE_BANKS
         } as AppSettings);
       }
+    }, (error) => {
+      console.warn("Receipt Settings subscription error:", error);
     });
     return () => unsubscribe();
   }, []);

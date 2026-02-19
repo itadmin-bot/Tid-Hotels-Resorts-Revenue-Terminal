@@ -45,6 +45,7 @@ export interface MenuItem {
 
 export interface AppSettings {
   hotelName: string;
+  hotelSubName: string;
   hotelAddress: string;
   vat: number;
   serviceCharge: number;

@@ -18,7 +18,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewCha
         <h1 className="text-2xl font-bold text-[#C8A862] italic tracking-tighter uppercase truncate">
           {settings?.hotelName || BRAND.name}
         </h1>
-        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Hotels & Resorts</p>
+        <p className="text-[10px] text-gray-500 uppercase tracking-widest">
+          {settings?.hotelSubName || 'Hotels & Resorts'}
+        </p>
       </div>
 
       <nav className="flex-1 space-y-2">
