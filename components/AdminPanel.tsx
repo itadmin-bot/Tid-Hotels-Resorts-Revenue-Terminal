@@ -12,7 +12,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount } from '../types';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType } from '../types';
 import { INITIAL_ROOMS, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '../constants';
 
 interface AdminPanelProps {
@@ -58,7 +58,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     const unsubscribe = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        // Migration/Compatibility: If old single objects exist, wrap them in arrays
         setSettings({
           vat: data.vat,
           serviceCharge: data.serviceCharge,
@@ -144,7 +143,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   };
 
   const addMenuItem = async () => {
-    const newItem = { name: 'New Item', description: '', price: 0, category: 'General', imageUrl: '' };
+    const newItem = { name: 'New Item', description: '', price: 0, category: 'General', unit: 'ALL', imageUrl: '' };
     await addDoc(collection(db, 'menu'), newItem);
   };
 
@@ -338,7 +337,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 <thead>
                   <tr className="text-[10px] text-gray-500 uppercase border-b border-gray-700/50">
                     <th className="pb-4">Item Name</th>
-                    <th className="pb-4">Description</th>
+                    <th className="pb-4">Unit</th>
                     <th className="pb-4">Category</th>
                     <th className="pb-4 text-right">Price (₦)</th>
                     <th className="pb-4 text-right">Actions</th>
@@ -351,7 +350,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                         <input className="bg-transparent border-none text-white font-bold focus:outline-none w-full" defaultValue={item.name} onBlur={(e) => updateMenuItem(item.id, { name: e.target.value })} />
                       </td>
                       <td className="py-4">
-                        <input className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full" placeholder="Add description..." defaultValue={item.description} onBlur={(e) => updateMenuItem(item.id, { description: e.target.value })} />
+                        <select 
+                          className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full" 
+                          value={item.unit} 
+                          onChange={(e) => updateMenuItem(item.id, { unit: e.target.value as any })}
+                        >
+                          <option value="ALL">All Units</option>
+                          <option value={UnitType.ZENZA}>Zenza</option>
+                          <option value={UnitType.WHISPERS}>Whispers</option>
+                        </select>
                       </td>
                       <td className="py-4">
                         <input className="bg-transparent border-none text-gray-400 focus:outline-none w-full text-sm" defaultValue={item.category} onBlur={(e) => updateMenuItem(item.id, { category: e.target.value })} />

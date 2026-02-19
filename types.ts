@@ -39,6 +39,7 @@ export interface MenuItem {
   description: string;
   price: number;
   category: string;
+  unit: UnitType | 'ALL';
   imageUrl?: string;
 }
 

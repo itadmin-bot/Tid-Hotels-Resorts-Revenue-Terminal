@@ -22,7 +22,8 @@ interface POSModalProps {
 const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [unit, setUnit] = useState<UnitType>(UnitType.ZENZA);
+  const [unit, setUnit] = useState<UnitType | null>(null);
+  const [menuFilter, setMenuFilter] = useState<UnitType | 'ALL'>('ALL');
   const [cart, setCart] = useState<{item: MenuItem, quantity: number}[]>([]);
   const [guest, setGuest] = useState({ name: 'Walk-in Guest', email: '', phone: '' });
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.POS, amount: 0 }]);
@@ -39,6 +40,11 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
     });
     return () => { unsubMenu(); unsubSettings(); };
   }, []);
+
+  const selectUnit = (u: UnitType) => {
+    setUnit(u);
+    setMenuFilter(u); // Default filter to selected unit
+  };
 
   const addToCart = (item: MenuItem) => {
     const existing = cart.find(c => c.item.id === item.id);
@@ -80,6 +86,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
   };
 
   const handleSubmit = async () => {
+    if (!unit) return alert('Revenue unit not selected.');
     if (cart.length === 0) return alert('Cannot process empty cart.');
     setIsSubmitting(true);
     try {
@@ -155,6 +162,42 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
     );
   }
 
+  // Mandatory Unit Selection Screen
+  if (!unit) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 text-center space-y-8 shadow-2xl">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-[#C8A862] uppercase tracking-tight">REVENUE UNIT SELECTION</h2>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em]">Initialize POS Terminal Session</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <button 
+              onClick={() => selectUnit(UnitType.ZENZA)}
+              className="py-8 bg-purple-600/10 border-2 border-purple-500/30 rounded-2xl text-purple-400 hover:bg-purple-600 hover:text-white transition-all group"
+            >
+              <span className="text-lg font-black uppercase tracking-widest group-hover:scale-110 block transition-transform">ZENZA UNIT</span>
+              <span className="text-[9px] font-bold opacity-60">Revenue Stream A</span>
+            </button>
+            <button 
+              onClick={() => selectUnit(UnitType.WHISPERS)}
+              className="py-8 bg-blue-600/10 border-2 border-blue-500/30 rounded-2xl text-blue-400 hover:bg-blue-600 hover:text-white transition-all group"
+            >
+              <span className="text-lg font-black uppercase tracking-widest group-hover:scale-110 block transition-transform">WHISPERS UNIT</span>
+              <span className="text-[9px] font-bold opacity-60">Revenue Stream B</span>
+            </button>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-xs font-black uppercase tracking-widest">Cancel Session</button>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredMenuItems = menu.filter(item => {
+    if (menuFilter === 'ALL') return true;
+    return item.unit === menuFilter || item.unit === 'ALL';
+  });
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-[#13263A] w-full max-w-6xl h-[90vh] rounded-2xl border border-gray-700 overflow-hidden flex flex-col md:flex-row shadow-2xl">
@@ -163,40 +206,58 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
           <div className="p-6 border-b border-gray-700/50 flex justify-between items-center bg-[#0B1C2D]/30">
             <div>
               <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tight">WALK-IN POS DISPATCH</h2>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Revenue Authority Terminal</p>
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Active Revenue Source: {unit}</p>
             </div>
-            <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700">
-              <button 
-                disabled={cart.length > 0}
-                onClick={() => setUnit(UnitType.ZENZA)}
-                className={`px-4 py-2 text-[10px] font-black uppercase rounded transition-all ${unit === UnitType.ZENZA ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-white disabled:opacity-50'}`}
-              >
-                Zenza
-              </button>
-              <button 
-                disabled={cart.length > 0}
-                onClick={() => setUnit(UnitType.WHISPERS)}
-                className={`px-4 py-2 text-[10px] font-black uppercase rounded transition-all ${unit === UnitType.WHISPERS ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white disabled:opacity-50'}`}
-              >
-                Whispers
-              </button>
+            <div className="flex gap-2 items-center">
+              <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700 mr-4">
+                <button 
+                  onClick={() => setMenuFilter(UnitType.ZENZA)}
+                  className={`px-3 py-1.5 text-[9px] font-black uppercase rounded transition-all ${menuFilter === UnitType.ZENZA ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                  Zenza Items
+                </button>
+                <button 
+                  onClick={() => setMenuFilter(UnitType.WHISPERS)}
+                  className={`px-3 py-1.5 text-[9px] font-black uppercase rounded transition-all ${menuFilter === UnitType.WHISPERS ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                  Whispers Items
+                </button>
+                <button 
+                  onClick={() => setMenuFilter('ALL')}
+                  className={`px-3 py-1.5 text-[9px] font-black uppercase rounded transition-all ${menuFilter === 'ALL' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-white'}`}
+                >
+                  All Items
+                </button>
+              </div>
+              <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700 opacity-50">
+                 <span className="px-4 py-2 text-[10px] font-black uppercase text-[#C8A862]">Locked: {unit}</span>
+              </div>
             </div>
-            {cart.length > 0 && <span className="text-[9px] text-[#C8A862] font-black animate-pulse uppercase tracking-widest">UNIT LOCKED</span>}
           </div>
           <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {menu.map(item => (
+            {filteredMenuItems.map(item => (
               <button 
                 key={item.id} 
                 onClick={() => addToCart(item)}
                 className="bg-[#0B1C2D]/50 border border-gray-700/30 p-4 rounded-xl text-left hover:border-[#C8A862]/50 transition-all flex flex-col justify-between group active:scale-95"
               >
                 <div>
-                  <div className="text-[10px] text-gray-500 font-black uppercase mb-1">{item.category}</div>
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="text-[9px] text-gray-500 font-black uppercase">{item.category}</div>
+                    {item.unit !== 'ALL' && (
+                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${item.unit === UnitType.ZENZA ? 'border-purple-500/30 text-purple-400' : 'border-blue-500/30 text-blue-400'}`}>
+                        {item.unit}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm font-bold text-white group-hover:text-[#C8A862] line-clamp-2 leading-tight">{item.name}</div>
                 </div>
                 <div className="mt-4 text-[#C8A862] font-black">₦{item.price.toLocaleString()}</div>
               </button>
             ))}
+            {filteredMenuItems.length === 0 && (
+              <div className="col-span-full py-20 text-center text-gray-600 uppercase text-[10px] font-black tracking-widest italic opacity-50">No Items Found for {menuFilter}</div>
+            )}
           </div>
         </div>
 
