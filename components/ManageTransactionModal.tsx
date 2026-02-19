@@ -75,7 +75,12 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const handleMenuSelect = (index: number, itemId: string) => {
     const selected = menuCatalog.find(m => m.id === itemId);
     if (selected) {
-      updateItem(index, 'description', selected.name);
+      // Correctly format the description with kitchen instructions for the receipt
+      const fullDescription = selected.description 
+        ? `${selected.name} (${selected.description})` 
+        : selected.name;
+      
+      updateItem(index, 'description', fullDescription);
       updateItem(index, 'price', selected.price);
     }
   };

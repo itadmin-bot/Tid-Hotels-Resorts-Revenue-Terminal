@@ -92,7 +92,8 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
     setIsSubmitting(true);
     try {
       const items: TransactionItem[] = cart.map(c => ({
-        description: c.item.name,
+        // Append description to the name so it appears on the kitchen docket/receipt
+        description: c.item.description ? `${c.item.name} (${c.item.description})` : c.item.name,
         quantity: c.quantity,
         price: c.item.price,
         total: c.item.price * c.quantity
@@ -276,6 +277,11 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
                     )}
                   </div>
                   <div className="text-sm font-bold text-white group-hover:text-[#C8A862] line-clamp-2 leading-tight uppercase tracking-tight">{item.name}</div>
+                  {item.description && (
+                    <div className="text-[10px] text-gray-500 font-medium italic mt-1 line-clamp-2 leading-tight">
+                      {item.description}
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4 text-[#C8A862] font-black">₦{item.price.toLocaleString()}</div>
               </button>

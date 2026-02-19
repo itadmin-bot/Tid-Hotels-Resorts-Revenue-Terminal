@@ -14,7 +14,6 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
   const isPos = transaction.type === 'POS';
 
   useEffect(() => {
-    // Only subscribe to settings if we have an active session to prevent permission-denied errors
     if (!auth.currentUser) return;
 
     const unsubscribe = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
@@ -49,6 +48,16 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
   const currentBanks = transaction.selectedBank ? [transaction.selectedBank] : bankList;
 
+  // Helper to split name and instructions for better kitchen visibility
+  const formatItemDescription = (desc: string) => {
+    if (!desc.includes(' (')) return { name: desc, notes: '' };
+    const parts = desc.split(' (');
+    return {
+      name: parts[0],
+      notes: parts[1].replace(')', '')
+    };
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 overflow-y-auto">
       <div className="flex flex-col h-full w-full max-w-4xl p-4">
@@ -82,14 +91,24 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <div className="border-y border-dashed border-black/20 py-3 mb-3">
                 <div className="font-bold flex justify-between mb-2 text-[9px]">
                   <span>ITEM</span>
-                  <span>TOTAL</span>
+                  <span className="shrink-0 ml-4">TOTAL</span>
                 </div>
-                {transaction.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between mb-1">
-                    <span className="truncate pr-4">{item.description} (x{item.quantity})</span>
-                    <span>₦{item.total.toLocaleString()}</span>
-                  </div>
-                ))}
+                {transaction.items.map((item, idx) => {
+                  const { name, notes } = formatItemDescription(item.description);
+                  return (
+                    <div key={idx} className="mb-2">
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold uppercase">{name} x{item.quantity}</span>
+                        <span className="shrink-0 ml-4">₦{item.total.toLocaleString()}</span>
+                      </div>
+                      {notes && (
+                        <div className="italic text-[9px] opacity-80 mt-0.5 border-l-2 border-black/10 pl-2 ml-1">
+                          * {notes}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="space-y-1 text-[9px] border-b border-dashed border-black/10 pb-2 mb-2">
@@ -107,13 +126,12 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <span>VAT ({((settings?.vat || 0) * 100).toFixed(1)}% Inc):</span>
                   <span>₦{transaction.taxAmount.toLocaleString()}</span>
                 </div>
-                {/* Note: Service Charge hidden on POS as per instructions */}
               </div>
 
               <div className="text-right text-sm font-black mb-4 uppercase">Grand Total: ₦{transaction.totalAmount.toLocaleString()}</div>
 
               <div className="border-t border-black/10 pt-3 space-y-1 mb-6 uppercase">
-                <p className="font-bold text-[8px] opacity-60">Payment Breakdown:</p>
+                <p className="font-bold text-[8px] opacity-60">Settlement Log:</p>
                 {transaction.payments && transaction.payments.length > 0 ? (
                   transaction.payments.map((p, i) => (
                     <div key={i} className="flex justify-between text-[9px]">
@@ -128,14 +146,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-xs border-t border-black/5 pt-1 mt-1">
-                  <span>OUTSTANDING:</span>
+                  <span>BALANCE:</span>
                   <span>₦{transaction.balance.toLocaleString()}</span>
                 </div>
               </div>
 
               {transaction.balance > 0 && (
                 <div className="mb-6">
-                  <div className="font-bold text-[8px] uppercase tracking-widest opacity-60 mb-1">Settlement Account(s)</div>
+                  <div className="font-bold text-[8px] uppercase tracking-widest opacity-60 mb-1">Corporate Accounts</div>
                   <div className="space-y-1">
                     {currentBanks.map((bank, i) => (
                       <div key={i} className="p-1 border border-dashed border-black/10 text-[8px]">
@@ -186,7 +204,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 <tbody className="font-bold">
                   {transaction.items.map((item, idx) => (
                     <tr key={idx} className="border-b border-gray-100">
-                      <td className="p-4">{item.description}</td>
+                      <td className="p-4 leading-relaxed">{item.description}</td>
                       <td className="text-center p-4">{item.quantity}</td>
                       <td className="text-right p-4">₦{item.total.toLocaleString()}</td>
                     </tr>
