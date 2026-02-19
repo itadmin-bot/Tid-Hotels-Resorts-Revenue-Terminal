@@ -352,6 +352,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 <thead>
                   <tr className="text-[10px] text-gray-500 uppercase border-b border-gray-700/50">
                     <th className="pb-4">Item Name</th>
+                    <th className="pb-4">Description</th>
                     <th className="pb-4">Unit</th>
                     <th className="pb-4">Category</th>
                     <th className="pb-4 text-right">Price (₦)</th>
@@ -363,6 +364,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     <tr key={item.id}>
                       <td className="py-4">
                         <input className="bg-transparent border-none text-white font-bold focus:outline-none w-full" defaultValue={item.name} onBlur={(e) => updateMenuItem(item.id, { name: e.target.value })} />
+                      </td>
+                      <td className="py-4">
+                        <input className="bg-transparent border-none text-gray-400 text-xs focus:outline-none w-full" placeholder="Add details..." defaultValue={item.description} onBlur={(e) => updateMenuItem(item.id, { description: e.target.value })} />
                       </td>
                       <td className="py-4">
                         <select 
@@ -382,7 +386,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                         <input type="number" className="bg-transparent border-none text-[#C8A862] font-bold focus:outline-none w-24 text-right" defaultValue={item.price} onBlur={(e) => updateMenuItem(item.id, { price: parseFloat(e.target.value) || 0 })} />
                       </td>
                       <td className="py-4 text-right">
-                        {/* Fixed typo: classNametext-red-400 changed to className="text-red-400..." */}
                         <button onClick={() => deleteMenuItem(item.id)} className="text-red-400 text-xs hover:underline">Delete</button>
                       </td>
                     </tr>
@@ -518,7 +521,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         )}
 
         {activeTab === 'SECURITY' && (
-          /* Fixed typo: max-md changed to max-w-md */
           <div className="space-y-6 max-w-md">
             <h3 className="font-bold text-[#C8A862]">Security Control</h3>
             <div>
