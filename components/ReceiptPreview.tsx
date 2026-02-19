@@ -73,52 +73,54 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           </div>
 
           <div className="flex-1 bg-gray-300 p-2 md:p-8 rounded-xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center no-print">
-            <div className="bg-white p-0 shadow-2xl h-fit border-none">
+            <div className="bg-white p-0 shadow-2xl h-fit border-none flex justify-center w-full md:w-auto">
               {isPos ? (
-                <div className="text-black bg-white p-6 font-mono text-[12px] leading-none w-[80mm]">
-                  <div className="text-center mb-4">
-                    <h1 className="text-lg font-black tracking-tighter uppercase mb-1">{settings.hotelName}</h1>
-                    <p className="text-[9px] font-bold opacity-70 uppercase leading-tight">{settings.hotelAddress}</p>
-                  </div>
-                  <div className="border-b border-black border-dashed mb-2"></div>
-                  <div className="grid grid-cols-2 gap-x-1 uppercase text-[10px] mb-2 font-bold">
-                    <p>REF: #{transaction.reference.split('-').pop()}</p>
-                    <p className="text-right">{new Date(transaction.createdAt).toLocaleDateString()}</p>
-                    <p>OUTLET: {transaction.unit}</p>
-                    <p className="text-right">OP: {transaction.cashierName.split(' ')[0]}</p>
-                  </div>
-                  <div className="border-b border-black border-dashed mb-2"></div>
-                  <div className="mb-2">
-                    {transaction.items.map((item, idx) => {
-                      const { name, notes } = formatItemDescription(item.description);
-                      return (
-                        <div key={idx} className="mb-2">
-                          <div className="flex justify-between items-start">
-                            <span className="font-black uppercase text-[11px] flex-1 leading-tight mr-2">
-                              {name} x{item.quantity}
-                            </span>
-                            <span className="shrink-0 font-black text-[11px]">₦{item.total.toLocaleString()}</span>
+                <div className="text-black bg-white p-6 font-mono text-[12px] leading-none w-[80mm] flex flex-col items-center">
+                  <div className="w-full">
+                    <div className="text-center mb-4">
+                      <h1 className="text-lg font-black tracking-tighter uppercase mb-1">{settings.hotelName}</h1>
+                      <p className="text-[9px] font-bold opacity-70 uppercase leading-tight">{settings.hotelAddress}</p>
+                    </div>
+                    <div className="border-b border-black border-dashed mb-2"></div>
+                    <div className="grid grid-cols-2 gap-x-1 uppercase text-[10px] mb-2 font-bold">
+                      <p>REF: #{transaction.reference.split('-').pop()}</p>
+                      <p className="text-right">{new Date(transaction.createdAt).toLocaleDateString()}</p>
+                      <p>OUTLET: {transaction.unit}</p>
+                      <p className="text-right">OP: {transaction.cashierName.split(' ')[0]}</p>
+                    </div>
+                    <div className="border-b border-black border-dashed mb-2"></div>
+                    <div className="mb-2">
+                      {transaction.items.map((item, idx) => {
+                        const { name, notes } = formatItemDescription(item.description);
+                        return (
+                          <div key={idx} className="mb-2">
+                            <div className="flex justify-between items-start">
+                              <span className="font-black uppercase text-[11px] flex-1 leading-tight mr-2">
+                                {name} x{item.quantity}
+                              </span>
+                              <span className="shrink-0 font-black text-[11px]">₦{item.total.toLocaleString()}</span>
+                            </div>
+                            {notes && <div className="font-bold text-[9px] italic opacity-70 mt-0.5 leading-tight">{'>> '}{notes}</div>}
                           </div>
-                          {notes && <div className="font-bold text-[9px] italic opacity-70 mt-0.5 leading-tight">{'>> '}{notes}</div>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="border-t border-black border-dotted pt-1 mb-2">
-                    <div className="flex justify-between text-[11px] font-bold">
-                      <span>GROSS:</span>
-                      <span>₦{transaction.subtotal.toLocaleString()}</span>
+                        );
+                      })}
                     </div>
-                    <div className="flex justify-between text-[11px] font-bold">
-                      <span>VAT ({(settings.vat * 100).toFixed(1)}%):</span>
-                      <span>₦{transaction.taxAmount.toLocaleString()}</span>
+                    <div className="border-t border-black border-dotted pt-1 mb-2">
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span>GROSS:</span>
+                        <span>₦{transaction.subtotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span>VAT ({(settings.vat * 100).toFixed(1)}%):</span>
+                        <span>₦{transaction.taxAmount.toLocaleString()}</span>
+                      </div>
                     </div>
+                    <div className="flex justify-between items-center py-2 border-y border-black mb-2">
+                      <span className="text-[12px] font-black uppercase">GRAND TOTAL:</span>
+                      <span className="text-xl font-black">₦{transaction.totalAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="text-center italic text-[9px] font-black border-t border-black pt-2">*** VERIFIED REVENUE RECORD ***</div>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-y border-black mb-2">
-                    <span className="text-[12px] font-black uppercase">GRAND TOTAL:</span>
-                    <span className="text-xl font-black">₦{transaction.totalAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="text-center italic text-[9px] font-black border-t border-black pt-2">*** VERIFIED REVENUE RECORD ***</div>
                 </div>
               ) : (
                 <div className="text-black bg-white p-[10mm] md:p-[20mm] font-sans text-sm w-[210mm]">
@@ -173,11 +175,11 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
       <div className="print-only">
         {isPos ? (
           <div className="docket-container">
-            <div style={{textAlign: 'center', marginBottom: '8px'}}>
+            <div style={{textAlign: 'center', marginBottom: '6px'}}>
               <h1 style={{fontSize: '18px', fontWeight: '900', margin: '0'}}>{settings.hotelName}</h1>
               <p style={{fontSize: '10px', fontWeight: '900', margin: '2px 0'}}>{settings.hotelAddress}</p>
             </div>
-            <div style={{borderBottom: '1px dashed black', margin: '5px 0'}}></div>
+            <div style={{borderBottom: '1px dashed black', margin: '4px 0'}}></div>
             <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '900'}}>
               <span>REF: #{transaction.reference.split('-').pop()}</span>
               <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
@@ -186,10 +188,10 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <span>UNIT: {transaction.unit}</span>
               <span>OP: {transaction.cashierName.split(' ')[0]}</span>
             </div>
-            <div style={{borderBottom: '1px dashed black', margin: '5px 0'}}></div>
-            <div style={{marginBottom: '8px'}}>
+            <div style={{borderBottom: '1px dashed black', margin: '4px 0'}}></div>
+            <div style={{marginBottom: '6px'}}>
               {transaction.items.map((item, idx) => (
-                <div key={idx} style={{marginBottom: '4px'}}>
+                <div key={idx} style={{marginBottom: '3px'}}>
                   <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '900'}}>
                     <span style={{flex: 1}}>{formatItemDescription(item.description).name} x{item.quantity}</span>
                     <span>₦{item.total.toLocaleString()}</span>
@@ -207,7 +209,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 <span>₦{transaction.taxAmount.toLocaleString()}</span>
               </div>
             </div>
-            <div style={{display: 'flex', justifyContent: 'space-between', margin: '8px 0', borderTop: '2px solid black', borderBottom: '2px solid black', padding: '4px 0', fontSize: '16px', fontWeight: '900'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', margin: '6px 0', borderTop: '2px solid black', borderBottom: '2px solid black', padding: '4px 0', fontSize: '16px', fontWeight: '900'}}>
               <span>TOTAL:</span>
               <span>₦{transaction.totalAmount.toLocaleString()}</span>
             </div>

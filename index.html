@@ -26,7 +26,7 @@
         }
         
         @media print {
-            /* Hide everything that isn't the print container */
+            /* Hide all non-essential UI */
             body > *:not(#root) { display: none !important; }
             .no-print { display: none !important; }
             
@@ -41,11 +41,11 @@
             }
 
             @page {
-                size: 80mm auto; /* Standard Thermal 80mm */
+                size: 80mm auto;
                 margin: 0 !important;
             }
 
-            /* Force all text to black for high-contrast thermal printing */
+            /* Global print resets */
             * {
                 color: black !important;
                 background: transparent !important;
@@ -54,14 +54,16 @@
                 -webkit-print-color-adjust: exact !important;
             }
 
+            /* Center the 80mm content on the paper */
             .docket-container {
                 display: block !important;
-                width: 76mm !important; /* Slightly narrower than 80mm for margins */
-                max-width: 76mm !important;
+                width: 74mm !important; /* Centered with 3mm margin on each side for safety */
+                max-width: 74mm !important;
                 margin: 0 auto !important;
                 padding: 4mm 0 !important;
                 font-family: 'Courier New', Courier, monospace !important;
                 border: none !important;
+                text-align: left;
             }
 
             .invoice-container {
@@ -77,6 +79,7 @@
                 visibility: visible !important;
                 position: static !important;
                 width: 100% !important;
+                margin: 0 auto !important;
             }
         }
         .print-only { display: none; }
