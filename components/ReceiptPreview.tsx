@@ -215,12 +215,12 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
       <div className="print-only">
         {isPos ? (
           <div className="docket-container">
-            <div style={{textAlign: 'center', marginBottom: '6px'}}>
-              <h1 style={{fontSize: '18px', fontWeight: '900', margin: '0'}}>{settings.hotelName}</h1>
-              <p style={{fontSize: '10px', fontWeight: '900', margin: '2px 0'}}>{settings.hotelAddress}</p>
+            <div style={{textAlign: 'center', marginBottom: '4px'}}>
+              <h1 style={{fontSize: '18px', fontWeight: '900', margin: '0', letterSpacing: '-0.5px'}}>{settings.hotelName}</h1>
+              <p style={{fontSize: '10px', fontWeight: '900', margin: '2px 0', lineHeight: '1.2'}}>{settings.hotelAddress}</p>
             </div>
             <div style={{borderBottom: '1px dashed black', margin: '4px 0'}}></div>
-            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '900'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '900'}}>
               <span>REF: #{transaction.reference.split('-').pop()}</span>
               <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
             </div>
@@ -229,17 +229,25 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <span>OP: {transaction.cashierName.split(' ')[0]}</span>
             </div>
             <div style={{borderBottom: '1px dashed black', margin: '4px 0'}}></div>
-            <div style={{marginBottom: '6px'}}>
-              {transaction.items.map((item, idx) => (
-                <div key={idx} style={{marginBottom: '3px'}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '900'}}>
-                    <span style={{flex: 1}}>{formatItemDescription(item.description).name} x{item.quantity}</span>
-                    <span>₦{item.total.toLocaleString()}</span>
+            <div style={{marginBottom: '4px'}}>
+              {transaction.items.map((item, idx) => {
+                const { name, notes } = formatItemDescription(item.description);
+                return (
+                  <div key={idx} style={{marginBottom: '3px'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '900', lineHeight: '1.2'}}>
+                      <span style={{flex: 1, paddingRight: '10px'}}>{name} x{item.quantity}</span>
+                      <span style={{whiteSpace: 'nowrap'}}>₦{item.total.toLocaleString()}</span>
+                    </div>
+                    {notes && (
+                      <div style={{fontSize: '9px', fontStyle: 'italic', fontWeight: '900', opacity: 0.8, marginTop: '2px'}}>
+                        {'>> '}{notes}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-            <div style={{borderTop: '1px dotted black', paddingTop: '4px', fontSize: '12px', fontWeight: '900'}}>
+            <div style={{borderTop: '1px dotted black', paddingTop: '4px', fontSize: '11px', fontWeight: '900'}}>
               <div style={{display: 'flex', justifyContent: 'space-between'}}>
                 <span>GROSS:</span>
                 <span>₦{transaction.subtotal.toLocaleString()}</span>
@@ -249,30 +257,30 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 <span>₦{transaction.taxAmount.toLocaleString()}</span>
               </div>
             </div>
-            <div style={{display: 'flex', justifyContent: 'space-between', margin: '6px 0', borderTop: '2px solid black', borderBottom: '2px solid black', padding: '4px 0', fontSize: '16px', fontWeight: '900'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', margin: '4px 0', borderTop: '2px solid black', borderBottom: '2px solid black', padding: '3px 0', fontSize: '15px', fontWeight: '900'}}>
               <span>TOTAL:</span>
               <span>₦{transaction.totalAmount.toLocaleString()}</span>
             </div>
             
             {transaction.balance > 0 && (
-              <div style={{fontSize: '11px', fontWeight: '900', borderTop: '1px dashed black', paddingTop: '4px', marginTop: '4px'}}>
-                <div style={{marginBottom: '4px', fontSize: '10px', color: '#666'}}>PAY TO:</div>
+              <div style={{fontSize: '10px', fontWeight: '900', borderTop: '1px dashed black', paddingTop: '4px', marginTop: '2px'}}>
+                <div style={{marginBottom: '3px', fontSize: '9px', color: '#333'}}>SETTLEMENT OPTIONS:</div>
                 {currentBanks.map((bank, i) => (
-                  <div key={i} style={{marginBottom: '4px'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <div key={i} style={{marginBottom: '2px'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '10px'}}>
                       <span>{bank.bank}</span>
                       <span>{bank.accountNumber}</span>
                     </div>
                   </div>
                 ))}
-                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '14px', borderTop: '1px dotted black', marginTop: '4px', paddingTop: '2px'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px dotted black', marginTop: '3px', paddingTop: '2px', color: 'red'}}>
                   <span>BALANCE:</span>
                   <span>₦{transaction.balance.toLocaleString()}</span>
                 </div>
               </div>
             )}
             
-            <div style={{textAlign: 'center', marginTop: '10px', paddingTop: '4px', borderTop: '1px solid black', fontSize: '10px', fontWeight: '900'}}>*** VERIFIED REVENUE RECORD ***</div>
+            <div style={{textAlign: 'center', marginTop: '8px', paddingTop: '4px', borderTop: '1px solid black', fontSize: '9px', fontWeight: '900'}}>*** VERIFIED REVENUE RECORD ***</div>
           </div>
         ) : (
           <div className="invoice-container">
