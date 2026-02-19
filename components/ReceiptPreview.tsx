@@ -22,6 +22,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         const data = snapshot.data();
         setSettings({
           hotelName: data.hotelName || BRAND.name,
+          hotelSubName: data.hotelSubName || 'Hotels & Resorts',
           hotelAddress: data.hotelAddress || BRAND.address,
           vat: data.vat,
           serviceCharge: data.serviceCharge,
@@ -132,17 +133,19 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 </div>
               </div>
 
-              <div className="mb-6">
-                <div className="font-bold text-[8px] uppercase tracking-widest opacity-60 mb-1">Settlement Account(s)</div>
-                <div className="space-y-1">
-                  {currentBanks.map((bank, i) => (
-                    <div key={i} className="p-1 border border-dashed border-black/10 text-[8px]">
-                      <p className="font-bold">{bank.bank}</p>
-                      <p>{bank.accountNumber} • {bank.accountName}</p>
-                    </div>
-                  ))}
+              {transaction.balance > 0 && (
+                <div className="mb-6">
+                  <div className="font-bold text-[8px] uppercase tracking-widest opacity-60 mb-1">Settlement Account(s)</div>
+                  <div className="space-y-1">
+                    {currentBanks.map((bank, i) => (
+                      <div key={i} className="p-1 border border-dashed border-black/10 text-[8px]">
+                        <p className="font-bold">{bank.bank}</p>
+                        <p>{bank.accountNumber} • {bank.accountName}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="text-center italic text-[8px] opacity-50">Revenue Authority Verified • TIDÈ</div>
             </div>
@@ -246,10 +249,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   </div>
                 </div>
                 <div className="text-right flex flex-col justify-end">
-                  <p className="font-black uppercase tracking-widest mb-1">Corporate Accounts</p>
-                  {currentBanks.map((bank, i) => (
-                    <p key={i} className="text-[9px] text-gray-600 uppercase font-bold">{bank.bank} • {bank.accountNumber} • {bank.accountName}</p>
-                  ))}
+                  {transaction.balance > 0 && (
+                    <div className="mb-4">
+                      <p className="font-black uppercase tracking-widest mb-1">Corporate Accounts</p>
+                      {currentBanks.map((bank, i) => (
+                        <p key={i} className="text-[9px] text-gray-600 uppercase font-bold">{bank.bank} • {bank.accountNumber} • {bank.accountName}</p>
+                      ))}
+                    </div>
+                  )}
                   <div className="h-4"></div>
                   <p className="text-[8px] italic opacity-40 uppercase">This is a verified revenue authority document.</p>
                 </div>
