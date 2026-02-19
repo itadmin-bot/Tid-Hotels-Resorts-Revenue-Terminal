@@ -26,10 +26,10 @@
         }
         
         @media print {
-            /* Hide all non-essential UI */
-            .no-print, header, nav, aside, footer, button { display: none !important; }
+            /* Hide everything that isn't the print container */
+            body > *:not(#root) { display: none !important; }
+            .no-print { display: none !important; }
             
-            /* Root resets for thermal printing */
             html, body {
                 background: white !important;
                 color: black !important;
@@ -41,47 +41,42 @@
             }
 
             @page {
-                size: 80mm auto; /* Strict 80mm thermal paper width */
+                size: 80mm auto; /* Standard Thermal 80mm */
                 margin: 0 !important;
             }
 
-            /* The docket container must fill the paper width */
+            /* Force all text to black for high-contrast thermal printing */
+            * {
+                color: black !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+                -webkit-print-color-adjust: exact !important;
+            }
+
             .docket-container {
                 display: block !important;
-                width: 80mm !important;
-                max-width: 80mm !important;
-                margin: 0 !important;
-                padding: 4mm 2mm !important; /* Slight padding for printer bleed */
-                background: white !important;
+                width: 76mm !important; /* Slightly narrower than 80mm for margins */
+                max-width: 76mm !important;
+                margin: 0 auto !important;
+                padding: 4mm 0 !important;
                 font-family: 'Courier New', Courier, monospace !important;
                 border: none !important;
-                box-shadow: none !important;
-                overflow: visible !important;
             }
 
             .invoice-container {
+                display: block !important;
                 width: 210mm !important;
                 margin: 0 auto !important;
                 padding: 10mm !important;
-                background: white !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
-            /* Ensure the print-only wrapper is shown */
             .print-only {
                 display: block !important;
                 visibility: visible !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 80mm !important;
-            }
-
-            /* Disable browser-added flourishes */
-            * { 
-                box-shadow: none !important; 
-                border-radius: 0 !important; 
-                -webkit-print-color-adjust: exact !important;
-                text-shadow: none !important;
+                position: static !important;
+                width: 100% !important;
             }
         }
         .print-only { display: none; }
