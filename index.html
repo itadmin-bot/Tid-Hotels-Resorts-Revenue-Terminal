@@ -35,14 +35,24 @@
                 color: black !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                width: 80mm !important;
+                /* Use full width to allow centering within the printable area */
+                width: 100% !important;
                 height: auto !important;
                 overflow: visible !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: flex-start !important;
             }
 
             @page {
-                size: 80mm auto;
+                size: auto; /* Allow printer to define size, or use 80mm auto if strictly thermal */
                 margin: 0 !important;
+            }
+
+            #root {
+                width: 100% !important;
+                display: flex !important;
+                justify-content: center !important;
             }
 
             /* Global print resets */
@@ -54,12 +64,12 @@
                 -webkit-print-color-adjust: exact !important;
             }
 
-            /* Center the 80mm content on the paper */
+            /* Center the 80mm content strictly */
             .docket-container {
                 display: block !important;
-                width: 74mm !important; /* Centered with 3mm margin on each side for safety */
+                width: 74mm !important;
                 max-width: 74mm !important;
-                margin: 0 auto !important;
+                margin: 0 auto !important; /* Horizontal centering */
                 padding: 4mm 0 !important;
                 font-family: 'Courier New', Courier, monospace !important;
                 border: none !important;
@@ -75,7 +85,9 @@
             }
 
             .print-only {
-                display: block !important;
+                display: flex !important; /* Use flex to center child */
+                flex-direction: column !important;
+                align-items: center !important;
                 visibility: visible !important;
                 position: static !important;
                 width: 100% !important;
