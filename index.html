@@ -42,14 +42,14 @@
             }
 
             @page {
-                size: 80mm auto; /* Specific for thermal roll */
+                size: 80mm auto; /* 80mm roll width, auto height */
                 margin: 0 !important;
             }
 
             #root {
                 width: 100% !important;
                 display: block !important;
-                margin: 0 auto !important;
+                margin: 0 !important;
             }
 
             /* Global print resets */
@@ -62,16 +62,17 @@
                 box-sizing: border-box !important;
             }
 
-            /* Center the 80mm content strictly */
+            /* 72mm is the safe printable width for 80mm thermal rolls */
             .docket-container {
                 display: block !important;
-                width: 80mm !important;
-                max-width: 80mm !important;
+                width: 72mm !important;
+                max-width: 72mm !important;
                 margin: 0 auto !important;
-                padding: 4mm 2mm !important; /* Internal safety margin */
+                padding: 2mm 0 !important;
                 font-family: 'Courier New', Courier, monospace !important;
                 border: none !important;
                 overflow: hidden !important;
+                line-height: 1.1 !important;
             }
 
             .invoice-container {
@@ -88,7 +89,7 @@
                 position: static !important;
                 width: 100% !important;
                 margin: 0 auto !important;
-                text-align: center !important; /* Ensure children center within the flex-less body */
+                text-align: center !important;
             }
         }
         .print-only { display: none; }
