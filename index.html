@@ -33,26 +33,27 @@
                 color: black !important; 
                 margin: 0 !important;
                 padding: 0 !important;
-                width: 80mm !important;
+                width: 100% !important;
                 height: auto !important;
-                overflow: visible !important;
             }
 
             @page {
                 margin: 0 !important;
-                size: 80mm auto; /* 80mm thermal width, dynamic length */
+                size: 80mm auto; /* Enforces 80mm width and dynamic height */
             }
 
             /* Ensure only the active document prints */
             #root > div:not(.print-active) { display: none !important; }
             
             .docket-container {
-                width: 100% !important;
+                width: 80mm !important;
+                max-width: 80mm !important;
                 margin: 0 !important;
-                padding: 1mm !important;
+                padding: 2mm !important;
                 border: none !important;
                 background: white !important;
                 font-family: 'Courier New', Courier, monospace !important;
+                overflow: hidden !important;
                 display: block !important;
                 height: auto !important;
             }
@@ -63,9 +64,6 @@
                 padding: 10mm !important;
                 background: white !important;
             }
-
-            /* Remove browser shadows and borders on print */
-            * { box-shadow: none !important; border-radius: 0 !important; }
         }
         .print-only { display: none; }
     </style>
