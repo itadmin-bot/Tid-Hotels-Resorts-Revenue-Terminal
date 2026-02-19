@@ -27,39 +27,36 @@
         @media print {
             .no-print { display: none !important; }
             .print-only { display: block !important; }
+            
             body, html { 
                 background: white !important; 
                 color: black !important; 
                 margin: 0 !important;
                 padding: 0 !important;
-                height: auto !important;
-                width: auto !important;
-            }
-            
-            /* Docket 80mm Print Rules - Optimized for Visibility & Length */
-            .docket-container {
-                width: 76mm !important; /* Slightly less than 80mm to prevent clipping */
-                margin: 0 !important;
-                padding: 2mm !important;
-                background: white !important;
-                font-family: 'Courier New', Courier, monospace !important; /* Fixed width font for alignment */
-            }
-
-            /* A4 Invoice Print Rules */
-            .invoice-container {
-                width: 210mm !important;
-                min-height: 297mm !important;
-                margin: 0 auto !important;
-                padding: 15mm !important;
-                background: white !important;
+                width: 100% !important;
             }
 
             @page {
-                margin: 0;
+                margin: 0 !important;
                 size: auto;
             }
-            #root {
-                display: block !important;
+
+            /* Ensure only the active document prints */
+            #root > div:not(.print-active) { display: none !important; }
+            
+            .docket-container {
+                width: 76mm !important;
+                margin: 0 !important;
+                padding: 1mm !important;
+                border: none !important;
+                background: white !important;
+                font-family: 'Courier New', Courier, monospace !important;
+            }
+
+            .invoice-container {
+                width: 210mm !important;
+                margin: 0 auto !important;
+                padding: 10mm !important;
                 background: white !important;
             }
         }
