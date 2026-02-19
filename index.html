@@ -24,10 +24,12 @@
         .animate-progress {
             animation: progress 2s infinite ease-in-out;
         }
+        
         @media print {
+            /* Hide all UI elements except the marked print area */
             .no-print { display: none !important; }
-            .print-only { display: block !important; }
             
+            /* Basic resets for the print engine */
             body, html { 
                 background: white !important; 
                 color: black !important; 
@@ -40,24 +42,26 @@
 
             @page {
                 margin: 0 !important;
-                size: 80mm auto; /* Strict 80mm width, height based on content */
+                size: 80mm auto; /* 80mm thermal printer width */
             }
 
-            /* Ensure only the active document prints and occupies full page width */
-            #root > div:not(.print-active) { display: none !important; }
-            
+            /* The docket container must fill the 80mm width perfectly */
             .docket-container {
                 width: 80mm !important;
+                min-width: 80mm !important;
                 max-width: 80mm !important;
                 margin: 0 !important;
-                padding: 4mm 2mm !important; /* Standard padding for thermal bleed */
+                padding: 4mm 2mm !important;
                 border: none !important;
                 box-shadow: none !important;
                 background: white !important;
                 font-family: 'Courier New', Courier, monospace !important;
                 display: block !important;
                 height: auto !important;
-                overflow: hidden !important;
+                overflow: visible !important;
+                position: relative !important;
+                top: 0 !important;
+                left: 0 !important;
             }
 
             .invoice-container {
@@ -65,12 +69,18 @@
                 margin: 0 auto !important;
                 padding: 10mm !important;
                 background: white !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
-            /* Strip all non-essential UI elements for print */
-            * { box-shadow: none !important; border-radius: 0 !important; }
+            /* Force black text and disable all visual flourishes for high-speed thermal printing */
+            * { 
+                box-shadow: none !important; 
+                border-radius: 0 !important; 
+                -webkit-print-color-adjust: exact !important;
+                text-shadow: none !important;
+                filter: none !important;
+            }
         }
-        .print-only { display: none; }
     </style>
     <script type="importmap">
     {
