@@ -25,65 +25,13 @@
             animation: progress 2s infinite ease-in-out;
         }
         
-        @page {
-            size: 80mm auto;
-            margin: 0 !important;
-        }
-
+        /* Hide all print functionality from main window to avoid A4 scaling issues */
         @media print {
-            /* 1. Reset Environment */
-            html, body {
-                width: 80mm !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #fff !important;
-                color: #000 !important;
-                overflow: visible !important;
-                height: auto !important;
-                min-height: auto !important;
-                -webkit-print-color-adjust: exact !important;
-            }
-
-            /* 2. Hide everything by default */
-            body * {
-                visibility: hidden !important;
-                height: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                border: none !important;
-                box-shadow: none !important;
-                border-radius: 0 !important;
-                transform: none !important;
-            }
-
-            /* 3. Restore only the Docket Container */
-            .thermal-docket, 
-            .thermal-docket * {
-                visibility: visible !important;
-                height: auto !important;
-            }
-
-            /* 4. Force strict 80mm layout */
-            .thermal-docket {
-                display: block !important;
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 80mm !important;
-                max-width: 80mm !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: white !important;
-                z-index: 99999 !important;
-                overflow: hidden !important;
-            }
-
-            .no-print {
-                display: none !important;
-            }
+            body * { display: none !important; }
         }
 
-        .print-only { display: none; }
+        .no-print { display: block; }
+        @media print { .no-print { display: none !important; } }
     </style>
     <script type="importmap">
     {
