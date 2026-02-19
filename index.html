@@ -26,61 +26,69 @@
         }
         
         @media print {
-            /* Hide all non-essential UI */
+            /* Hide all UI elements except root */
             body > *:not(#root) { display: none !important; }
             .no-print { display: none !important; }
             
+            /* Reset body for thermal roll */
             html, body {
                 background: white !important;
                 color: black !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                width: 100% !important;
+                width: 80mm !important;
                 height: auto !important;
                 min-height: auto !important;
                 overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
             }
 
+            /* Define roll width and auto height */
             @page {
-                size: 80mm auto; /* 80mm roll width, auto height */
+                size: 80mm auto;
                 margin: 0 !important;
             }
 
             #root {
-                width: 100% !important;
+                width: 80mm !important;
                 display: block !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                height: auto !important;
+                min-height: auto !important;
             }
 
-            /* Global print resets */
+            /* Global print resets for all elements */
             * {
                 color: black !important;
                 background: transparent !important;
                 box-shadow: none !important;
                 text-shadow: none !important;
-                -webkit-print-color-adjust: exact !important;
                 box-sizing: border-box !important;
             }
 
-            /* 72mm is the safe printable width for 80mm thermal rolls */
+            /* Compact 80mm Docket Container */
             .docket-container {
                 display: block !important;
-                width: 72mm !important;
-                max-width: 72mm !important;
+                width: 80mm !important;
                 margin: 0 auto !important;
-                padding: 2mm 0 !important;
+                padding: 0 2mm !important; /* Tiny safety margin for feed */
                 font-family: 'Courier New', Courier, monospace !important;
-                border: none !important;
-                overflow: hidden !important;
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
                 line-height: 1.1 !important;
+                border: none !important;
             }
 
+            /* Standard A4 Invoice */
             .invoice-container {
                 display: block !important;
                 width: 210mm !important;
                 margin: 0 auto !important;
                 padding: 10mm !important;
                 font-family: 'Inter', sans-serif !important;
+                height: auto !important;
             }
 
             .print-only {
