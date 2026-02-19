@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,20 +33,16 @@
                 margin: 0 !important;
                 padding: 0 !important;
                 height: auto !important;
-                overflow: visible !important;
-            }
-            #root { 
-                background: white !important;
-                color: black !important;
-                height: auto !important;
+                width: auto !important;
             }
             
-            /* Docket 80mm Print Rules */
+            /* Docket 80mm Print Rules - Optimized for Visibility & Length */
             .docket-container {
-                width: 80mm !important;
-                margin: 0 auto !important;
-                padding: 5mm !important;
+                width: 76mm !important; /* Slightly less than 80mm to prevent clipping */
+                margin: 0 !important;
+                padding: 2mm !important;
                 background: white !important;
+                font-family: 'Courier New', Courier, monospace !important; /* Fixed width font for alignment */
             }
 
             /* A4 Invoice Print Rules */
@@ -55,17 +50,17 @@
                 width: 210mm !important;
                 min-height: 297mm !important;
                 margin: 0 auto !important;
-                padding: 20mm !important;
+                padding: 15mm !important;
                 background: white !important;
             }
 
             @page {
                 margin: 0;
+                size: auto;
             }
-            body > div:first-child {
-                display: flex !important;
-                justify-content: center !important;
-                align-items: flex-start !important;
+            #root {
+                display: block !important;
+                background: white !important;
             }
         }
         .print-only { display: none; }
