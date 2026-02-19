@@ -34,23 +34,28 @@
                 margin: 0 !important;
                 padding: 0 !important;
                 width: 100% !important;
+                height: auto !important;
             }
 
             @page {
                 margin: 0 !important;
-                size: auto;
+                size: 80mm auto; /* Enforces 80mm width and dynamic height */
             }
 
             /* Ensure only the active document prints */
             #root > div:not(.print-active) { display: none !important; }
             
             .docket-container {
-                width: 76mm !important;
+                width: 80mm !important;
+                max-width: 80mm !important;
                 margin: 0 !important;
-                padding: 1mm !important;
+                padding: 2mm !important;
                 border: none !important;
                 background: white !important;
                 font-family: 'Courier New', Courier, monospace !important;
+                overflow: hidden !important;
+                display: block !important;
+                height: auto !important;
             }
 
             .invoice-container {
