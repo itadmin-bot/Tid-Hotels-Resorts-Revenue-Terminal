@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType } from '../types';
-import { INITIAL_ROOMS, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '../constants';
+import { INITIAL_ROOMS, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS, BRAND } from '../constants';
 
 interface AdminPanelProps {
   user: UserProfile;
@@ -68,6 +68,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       if (snapshot.exists()) {
         const data = snapshot.data();
         setSettings({
+          hotelName: data.hotelName || BRAND.name,
+          hotelAddress: data.hotelAddress || BRAND.address,
           vat: data.vat,
           serviceCharge: data.serviceCharge,
           zenzaBanks: Array.isArray(data.zenzaBanks) ? data.zenzaBanks : (data.zenzaBank ? [data.zenzaBank] : [ZENZA_BANK]),
@@ -76,6 +78,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         } as AppSettings);
       } else if (user.role === UserRole.ADMIN) {
         const defaultSettings: AppSettings = {
+          hotelName: BRAND.name,
+          hotelAddress: BRAND.address,
           vat: 0.075,
           serviceCharge: 0.10,
           zenzaBanks: [ZENZA_BANK],
@@ -444,9 +448,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         )}
 
         {activeTab === 'SETTINGS' && settings && (
-          <div className="space-y-8 max-w-lg">
+          <div className="space-y-12 max-w-2xl">
+            {/* Corporate Identity Section */}
             <div>
-              <h3 className="font-bold text-[#C8A862] mb-4">Taxation & Service (Inclusive)</h3>
+              <h3 className="font-bold text-[#C8A862] mb-4 uppercase tracking-widest text-xs">Corporate Identity</h3>
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="text-xs text-gray-500 uppercase block mb-1">Hotel/Brand Name</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white font-bold focus:border-[#C8A862] outline-none" 
+                    defaultValue={settings.hotelName} 
+                    onBlur={(e) => updateGlobalSettings({ hotelName: e.target.value || BRAND.name })} 
+                  />
+                  <p className="text-[9px] text-gray-500 mt-1 uppercase">Updates the terminal logo and receipt header name.</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase block mb-1">Corporate Address</label>
+                  <textarea 
+                    rows={2}
+                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-white text-sm focus:border-[#C8A862] outline-none" 
+                    defaultValue={settings.hotelAddress} 
+                    onBlur={(e) => updateGlobalSettings({ hotelAddress: e.target.value || BRAND.address })} 
+                  />
+                  <p className="text-[9px] text-gray-500 mt-1 uppercase">Updates the address displayed on all corporate receipts and folios.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Taxation Section */}
+            <div>
+              <h3 className="font-bold text-[#C8A862] mb-4 uppercase tracking-widest text-xs">Taxation & Service (Inclusive)</h3>
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="text-xs text-gray-500 uppercase block mb-1">VAT (%)</label>

@@ -18,6 +18,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
       if (snapshot.exists()) {
         const data = snapshot.data();
         setSettings({
+          hotelName: data.hotelName || BRAND.name,
+          hotelAddress: data.hotelAddress || BRAND.address,
           vat: data.vat,
           serviceCharge: data.serviceCharge,
           zenzaBanks: Array.isArray(data.zenzaBanks) ? data.zenzaBanks : (data.zenzaBank ? [data.zenzaBank] : [ZENZA_BANK]),
@@ -59,8 +61,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           {isPos ? (
             <div className="docket-container text-black bg-white p-6 font-mono text-[10px] leading-tight shadow-xl">
               <div className="text-center border-b border-black/10 pb-4 mb-4">
-                <h1 className="text-xl font-bold tracking-tighter">{BRAND.name}</h1>
-                <p className="text-[8px] font-sans opacity-70">{BRAND.address}</p>
+                <h1 className="text-xl font-bold tracking-tighter uppercase">{settings.hotelName}</h1>
+                <p className="text-[8px] font-sans opacity-70 uppercase">{settings.hotelAddress}</p>
               </div>
 
               <div className="mb-4 space-y-0.5 uppercase">
@@ -143,8 +145,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             <div className="invoice-container text-black bg-white p-[20mm] font-sans text-sm shadow-2xl">
               <div className="flex justify-between items-start border-b-2 border-black pb-8 mb-8">
                 <div>
-                  <h1 className="text-3xl font-black tracking-tighter mb-1">{BRAND.name}</h1>
-                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{BRAND.address}</p>
+                  <h1 className="text-3xl font-black tracking-tighter mb-1 uppercase">{settings.hotelName}</h1>
+                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{settings.hotelAddress}</p>
                 </div>
                 <div className="text-right">
                   <h2 className="text-xl font-black text-gray-400 uppercase tracking-tighter mb-1">Reservation Folio</h2>

@@ -44,6 +44,8 @@ export interface MenuItem {
 }
 
 export interface AppSettings {
+  hotelName: string;
+  hotelAddress: string;
   vat: number;
   serviceCharge: number;
   zenzaBanks: BankAccount[];

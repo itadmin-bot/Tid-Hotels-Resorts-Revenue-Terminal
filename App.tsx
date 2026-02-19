@@ -6,13 +6,14 @@ import AuthScreen from './components/AuthScreen';
 import Dashboard from './components/Dashboard';
 import Sidebar from './components/Sidebar';
 import AdminPanel from './components/AdminPanel';
-import { UserProfile, UserRole } from './types';
-import { BRAND } from './constants';
+import { UserProfile, UserRole, AppSettings } from './types';
+import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from './constants';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [activeView, setActiveView] = useState<'LEDGER' | 'ADMIN'>('LEDGER');
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -53,6 +54,27 @@ const App: React.FC = () => {
     }
     return () => clearInterval(interval);
   }, [user]);
+
+  // Real-time Settings and Dynamic Title
+  useEffect(() => {
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const updatedSettings: AppSettings = {
+          hotelName: data.hotelName || BRAND.name,
+          hotelAddress: data.hotelAddress || BRAND.address,
+          vat: data.vat || 0.075,
+          serviceCharge: data.serviceCharge || 0.10,
+          zenzaBanks: data.zenzaBanks || [ZENZA_BANK],
+          whispersBanks: data.whispersBanks || [WHISPERS_BANK],
+          invoiceBanks: data.invoiceBanks || INVOICE_BANKS
+        };
+        setSettings(updatedSettings);
+        document.title = `${updatedSettings.hotelName} - Revenue Terminal`;
+      }
+    });
+    return () => unsubSettings();
+  }, []);
 
   // Real-time Presence Heartbeat
   useEffect(() => {
@@ -166,7 +188,7 @@ const App: React.FC = () => {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0B1C2D]">
         <div className="flex flex-col items-center gap-8">
-          <div className="text-[#C8A862] animate-pulse text-4xl font-black italic tracking-tighter">TIDÈ HOTELS</div>
+          <div className="text-[#C8A862] animate-pulse text-4xl font-black italic tracking-tighter uppercase">{settings?.hotelName || BRAND.name}</div>
           <div className="w-64 h-1 bg-gray-800 rounded-full relative overflow-hidden">
             <div className="absolute top-0 left-0 h-full bg-[#C8A862] animate-progress w-2/3"></div>
           </div>
@@ -197,7 +219,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white">
-      <Sidebar user={userProfile!} activeView={activeView} onViewChange={setActiveView} />
+      <Sidebar user={userProfile!} settings={settings} activeView={activeView} onViewChange={setActiveView} />
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         {activeView === 'LEDGER' ? <Dashboard user={userProfile!} /> : <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
       </main>

@@ -1,20 +1,23 @@
-
 import React from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
-import { UserProfile, UserRole } from '../types';
+import { UserProfile, UserRole, AppSettings } from '../types';
+import { BRAND } from '../constants';
 
 interface SidebarProps {
   user: UserProfile;
+  settings: AppSettings | null;
   activeView: 'LEDGER' | 'ADMIN';
   onViewChange: (view: 'LEDGER' | 'ADMIN') => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewChange }) => {
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-[#13263A] border-r border-gray-700/50 p-6 no-print">
       <div className="mb-10">
-        <h1 className="text-2xl font-bold text-[#C8A862] italic tracking-tighter">TIDÈ</h1>
+        <h1 className="text-2xl font-bold text-[#C8A862] italic tracking-tighter uppercase truncate">
+          {settings?.hotelName || BRAND.name}
+        </h1>
         <p className="text-[10px] text-gray-500 uppercase tracking-widest">Hotels & Resorts</p>
       </div>
 
