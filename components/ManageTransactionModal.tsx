@@ -314,14 +314,14 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                 <div className="col-span-2 grid grid-cols-2 gap-4 bg-[#0B1C2D]/30 p-4 rounded-xl border border-gray-700/30">
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
-                      <Calendar className="w-3 h-3 text-[#C8A862]" />
+                      <Calendar className="w-4 h-4 text-[#C8A862]" />
                       Check-In Date
                     </label>
                     <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkIn} onChange={(e) => setStayPeriod({...stayPeriod, checkIn: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
-                      <Calendar className="w-3 h-3 text-[#C8A862]" />
+                      <Calendar className="w-4 h-4 text-[#C8A862]" />
                       Check-Out Date
                     </label>
                     <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkOut} onChange={(e) => setStayPeriod({...stayPeriod, checkOut: e.target.value})} />
@@ -350,12 +350,12 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                 {transaction.type === 'FOLIO' && (
                   <div className="flex gap-2 items-center bg-[#0B1C2D] p-2 rounded-lg border border-gray-700/50">
                     <div className="flex gap-1 items-center">
-                      <Calendar className="w-3 h-3 text-[#C8A862]" />
+                      <Calendar className="w-4 h-4 text-[#C8A862]" />
                       <input type="date" className="bg-transparent text-[9px] text-white outline-none" value={roomAddDates.checkIn} onChange={(e) => setRoomAddDates({...roomAddDates, checkIn: e.target.value})} />
                     </div>
                     <span className="text-gray-600 text-[9px]">to</span>
                     <div className="flex gap-1 items-center">
-                      <Calendar className="w-3 h-3 text-[#C8A862]" />
+                      <Calendar className="w-4 h-4 text-[#C8A862]" />
                       <input type="date" className="bg-transparent text-[9px] text-white outline-none" value={roomAddDates.checkOut} onChange={(e) => setRoomAddDates({...roomAddDates, checkOut: e.target.value})} />
                     </div>
                     <select 

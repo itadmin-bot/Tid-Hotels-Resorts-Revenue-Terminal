@@ -212,7 +212,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
-              <Calendar className="w-3 h-3 text-[#C8A862]" />
+              <Calendar className="w-4 h-4 text-[#C8A862]" />
               Start Date
             </label>
             <input 
@@ -224,7 +224,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
-              <Calendar className="w-3 h-3 text-[#C8A862]" />
+              <Calendar className="w-4 h-4 text-[#C8A862]" />
               End Date
             </label>
             <input 

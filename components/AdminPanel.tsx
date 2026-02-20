@@ -8,6 +8,7 @@ import {
   deleteDoc,
   addDoc
 } from 'firebase/firestore';
+import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee } from 'lucide-react';
 import { db } from '../firebase';
 import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '../types';
 
@@ -20,6 +21,8 @@ interface AdminPanelProps {
 const DEFAULT_ADMIN_KEY = 'TIDE-ADMIN-2026-X9FQ';
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize }) => {
+  const [showAccessCode, setShowAccessCode] = useState(false);
+  const [showSecurityCode, setShowSecurityCode] = useState(false);
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [securityTabCode, setSecurityTabCode] = useState('');
   const [error, setError] = useState('');
@@ -246,11 +249,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       <div className="flex h-full items-center justify-center">
         <div className="max-w-md w-full p-10 bg-[#13263A] rounded-2xl border border-gray-700 shadow-2xl text-center space-y-8">
           <div className="w-20 h-20 bg-[#C8A862]/10 rounded-full flex items-center justify-center mx-auto border border-[#C8A862]/30">
-            <svg className="w-10 h-10 text-[#C8A862]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            <Lock className="w-10 h-10 text-[#C8A862]" />
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Admin Authorization</h2>
           <form onSubmit={handleVerifyCode} className="space-y-4">
-            <input type="password" placeholder="••••" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg py-4 px-4 text-center font-mono tracking-[0.5em] text-[#C8A862] text-xl outline-none" value={accessCodeInput} onChange={(e) => setAccessCodeInput(e.target.value)} />
+            <div className="relative">
+              <input type={showAccessCode ? 'text' : 'password'} placeholder="••••" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg py-4 px-4 text-center font-mono tracking-[0.5em] text-[#C8A862] text-xl outline-none focus:border-[#C8A862]" value={accessCodeInput} onChange={(e) => setAccessCodeInput(e.target.value)} />
+              <button type="button" onClick={() => setShowAccessCode(!showAccessCode)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#C8A862] hover:text-white transition-colors">
+                {showAccessCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
             {error && <p className="text-red-400 text-[10px] font-bold uppercase">{error}</p>}
             <button disabled={loading} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg uppercase tracking-widest hover:bg-[#B69651] transition-all">Unlock System</button>
           </form>
@@ -540,7 +548,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Update Authorization Key</label>
                 <div className="flex gap-4">
-                  <input type="password" placeholder="TIDE-XXXX" className="flex-1 bg-[#0B1C2D] border border-gray-700 rounded-lg p-4 text-sm text-white font-mono tracking-widest focus:border-[#C8A862] outline-none" value={securityTabCode} onChange={(e) => setSecurityTabCode(e.target.value)} />
+                  <div className="relative flex-1">
+                    <input type={showSecurityCode ? 'text' : 'password'} placeholder="TIDE-XXXX" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-4 text-sm text-white font-mono tracking-widest focus:border-[#C8A862] outline-none" value={securityTabCode} onChange={(e) => setSecurityTabCode(e.target.value)} />
+                    <button type="button" onClick={() => setShowSecurityCode(!showSecurityCode)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#C8A862] hover:text-white transition-colors">
+                      {showSecurityCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                   <button onClick={handleUpdateMasterCode} disabled={loading} className="px-8 py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg uppercase text-xs tracking-widest hover:bg-[#B69651] transition-all disabled:opacity-50 shadow-xl">Update Key</button>
                 </div>
               </div>
