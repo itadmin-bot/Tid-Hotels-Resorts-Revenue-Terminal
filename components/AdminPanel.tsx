@@ -35,8 +35,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [loading, setLoading] = useState(false);
   const [masterCode, setMasterCode] = useState(DEFAULT_ADMIN_KEY);
 
-  const [showRoomModal, setShowRoomModal] = useState<Partial<Room> | null>(null);
-  const [showMenuModal, setShowMenuModal] = useState<Partial<MenuItem> | null>(null);
+  const [showRoomModal, setShowRoomModal] = useState<(Partial<Room> & { addInventory?: number }) | null>(null);
+  const [showMenuModal, setShowMenuModal] = useState<(Partial<MenuItem> & { restockAmount?: number }) | null>(null);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -189,13 +189,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const saveRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showRoomModal) return;
+    
+    const currentTotal = Number(showRoomModal.totalInventory) || 0;
+    const addition = Number(showRoomModal.addInventory) || 0;
+    
     const data = {
       name: showRoomModal.name || '',
       type: showRoomModal.type || 'Standard',
       price: Number(showRoomModal.price) || 0,
-      totalInventory: Number(showRoomModal.totalInventory) || 1,
-      bookedCount: showRoomModal.bookedCount || 0
+      totalInventory: currentTotal + addition,
+      bookedCount: Number(showRoomModal.bookedCount) || 0
     };
+    
     if (showRoomModal.id) {
       await updateDoc(doc(db, 'rooms', showRoomModal.id), data);
     } else {
@@ -207,16 +212,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const saveMenuItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showMenuModal) return;
+    
+    const currentInitialStock = Number(showMenuModal.initialStock) || 0;
+    const restock = Number(showMenuModal.restockAmount) || 0;
+    
     const data = {
       name: showMenuModal.name || '',
       description: showMenuModal.description || '',
       price: Number(showMenuModal.price) || 0,
       category: showMenuModal.category || 'General',
       unit: showMenuModal.unit || 'ALL',
-      initialStock: Number(showMenuModal.initialStock) || 0,
+      initialStock: currentInitialStock + restock,
       soldCount: showMenuModal.soldCount || 0,
       lowStockThreshold: Number(showMenuModal.lowStockThreshold) || 3
     };
+    
     if (showMenuModal.id) {
       await updateDoc(doc(db, 'menu', showMenuModal.id), data);
     } else {
@@ -591,13 +601,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase">Total Capacity</label>
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Total Capacity (Edit Direct)</label>
                   <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={showRoomModal.totalInventory || ''} onChange={(e) => setShowRoomModal({...showRoomModal, totalInventory: Number(e.target.value)})} required />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase">Currently Booked</label>
-                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={showRoomModal.bookedCount || 0} onChange={(e) => setShowRoomModal({...showRoomModal, bookedCount: Number(e.target.value)})} />
+                  <label className="text-[9px] font-black text-[#C8A862] uppercase">Add to Inventory (+)</label>
+                  <input type="number" placeholder="Add rooms" className="w-full bg-[#0B1C2D] border border-[#C8A862]/30 rounded-lg p-3 text-sm text-[#C8A862] font-black outline-none focus:border-[#C8A862]" value={showRoomModal.addInventory || ''} onChange={(e) => setShowRoomModal({...showRoomModal, addInventory: Number(e.target.value)})} />
                 </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-gray-500 uppercase">Currently Booked / Occupied</label>
+                <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={showRoomModal.bookedCount || 0} onChange={(e) => setShowRoomModal({...showRoomModal, bookedCount: Number(e.target.value)})} />
               </div>
               <div className="flex gap-4 pt-4">
                 <button type="button" onClick={() => setShowRoomModal(null)} className="flex-1 py-4 border border-gray-700 text-gray-500 rounded-lg uppercase text-[10px] font-black">Cancel</button>
@@ -627,8 +641,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" value={showMenuModal.price || ''} onChange={(e) => setShowMenuModal({...showMenuModal, price: Number(e.target.value)})} required />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase">Initial Stock</label>
-                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" value={showMenuModal.initialStock || ''} onChange={(e) => setShowMenuModal({...showMenuModal, initialStock: Number(e.target.value)})} required />
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Total Stocked (Edit Direct)</label>
+                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" value={showMenuModal.initialStock || 0} onChange={(e) => setShowMenuModal({...showMenuModal, initialStock: Number(e.target.value)})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-[#C8A862] uppercase">Restock / Add to Inventory</label>
+                  <input type="number" placeholder="Enter amount to add" className="w-full bg-[#0B1C2D] border border-[#C8A862]/30 rounded-lg p-3 text-sm text-[#C8A862] font-black outline-none focus:border-[#C8A862]" value={showMenuModal.restockAmount || ''} onChange={(e) => setShowMenuModal({...showMenuModal, restockAmount: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Sold to Date</label>
+                  <input type="number" disabled className="w-full bg-[#0B1C2D]/50 border border-gray-800 rounded-lg p-3 text-sm text-gray-500 font-black cursor-not-allowed" value={showMenuModal.soldCount || 0} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -641,8 +665,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-[#C8A862] uppercase">Low Stock Alert Threshold</label>
-                  <input type="number" className="w-full bg-[#0B1C2D] border border-[#C8A862]/30 rounded-lg p-3 text-sm text-[#C8A862] font-black" placeholder="Default: 3" value={showMenuModal.lowStockThreshold || ''} onChange={(e) => setShowMenuModal({...showMenuModal, lowStockThreshold: Number(e.target.value)})} />
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Low Stock Alert Threshold</label>
+                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" placeholder="Default: 3" value={showMenuModal.lowStockThreshold || ''} onChange={(e) => setShowMenuModal({...showMenuModal, lowStockThreshold: Number(e.target.value)})} />
                 </div>
               </div>
               <div className="flex gap-4 pt-4">
