@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, collection, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   Transaction, 
   SettlementStatus, 
@@ -9,7 +10,8 @@ import {
   BankAccount, 
   TransactionPayment, 
   TransactionItem, 
-  MenuItem 
+  MenuItem,
+  Room
 } from '../types';
 import ReceiptPreview from './ReceiptPreview';
 
@@ -21,11 +23,25 @@ interface ManageTransactionModalProps {
 const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transaction, onClose }) => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [menuCatalog, setMenuCatalog] = useState<MenuItem[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [guestName, setGuestName] = useState(transaction.guestName);
   const [email, setEmail] = useState(transaction.email || '');
   const [phone, setPhone] = useState(transaction.phone || '');
   const [idType, setIdType] = useState(transaction.identityType || 'National ID');
   const [idNumber, setIdNumber] = useState(transaction.idNumber || '');
+  
+  // Stay Period Management
+  const [stayPeriod, setStayPeriod] = useState({
+    checkIn: transaction.roomDetails?.checkIn || '',
+    checkOut: transaction.roomDetails?.checkOut || '',
+    nights: transaction.roomDetails?.nights || 1
+  });
+
+  // Per-room addition dates (defaults to main stay period)
+  const [roomAddDates, setRoomAddDates] = useState({
+    checkIn: transaction.roomDetails?.checkIn || '',
+    checkOut: transaction.roomDetails?.checkOut || ''
+  });
   
   // Items Management
   const [items, setItems] = useState<TransactionItem[]>(transaction.items || []);
@@ -55,12 +71,36 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
       console.error("ManageTransactionModal menu listener error:", err);
     });
 
+    const unsubRooms = onSnapshot(collection(db, 'rooms'), (snapshot) => {
+      if (!isSubscribed) return;
+      setRooms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)));
+    }, (err) => {
+      console.error("ManageTransactionModal rooms listener error:", err);
+    });
+
     return () => {
       isSubscribed = false;
       unsubSettings();
       unsubMenu();
+      unsubRooms();
     };
   }, []);
+
+  // Automatic Night Calculation
+  useEffect(() => {
+    if (stayPeriod.checkIn && stayPeriod.checkOut) {
+      const start = new Date(stayPeriod.checkIn);
+      const end = new Date(stayPeriod.checkOut);
+      start.setHours(12, 0, 0, 0);
+      end.setHours(12, 0, 0, 0);
+      const diffMs = end.getTime() - start.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      const finalNights = diffDays > 0 ? diffDays : 1;
+      if (finalNights !== stayPeriod.nights) {
+        setStayPeriod(prev => ({ ...prev, nights: finalNights }));
+      }
+    }
+  }, [stayPeriod.checkIn, stayPeriod.checkOut]);
 
   const addItem = () => {
     setItems([...items, { description: '', quantity: 1, price: 0, total: 0 }]);
@@ -91,6 +131,28 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
       
       updateItem(index, 'description', fullDescription);
       updateItem(index, 'price', selected.price);
+      updateItem(index, 'itemId', selected.id);
+    }
+  };
+
+  const handleRoomSelect = (roomId: string) => {
+    const selected = rooms.find(r => r.id === roomId);
+    if (selected) {
+      const start = new Date(roomAddDates.checkIn);
+      const end = new Date(roomAddDates.checkOut);
+      start.setHours(12, 0, 0, 0);
+      end.setHours(12, 0, 0, 0);
+      const diffMs = end.getTime() - start.getTime();
+      const nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+      
+      const desc = `${selected.name} (${selected.type}) • ${roomAddDates.checkIn} to ${roomAddDates.checkOut} (${nights} Nights)`;
+      setItems([...items, { 
+        itemId: selected.id, 
+        description: desc, 
+        quantity: 1, 
+        price: selected.price * nights, 
+        total: selected.price * nights 
+      }]);
     }
   };
 
@@ -135,6 +197,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
     }
 
     setIsSaving(true);
+    const batch = writeBatch(db);
     try {
       const updatedPayments = [...(transaction.payments || [])];
       
@@ -146,6 +209,26 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
             amount: p.amount,
             timestamp: Date.now()
           });
+        }
+      });
+
+      // Track new rooms to update inventory
+      const existingItemIds = new Set(transaction.items.map(i => i.itemId));
+      items.forEach(item => {
+        if (item.itemId && !existingItemIds.has(item.itemId)) {
+          // Check if it's a room
+          const isRoom = rooms.some(r => r.id === item.itemId);
+          if (isRoom) {
+            const roomRef = doc(db, 'rooms', item.itemId);
+            batch.update(roomRef, { bookedCount: increment(1) });
+          } else {
+            // Check if it's a menu item
+            const isMenu = menuCatalog.some(m => m.id === item.itemId);
+            if (isMenu) {
+              const menuRef = doc(db, 'menu', item.itemId);
+              batch.update(menuRef, { soldCount: increment(item.quantity) });
+            }
+          }
         }
       });
 
@@ -169,13 +252,26 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
         updatedAt: Date.now()
       };
 
+      // Update roomDetails if stay period changed or multiple rooms present
+      const roomItems = items.filter(i => rooms.some(r => r.id === i.itemId));
+      if (transaction.type === 'FOLIO') {
+        updates.roomDetails = {
+          ...transaction.roomDetails,
+          checkIn: stayPeriod.checkIn,
+          checkOut: stayPeriod.checkOut,
+          nights: stayPeriod.nights,
+          roomName: roomItems.length > 1 ? 'Multiple Rooms' : (roomItems[0]?.description.split(' (')[0] || transaction.roomDetails?.roomName || 'Room')
+        };
+      }
+
       // Set settlementMethod to the last added method if any
       if (totalNewPayment > 0) {
         const lastP = newPayments.filter(p => (p.amount || 0) > 0).pop();
         if (lastP) updates.settlementMethod = lastP.method;
       }
 
-      await updateDoc(doc(db, 'transactions', transaction.id), updates);
+      batch.update(doc(db, 'transactions', transaction.id), updates);
+      await batch.commit();
       onClose();
     } catch (err) {
       console.error(err);
@@ -186,7 +282,13 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   };
 
   // Filter out items that have no stock or have not been stocked yet for new additions
-  const availableStockCatalog = menuCatalog.filter(m => m.initialStock > (m.soldCount || 0));
+  const availableStockCatalog = menuCatalog.filter(m => {
+    const isStocked = m.initialStock > (m.soldCount || 0);
+    // User requested to show all items (Zenza/Whispers) for Folio management too
+    return isStocked;
+  });
+
+  const availableRooms = rooms.filter(r => r.totalInventory > r.bookedCount);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -201,12 +303,35 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           <section className="space-y-4">
-            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-700/50 pb-2">Guest Identity Data</h3>
+            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-700/50 pb-2">Guest Identity & Stay Period</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="text-[9px] font-bold text-gray-600 uppercase mb-1 block">Guest Full Name</label>
                 <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none font-bold" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
               </div>
+              
+              {transaction.type === 'FOLIO' && (
+                <div className="col-span-2 grid grid-cols-2 gap-4 bg-[#0B1C2D]/30 p-4 rounded-xl border border-gray-700/30">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
+                      <Calendar className="w-3 h-3 text-[#C8A862]" />
+                      Check-In Date
+                    </label>
+                    <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkIn} onChange={(e) => setStayPeriod({...stayPeriod, checkIn: e.target.value})} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
+                      <Calendar className="w-3 h-3 text-[#C8A862]" />
+                      Check-Out Date
+                    </label>
+                    <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkOut} onChange={(e) => setStayPeriod({...stayPeriod, checkOut: e.target.value})} />
+                  </div>
+                  <div className="col-span-2 text-center pt-2">
+                    <span className="text-[10px] font-black text-[#C8A862] uppercase tracking-widest">{stayPeriod.nights} Nights Calculated</span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-[9px] font-bold text-gray-600 uppercase mb-1 block">Email</label>
                 <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -221,7 +346,36 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
           <section className="space-y-4">
             <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
               <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Inventory Expenditure</h3>
-              <button onClick={addItem} className="text-[#C8A862] text-[10px] font-black hover:underline bg-[#C8A862]/10 px-3 py-1 rounded border border-[#C8A862]/20 uppercase tracking-widest">+ Add Line Item</button>
+              <div className="flex flex-col gap-2 items-end">
+                {transaction.type === 'FOLIO' && (
+                  <div className="flex gap-2 items-center bg-[#0B1C2D] p-2 rounded-lg border border-gray-700/50">
+                    <div className="flex gap-1 items-center">
+                      <Calendar className="w-3 h-3 text-[#C8A862]" />
+                      <input type="date" className="bg-transparent text-[9px] text-white outline-none" value={roomAddDates.checkIn} onChange={(e) => setRoomAddDates({...roomAddDates, checkIn: e.target.value})} />
+                    </div>
+                    <span className="text-gray-600 text-[9px]">to</span>
+                    <div className="flex gap-1 items-center">
+                      <Calendar className="w-3 h-3 text-[#C8A862]" />
+                      <input type="date" className="bg-transparent text-[9px] text-white outline-none" value={roomAddDates.checkOut} onChange={(e) => setRoomAddDates({...roomAddDates, checkOut: e.target.value})} />
+                    </div>
+                    <select 
+                      className="bg-[#C8A862]/10 border border-[#C8A862]/20 rounded px-2 py-1 text-[9px] font-black text-[#C8A862] outline-none uppercase tracking-widest ml-2"
+                      onChange={(e) => handleRoomSelect(e.target.value)}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>+ Add Room</option>
+                      {availableRooms.map(r => (
+                        <option key={r.id} value={r.id}>{r.name} (₦{r.price.toLocaleString()})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={addItem} className="text-[#C8A862] text-[10px] font-black hover:underline bg-[#C8A862]/10 px-3 py-1 rounded border border-[#C8A862]/20 uppercase tracking-widest flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> Manual Entry
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="space-y-3">
               {items.map((item, idx) => (

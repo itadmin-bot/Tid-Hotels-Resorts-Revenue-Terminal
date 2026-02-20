@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   UserProfile, 
   SettlementStatus,
@@ -267,10 +268,13 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">Stay Duration Protocol</label>
+                  <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
+                    <Calendar className="w-3 h-3 text-[#C8A862]" />
+                    Stay Duration Protocol
+                  </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="date" className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-xs text-white" value={stayPeriod.checkIn} onChange={(e) => setStayPeriod({...stayPeriod, checkIn: e.target.value})} />
-                    <input type="date" className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-xs text-white" value={stayPeriod.checkOut} onChange={(e) => setStayPeriod({...stayPeriod, checkOut: e.target.value})} />
+                    <input type="date" className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkIn} onChange={(e) => setStayPeriod({...stayPeriod, checkIn: e.target.value})} />
+                    <input type="date" className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkOut} onChange={(e) => setStayPeriod({...stayPeriod, checkOut: e.target.value})} />
                   </div>
                 </div>
                 <div className="space-y-1">

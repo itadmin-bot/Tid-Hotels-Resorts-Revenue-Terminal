@@ -67,10 +67,10 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
       .bank-info { font-size: 10px; line-height: 1.3; margin-top: 2mm; text-align: left; }
       .cut-spacer { height: 15mm; width: 100%; }
     ` : `
-      @page { size: A4; margin: 10mm !important; }
-      html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #ffffff !important; -webkit-print-color-adjust: exact; font-family: 'Inter', sans-serif !important; }
+      @page { size: 210mm 297mm; margin: 0 !important; }
+      html, body { margin: 0 !important; padding: 0 !important; width: 210mm !important; height: 297mm !important; background: #ffffff !important; -webkit-print-color-adjust: exact; font-family: 'Inter', sans-serif !important; }
       * { box-sizing: border-box !important; }
-      .print-shell { width: 100% !important; padding: 0 !important; box-sizing: border-box !important; color: #000 !important; }
+      .print-shell { width: 210mm !important; min-height: 297mm !important; padding: 15mm !important; box-sizing: border-box !important; color: #000 !important; position: relative; }
       .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8mm; margin-bottom: 8mm; }
       .hotel-info { flex: 1; }
       .hotel-name { font-size: 28px; font-weight: 900; color: #C8A862; font-style: italic; margin-bottom: 1mm; }
@@ -185,7 +185,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               </div>
             ) : (
               /* A4 Preview (Large) */
-              <div className="bg-white p-8 md:p-12 shadow-2xl h-fit w-[210mm] max-w-full text-black font-inter min-h-[297mm]">
+              <div className="bg-white p-[15mm] shadow-2xl h-fit w-[210mm] max-w-full text-black font-inter min-h-[297mm] box-border">
                   <div className="flex justify-between border-b-2 border-black pb-8 mb-8">
                     <div>
                       <h1 className="text-4xl font-black italic text-[#C8A862] uppercase tracking-tighter mb-1">{settings.hotelName}</h1>

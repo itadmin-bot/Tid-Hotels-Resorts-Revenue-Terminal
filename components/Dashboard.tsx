@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw } from 'lucide-react';
 import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem } from '../types';
 import { BRAND } from '../constants';
 import POSModal from './POSModal';
@@ -210,19 +211,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </select>
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Start Date</label>
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <Calendar className="w-3 h-3 text-[#C8A862]" />
+              Start Date
+            </label>
             <input 
               type="date"
-              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
+              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors accent-[#C8A862]"
               value={dateRange.start}
               onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
             />
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">End Date</label>
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <Calendar className="w-3 h-3 text-[#C8A862]" />
+              End Date
+            </label>
             <input 
               type="date"
-              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
+              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors accent-[#C8A862]"
               value={dateRange.end}
               onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
             />

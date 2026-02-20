@@ -3,7 +3,8 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { 
   initializeFirestore, 
-  enableIndexedDbPersistence, 
+  persistentLocalCache, 
+  persistentMultipleTabManager,
   CACHE_SIZE_UNLIMITED 
 } from "firebase/firestore";
 
@@ -21,20 +22,14 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 
-// Initialize Firestore with specific settings for stability
+// Initialize Firestore with modern persistent cache settings
 export const db = initializeFirestore(app, {
-  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+    cacheSizeBytes: CACHE_SIZE_UNLIMITED
+  }),
   // Force long polling if WebChannel/WebSockets are unstable in this environment
   experimentalForceLongPolling: true,
-});
-
-// Enable offline persistence
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    console.warn("Firestore Persistence failed: Multiple tabs open");
-  } else if (err.code === 'unimplemented') {
-    console.warn("Firestore Persistence failed: Browser not supported");
-  }
 });
 
 export const googleProvider = new GoogleAuthProvider();
