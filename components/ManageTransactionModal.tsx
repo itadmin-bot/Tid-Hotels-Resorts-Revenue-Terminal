@@ -482,13 +482,35 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
             </div>
 
             {transaction.payments && transaction.payments.length > 0 && (
-              <div className="pt-4 space-y-2 border-t border-gray-700/30">
-                <label className="text-[9px] font-bold text-gray-600 uppercase tracking-widest block">Audit Trail: Recorded Payments</label>
-                <div className="space-y-1 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
-                  {transaction.payments.map((p, i) => (
-                    <div key={i} className="flex justify-between text-[10px] text-gray-400 bg-white/5 p-2 rounded">
-                      <span className="uppercase">{p.method} • {new Date(p.timestamp).toLocaleDateString()}</span>
-                      <span className="font-black text-gray-300">₦{p.amount.toLocaleString()}</span>
+              <div className="pt-6 space-y-3 border-t border-gray-700/30">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black text-[#C8A862] uppercase tracking-[0.2em]">Verified Payment History</label>
+                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{transaction.payments.length} Records Found</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {[...transaction.payments].sort((a, b) => b.timestamp - a.timestamp).map((p, i) => (
+                    <div key={i} className="grid grid-cols-12 gap-2 bg-black/20 p-3 rounded-xl border border-gray-800/50 hover:border-gray-700 transition-colors items-center">
+                      <div className="col-span-4 flex flex-col">
+                        <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Settlement Method</span>
+                        <span className="text-[10px] text-white font-black uppercase tracking-tight">{p.method}</span>
+                      </div>
+                      <div className="col-span-5 flex flex-col">
+                        <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Transaction Timestamp</span>
+                        <span className="text-[10px] text-gray-400 font-medium">
+                          {new Date(p.timestamp).toLocaleString('en-GB', { 
+                            day: '2-digit', 
+                            month: 'short', 
+                            year: 'numeric',
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}
+                        </span>
+                      </div>
+                      <div className="col-span-3 flex flex-col text-right">
+                        <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Amount Paid</span>
+                        <span className="text-[11px] text-green-400 font-black tracking-tighter">₦{p.amount.toLocaleString()}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
