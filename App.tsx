@@ -62,7 +62,9 @@ const App: React.FC = () => {
       return;
     }
 
+    let isSubscribed = true;
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
+      if (!isSubscribed) return;
       if (snapshot.exists()) {
         const data = snapshot.data();
         const defaultTaxes: TaxConfig[] = [
@@ -86,9 +88,16 @@ const App: React.FC = () => {
         document.title = `${updatedSettings.hotelName} - Revenue Terminal`;
       }
     }, (err) => {
-      console.warn("Settings snapshot listener restricted:", err);
+      console.error("Settings snapshot listener error:", err);
+      if (err.code === 'permission-denied') {
+        console.warn("Settings access restricted for current user role");
+      }
     });
-    return () => unsubSettings();
+
+    return () => {
+      isSubscribed = false;
+      unsubSettings();
+    };
   }, [user]);
 
   // Real-time Presence Heartbeat (Immediate Login Timestamp)
@@ -150,53 +159,64 @@ const App: React.FC = () => {
         setLoading(true);
         const userRef = doc(db, 'users', currentUser.uid);
 
-        unsubProfile = onSnapshot(userRef, async (snapshot) => {
-          if (!isMounted) return;
+        try {
+          unsubProfile = onSnapshot(userRef, async (snapshot) => {
+            if (!isMounted) return;
 
-          if (!snapshot.exists()) {
-            const initialData = {
-              uid: currentUser.uid,
-              email: currentUser.email,
-              role: UserRole.STAFF,
-              isOnline: true,
-              lastActive: Date.now(),
-              onlineSince: Date.now(),
-              createdAt: Date.now(),
-              displayName: currentUser.email?.split('@')[0] || 'Operator'
-            };
-            try {
-              await setDoc(userRef, initialData);
-            } catch (err: any) {
-              console.error("Profile Creation Error:", err);
+            if (!snapshot.exists()) {
+              const initialData = {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                role: UserRole.STAFF,
+                isOnline: true,
+                lastActive: Date.now(),
+                onlineSince: Date.now(),
+                createdAt: Date.now(),
+                displayName: currentUser.email?.split('@')[0] || 'Operator'
+              };
+              try {
+                await setDoc(userRef, initialData);
+              } catch (err: any) {
+                console.error("Profile Creation Error:", err);
+                if (isMounted) {
+                  setSyncError("Terminal Access Denied");
+                  setLoading(false);
+                }
+              }
+            } else {
+              const data = snapshot.data();
               if (isMounted) {
-                setSyncError("Terminal Access Denied");
+                setUserProfile({
+                  uid: currentUser.uid,
+                  email: currentUser.email || '',
+                  displayName: data.displayName || 'Operator',
+                  role: (data.role as UserRole) || UserRole.STAFF,
+                  domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
+                  isOnline: data.isOnline ?? false,
+                  lastActive: data.lastActive || Date.now(),
+                  onlineSince: data.onlineSince || data.lastActive || Date.now(),
+                  createdAt: data.createdAt || data.lastActive || Date.now()
+                } as UserProfile);
                 setLoading(false);
               }
             }
-          } else {
-            const data = snapshot.data();
+          }, (err) => {
+            console.error("Profile Listener Error:", err);
             if (isMounted) {
-              setUserProfile({
-                uid: currentUser.uid,
-                email: currentUser.email || '',
-                displayName: data.displayName || 'Operator',
-                role: (data.role as UserRole) || UserRole.STAFF,
-                domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
-                isOnline: data.isOnline ?? false,
-                lastActive: data.lastActive || Date.now(),
-                onlineSince: data.onlineSince || data.lastActive || Date.now(),
-                createdAt: data.createdAt || data.lastActive || Date.now()
-              } as UserProfile);
+              // If it's a transient error, we might not want to show a hard error screen immediately
+              // but for profile, it's critical.
+              setSyncError("Terminal Connection Lost - Retrying...");
+              // Attempt to recover loading state if it was critical
               setLoading(false);
             }
-          }
-        }, (err) => {
-          console.error("Profile Listener Error:", err);
+          });
+        } catch (err) {
+          console.error("Failed to setup profile listener:", err);
           if (isMounted) {
-            setSyncError("Terminal Connection Lost");
+            setSyncError("Failed to initialize terminal");
             setLoading(false);
           }
-        });
+        }
       } else {
         if (isMounted) {
           setUserProfile(null);
@@ -204,6 +224,12 @@ const App: React.FC = () => {
           setLoading(false);
           setIsVerified(false);
         }
+      }
+    }, (err) => {
+      console.error("Auth state change error:", err);
+      if (isMounted) {
+        setSyncError("Authentication Service Error");
+        setLoading(false);
       }
     });
 

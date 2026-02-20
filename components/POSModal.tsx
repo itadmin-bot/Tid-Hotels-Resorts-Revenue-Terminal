@@ -33,14 +33,27 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
   const [menuFilter, setMenuFilter] = useState<'ALL' | UnitType>('ALL');
 
   useEffect(() => {
+    let isSubscribed = true;
     // Live synchronization for menu catalog and system settings
     const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      if (!isSubscribed) return;
       setMenu(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
+    }, (err) => {
+      console.error("POSModal menu listener error:", err);
     });
+
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
+      if (!isSubscribed) return;
       if (snapshot.exists()) setSettings(snapshot.data() as AppSettings);
+    }, (err) => {
+      console.error("POSModal settings listener error:", err);
     });
-    return () => { unsubMenu(); unsubSettings(); };
+
+    return () => { 
+      isSubscribed = false;
+      unsubMenu(); 
+      unsubSettings(); 
+    };
   }, []);
 
   const selectUnit = (u: UnitType) => {

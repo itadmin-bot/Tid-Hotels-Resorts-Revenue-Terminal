@@ -25,6 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
+    let isSubscribed = true;
     const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
     const transactionsRef = collection(db, 'transactions');
     
@@ -38,6 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       : query(transactionsRef, where('createdBy', '==', user.uid));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!isSubscribed) return;
       let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
       
       if (!isAdminUser) {
@@ -53,10 +55,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
     // Subscribe to menu for inventory reporting
     const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      if (!isSubscribed) return;
       setMenuItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
+    }, (error: any) => {
+      console.error("Firestore Menu Subscription Error:", error);
     });
 
     return () => {
+      isSubscribed = false;
       unsubscribe();
       unsubMenu();
     };

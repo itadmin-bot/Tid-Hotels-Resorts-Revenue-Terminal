@@ -16,7 +16,9 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
   useEffect(() => {
     if (!auth.currentUser) return;
 
+    let isSubscribed = true;
     const unsubscribe = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
+      if (!isSubscribed) return;
       if (snapshot.exists()) {
         const data = snapshot.data();
         setSettings({
@@ -33,9 +35,12 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         } as AppSettings);
       }
     }, (error) => {
-      console.warn("Receipt Settings subscription error:", error);
+      console.error("Receipt Settings subscription error:", error);
     });
-    return () => unsubscribe();
+    return () => {
+      isSubscribed = false;
+      unsubscribe();
+    };
   }, []);
 
   const handlePrint = () => {
@@ -49,6 +54,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
     const style = isPos ? `
       @page { size: 80mm auto; margin: 0 !important; }
       html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #ffffff !important; -webkit-print-color-adjust: exact; }
+      * { box-sizing: border-box !important; }
       .print-shell { width: 80mm !important; margin: 0 auto !important; padding: 6mm 4mm !important; box-sizing: border-box !important; font-family: 'Courier New', Courier, monospace !important; color: #000 !important; font-size: 12px !important; line-height: 1.2 !important; background: #fff !important; }
       .center { text-align: center !important; width: 100%; }
       .bold { font-weight: 900 !important; }
@@ -61,29 +67,30 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
       .bank-info { font-size: 10px; line-height: 1.3; margin-top: 2mm; text-align: left; }
       .cut-spacer { height: 15mm; width: 100%; }
     ` : `
-      @page { size: A4; margin: 15mm !important; }
+      @page { size: A4; margin: 10mm !important; }
       html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #ffffff !important; -webkit-print-color-adjust: exact; font-family: 'Inter', sans-serif !important; }
+      * { box-sizing: border-box !important; }
       .print-shell { width: 100% !important; padding: 0 !important; box-sizing: border-box !important; color: #000 !important; }
-      .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10mm; margin-bottom: 10mm; }
+      .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8mm; margin-bottom: 8mm; }
       .hotel-info { flex: 1; }
-      .hotel-name { font-size: 32px; font-weight: 900; color: #C8A862; font-style: italic; margin-bottom: 2mm; }
-      .hotel-sub { font-size: 10px; font-weight: bold; letter-spacing: 0.3em; margin-bottom: 4mm; text-transform: uppercase; color: #666; }
-      .hotel-addr { font-size: 11px; color: #444; max-width: 300px; line-height: 1.5; }
+      .hotel-name { font-size: 28px; font-weight: 900; color: #C8A862; font-style: italic; margin-bottom: 1mm; }
+      .hotel-sub { font-size: 9px; font-weight: bold; letter-spacing: 0.3em; margin-bottom: 3mm; text-transform: uppercase; color: #666; }
+      .hotel-addr { font-size: 10px; color: #444; max-width: 280px; line-height: 1.4; }
       .invoice-meta { text-align: right; }
-      .invoice-title { font-size: 24px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 2mm; text-transform: uppercase; }
-      .meta-row { font-size: 11px; font-weight: bold; margin-bottom: 1mm; }
-      .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #888; border-bottom: 1px solid #eee; padding-bottom: 1mm; margin-bottom: 4mm; }
-      .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 10mm; margin-bottom: 10mm; }
-      .guest-box, .stay-box { font-size: 13px; line-height: 1.6; }
-      .table { width: 100%; border-collapse: collapse; margin-bottom: 10mm; }
-      .table th { text-align: left; font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 4mm; border-bottom: 2px solid #000; background: #f9f9f9; }
-      .table td { padding: 4mm; border-bottom: 1px solid #eee; font-size: 12px; }
-      .totals { margin-left: auto; width: 300px; }
-      .total-row { display: flex; justify-content: space-between; padding: 2mm 0; font-size: 12px; }
-      .grand-total { border-top: 2px solid #000; margin-top: 2mm; padding-top: 4mm; font-size: 18px; font-weight: 900; }
-      .footer { margin-top: 20mm; border-top: 1px solid #eee; padding-top: 10mm; display: flex; gap: 10mm; }
-      .bank-list { flex: 1; font-size: 10px; }
-      .signature-box { width: 200px; border-top: 1px solid #000; margin-top: 15mm; text-align: center; font-size: 10px; font-weight: 900; padding-top: 2mm; }
+      .invoice-title { font-size: 22px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 1mm; text-transform: uppercase; }
+      .meta-row { font-size: 10px; font-weight: bold; margin-bottom: 1mm; }
+      .section-title { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #888; border-bottom: 1px solid #eee; padding-bottom: 1mm; margin-bottom: 3mm; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; margin-bottom: 8mm; }
+      .guest-box, .stay-box { font-size: 12px; line-height: 1.5; }
+      .table { width: 100%; border-collapse: collapse; margin-bottom: 8mm; table-layout: fixed; }
+      .table th { text-align: left; font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 3mm; border-bottom: 2px solid #000; background: #f9f9f9; }
+      .table td { padding: 3mm; border-bottom: 1px solid #eee; font-size: 11px; word-wrap: break-word; }
+      .totals { margin-left: auto; width: 80mm; }
+      .total-row { display: flex; justify-content: space-between; padding: 1.5mm 0; font-size: 11px; }
+      .grand-total { border-top: 2px solid #000; margin-top: 1.5mm; padding-top: 3mm; font-size: 16px; font-weight: 900; }
+      .footer { margin-top: 15mm; border-top: 1px solid #eee; padding-top: 8mm; display: flex; gap: 8mm; }
+      .bank-list { flex: 1; font-size: 9px; }
+      .signature-box { width: 180px; border-top: 1px solid #000; margin-top: 12mm; text-align: center; font-size: 9px; font-weight: 900; padding-top: 2mm; }
     `;
 
     printWindow.document.write(`
@@ -137,7 +144,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             </div>
           </div>
 
-          <div className="flex-1 bg-[#0B1C2D] p-4 md:p-8 rounded-2xl shadow-inner mx-auto overflow-y-auto w-full flex justify-center border border-white/5">
+          <div className="flex-1 bg-[#0B1C2D] p-4 md:p-8 rounded-2xl shadow-inner mx-auto overflow-auto w-full flex justify-center border border-white/5">
             {isPos ? (
               /* Thermal Preview (Small) */
               <div className="bg-white p-8 shadow-2xl h-fit w-[80mm] text-black font-mono">
@@ -178,7 +185,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               </div>
             ) : (
               /* A4 Preview (Large) */
-              <div className="bg-white p-12 shadow-2xl h-fit w-[210mm] text-black font-inter min-h-[297mm]">
+              <div className="bg-white p-8 md:p-12 shadow-2xl h-fit w-[210mm] max-w-full text-black font-inter min-h-[297mm]">
                   <div className="flex justify-between border-b-2 border-black pb-8 mb-8">
                     <div>
                       <h1 className="text-4xl font-black italic text-[#C8A862] uppercase tracking-tighter mb-1">{settings.hotelName}</h1>
@@ -389,16 +396,16 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           <table className="table">
             <thead>
               <tr>
-                <th style={{width: '60%'}}>Service Description</th>
-                <th style={{textAlign: 'center'}}>Qty</th>
-                <th style={{textAlign: 'right'}}>Rate (₦)</th>
-                <th style={{textAlign: 'right'}}>Amount (₦)</th>
+                <th style={{width: '50%'}}>Service Description</th>
+                <th style={{textAlign: 'center', width: '10%'}}>Qty</th>
+                <th style={{textAlign: 'right', width: '20%'}}>Rate (₦)</th>
+                <th style={{textAlign: 'right', width: '20%'}}>Amount (₦)</th>
               </tr>
             </thead>
             <tbody>
               {transaction.items.map((item, idx) => (
                 <tr key={idx}>
-                  <td className="uppercase bold">{item.description}</td>
+                  <td className="uppercase bold" style={{wordBreak: 'break-all'}}>{item.description}</td>
                   <td className="bold" style={{textAlign: 'center'}}>{item.quantity}</td>
                   <td className="bold" style={{textAlign: 'right'}}>{item.price.toLocaleString()}</td>
                   <td className="bold" style={{textAlign: 'right'}}>{item.total.toLocaleString()}</td>

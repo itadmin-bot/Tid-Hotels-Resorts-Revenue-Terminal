@@ -39,15 +39,24 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const [showReceipt, setShowReceipt] = useState(false);
 
   useEffect(() => {
+    let isSubscribed = true;
+
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
+      if (!isSubscribed) return;
       if (snapshot.exists()) setSettings(snapshot.data() as AppSettings);
+    }, (err) => {
+      console.error("ManageTransactionModal settings listener error:", err);
     });
     
     const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      if (!isSubscribed) return;
       setMenuCatalog(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
+    }, (err) => {
+      console.error("ManageTransactionModal menu listener error:", err);
     });
 
     return () => {
+      isSubscribed = false;
       unsubSettings();
       unsubMenu();
     };

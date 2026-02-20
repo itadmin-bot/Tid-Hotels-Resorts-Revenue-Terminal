@@ -36,9 +36,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [showMenuModal, setShowMenuModal] = useState<Partial<MenuItem> | null>(null);
 
   useEffect(() => {
-    const clock = setInterval(() => setCurrentTime(Date.now()), 15000);
+    let isSubscribed = true;
+    const clock = setInterval(() => {
+      if (isSubscribed) setCurrentTime(Date.now());
+    }, 15000);
 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      if (!isSubscribed) return;
       const allUsers = snapshot.docs.map(doc => {
         const data = doc.data();
         return { 
@@ -56,17 +60,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         if (!aOnline && bOnline) return 1;
         return a.displayName.localeCompare(b.displayName);
       }));
+    }, (err) => {
+      console.error("AdminPanel users listener error:", err);
     });
 
     const unsubRooms = onSnapshot(collection(db, 'rooms'), (snapshot) => {
+      if (!isSubscribed) return;
       setRooms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)));
+    }, (err) => {
+      console.error("AdminPanel rooms listener error:", err);
     });
 
     const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      if (!isSubscribed) return;
       setMenuItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
+    }, (err) => {
+      console.error("AdminPanel menu listener error:", err);
     });
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
+      if (!isSubscribed) return;
       if (snapshot.exists()) {
         const data = snapshot.data();
         setSettings({
@@ -82,13 +95,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           invoiceBanks: Array.isArray(data.invoiceBanks) ? data.invoiceBanks : []
         } as AppSettings);
       }
+    }, (err) => {
+      console.error("AdminPanel settings listener error:", err);
     });
 
     const unsubCode = onSnapshot(doc(db, 'accessCodes', 'master'), (snapshot) => {
+      if (!isSubscribed) return;
       if (snapshot.exists()) setMasterCode(snapshot.data().code);
+    }, (err) => {
+      console.error("AdminPanel access code listener error:", err);
     });
 
     return () => { 
+      isSubscribed = false;
       clearInterval(clock);
       unsubUsers(); 
       unsubRooms(); 

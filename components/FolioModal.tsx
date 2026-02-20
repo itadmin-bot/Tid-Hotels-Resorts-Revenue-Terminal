@@ -37,10 +37,17 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
+    let isSubscribed = true;
+
     const unsubRooms = onSnapshot(collection(db, 'rooms'), (snapshot) => {
+      if (!isSubscribed) return;
       setRooms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)));
+    }, (err) => {
+      console.error("FolioModal rooms listener error:", err);
     });
+
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
+      if (!isSubscribed) return;
       if (snapshot.exists()) {
         const data = snapshot.data() as AppSettings;
         setSettings(data);
@@ -48,8 +55,15 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
           setTargetBank('ALL'); // Default to Consolidated for new folios
         }
       }
+    }, (err) => {
+      console.error("FolioModal settings listener error:", err);
     });
-    return () => { unsubRooms(); unsubSettings(); };
+
+    return () => { 
+      isSubscribed = false;
+      unsubRooms(); 
+      unsubSettings(); 
+    };
   }, []);
 
   // AUTOMATIC NIGHT CALCULATION
