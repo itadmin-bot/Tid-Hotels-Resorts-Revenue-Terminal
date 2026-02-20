@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, doc, writeBatch, increment } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, doc, writeBatch, increment, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { 
   UserProfile, 
@@ -17,20 +17,24 @@ import ReceiptPreview from './ReceiptPreview';
 interface POSModalProps {
   user: UserProfile;
   onClose: () => void;
+  existingTransaction?: Transaction;
 }
 
-const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
+const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction }) => {
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [unit, setUnit] = useState<UnitType | null>(null);
+  const [unit, setUnit] = useState<UnitType | null>(existingTransaction?.unit || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<{item: MenuItem, quantity: number}[]>([]);
-  const [guest, setGuest] = useState({ name: 'Walk-in Guest' });
+  const [guest, setGuest] = useState({ name: existingTransaction?.guestName || 'Walk-in Guest' });
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.POS, amount: 0 }]);
-  const [discount, setDiscount] = useState(0);
+  const [discount, setDiscount] = useState(existingTransaction?.discountAmount || 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
   const [menuFilter, setMenuFilter] = useState<'ALL' | UnitType>('ALL');
+
+  const existingItems = existingTransaction?.items || [];
+  const previousPaidAmount = existingTransaction?.paidAmount || 0;
 
   useEffect(() => {
     let isSubscribed = true;
@@ -100,7 +104,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
     setCart(cart.map(c => c.item.id === id ? { ...c, quantity: q } : c));
   };
 
-  const subtotalItems = cart.reduce((acc, c) => acc + (c.item.price * c.quantity), 0);
+  const subtotalItems = cart.reduce((acc, c) => acc + (c.item.price * c.quantity), 0) + existingItems.reduce((acc, i) => acc + i.total, 0);
   const netAfterDiscount = Math.max(0, subtotalItems - discount);
   
   const taxes = settings?.taxes || [];
@@ -132,7 +136,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
     finalTotal = baseVal + vatSum + scSum;
   }
   
-  const totalPaid = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const totalPaid = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0) + previousPaidAmount;
   const balance = Math.max(0, finalTotal - totalPaid);
 
   const addPaymentRow = () => setPayments([...payments, { method: SettlementMethod.POS, amount: 0 }]);
@@ -147,13 +151,13 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
 
   const handleSubmit = async () => {
     if (!unit) return alert('Revenue unit not selected.');
-    if (cart.length === 0) return alert('Cannot process empty cart.');
+    if (cart.length === 0 && !existingTransaction) return alert('Cannot process empty cart.');
     
     setIsSubmitting(true);
     const batch = writeBatch(db);
     
     try {
-      const items: TransactionItem[] = cart.map(c => ({
+      const newItems: TransactionItem[] = cart.map(c => ({
         itemId: c.item.id,
         description: c.item.description ? `${c.item.name} (${c.item.description})` : c.item.name,
         quantity: c.quantity,
@@ -161,7 +165,9 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
         total: c.item.price * c.quantity
       }));
 
-      // Direct stock update via atomic increment
+      const allItems = [...existingItems, ...newItems];
+
+      // Direct stock update via atomic increment for NEW items only
       cart.forEach(c => {
         const itemRef = doc(db, 'menu', c.item.id);
         batch.update(itemRef, { soldCount: increment(c.quantity) });
@@ -169,7 +175,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
 
       const selectedBank = unit === UnitType.ZENZA ? settings?.zenzaBanks?.[0] : settings?.whispersBanks?.[0];
       
-      const finalPayments: TransactionPayment[] = payments
+      const newPayments: TransactionPayment[] = payments
         .filter(p => (p.amount || 0) > 0)
         .map(p => ({
           method: p.method as SettlementMethod,
@@ -177,34 +183,42 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
           timestamp: Date.now()
         }));
 
-      const txData = {
-        reference: `POS-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+      const allPayments = [...(existingTransaction?.payments || []), ...newPayments];
+
+      const txData: any = {
+        reference: existingTransaction?.reference || `POS-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'POS',
         unit, // This is the locked unit chosen at the start
         source: 'App',
         guestName: guest.name,
-        items,
+        items: allItems,
         subtotal: baseVal,
         taxAmount: vatSum,
         serviceCharge: scSum,
         discountAmount: discount,
         totalAmount: finalTotal,
         paidAmount: totalPaid,
-        payments: finalPayments,
+        payments: allPayments,
         balance: balance,
         status: balance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
-        settlementMethod: finalPayments.length > 0 ? finalPayments[0].method : SettlementMethod.POS,
+        settlementMethod: allPayments.length > 0 ? allPayments[allPayments.length - 1].method : SettlementMethod.POS,
         selectedBank: selectedBank || null,
-        createdBy: user.uid,
-        userId: user.uid,
+        createdBy: existingTransaction?.createdBy || user.uid,
+        userId: existingTransaction?.userId || user.uid,
         cashierName: user.displayName,
-        createdAt: Date.now(),
+        createdAt: existingTransaction?.createdAt || Date.now(),
         updatedAt: Date.now()
       };
 
-      const docRef = await addDoc(collection(db, 'transactions'), txData);
-      await batch.commit();
-      setSavedTransaction({ id: docRef.id, ...txData } as Transaction);
+      if (existingTransaction) {
+        await updateDoc(doc(db, 'transactions', existingTransaction.id), txData);
+        await batch.commit();
+        setSavedTransaction({ id: existingTransaction.id, ...txData } as Transaction);
+      } else {
+        const docRef = await addDoc(collection(db, 'transactions'), txData);
+        await batch.commit();
+        setSavedTransaction({ id: docRef.id, ...txData } as Transaction);
+      }
     } catch (err) {
       console.error(err);
       alert('Sync Failure: Transaction was not recorded. Retrying terminal handshake.');
@@ -330,6 +344,23 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose }) => {
 
             {/* Cart Items List */}
             <div className="space-y-3">
+              {existingItems.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Existing Items</h4>
+                  {existingItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-4 bg-white/[0.01] p-3 rounded-xl border border-white/5 opacity-60">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-black text-white uppercase truncate">{item.description}</div>
+                        <div className="text-[9px] text-gray-500 font-bold mt-0.5">₦{item.price.toLocaleString()} x {item.quantity}</div>
+                      </div>
+                      <div className="text-[10px] font-black text-white">₦{item.total.toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {cart.length > 0 && <h4 className="text-[10px] font-black text-[#C8A862] uppercase tracking-widest px-1">New Additions</h4>}
+              
               {cart.map(c => (
                 <div key={c.item.id} className="flex items-center gap-4 bg-white/[0.03] p-4 rounded-2xl border border-white/5 relative group transition-all hover:bg-white/[0.05]">
                   <div className="flex-1 min-w-0">

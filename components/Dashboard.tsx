@@ -16,6 +16,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showPOS, setShowPOS] = useState(false);
+  const [posEditingTransaction, setPosEditingTransaction] = useState<Transaction | null>(null);
   const [showFolio, setShowFolio] = useState(false);
   const [managingTransaction, setManagingTransaction] = useState<Transaction | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
@@ -332,6 +333,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right space-x-2">
+                    {t.type === 'POS' && (
+                      <button 
+                        onClick={() => { setPosEditingTransaction(t); setShowPOS(true); }} 
+                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all"
+                      >
+                        POS Add
+                      </button>
+                    )}
                     <button 
                       onClick={() => setManagingTransaction(t)} 
                       className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
@@ -353,7 +362,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
       </div>
 
-      {showPOS && <POSModal user={user} onClose={() => setShowPOS(false)} />}
+      {showPOS && <POSModal user={user} existingTransaction={posEditingTransaction || undefined} onClose={() => { setShowPOS(false); setPosEditingTransaction(null); }} />}
       {showFolio && <FolioModal user={user} onClose={() => setShowFolio(false)} />}
       {managingTransaction && (
         <ManageTransactionModal 
