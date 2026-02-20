@@ -314,7 +314,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#C8A862] hover:text-white transition-colors">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#EAD8B1] hover:text-white transition-colors">
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>

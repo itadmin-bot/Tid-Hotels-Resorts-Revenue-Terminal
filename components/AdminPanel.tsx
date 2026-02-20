@@ -265,7 +265,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           <form onSubmit={handleVerifyCode} className="space-y-4">
             <div className="relative">
               <input type={showAccessCode ? 'text' : 'password'} placeholder="••••" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg py-4 px-4 text-center font-mono tracking-[0.5em] text-[#C8A862] text-xl outline-none focus:border-[#C8A862]" value={accessCodeInput} onChange={(e) => setAccessCodeInput(e.target.value)} />
-              <button type="button" onClick={() => setShowAccessCode(!showAccessCode)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#C8A862] hover:text-white transition-colors">
+              <button type="button" onClick={() => setShowAccessCode(!showAccessCode)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#EAD8B1] hover:text-white transition-colors">
                 {showAccessCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
@@ -560,7 +560,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 <div className="flex gap-4">
                   <div className="relative flex-1">
                     <input type={showSecurityCode ? 'text' : 'password'} placeholder="TIDE-XXXX" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-4 text-sm text-white font-mono tracking-widest focus:border-[#C8A862] outline-none" value={securityTabCode} onChange={(e) => setSecurityTabCode(e.target.value)} />
-                    <button type="button" onClick={() => setShowSecurityCode(!showSecurityCode)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#C8A862] hover:text-white transition-colors">
+                    <button type="button" onClick={() => setShowSecurityCode(!showSecurityCode)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#EAD8B1] hover:text-white transition-colors">
                       {showSecurityCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>

@@ -269,7 +269,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-[#C8A862]" />
+                    <Calendar className="w-5 h-5 text-[#EAD8B1]" />
                     Stay Duration Protocol
                   </label>
                   <div className="grid grid-cols-2 gap-2">

@@ -32,6 +32,12 @@
 
         .no-print { display: block; }
         @media print { .no-print { display: none !important; } }
+
+        /* Enhance native date picker calendar icon visibility */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) sepia(1) saturate(5) hue-rotate(10deg);
+            cursor: pointer;
+        }
     </style>
     <script type="importmap">
     {
