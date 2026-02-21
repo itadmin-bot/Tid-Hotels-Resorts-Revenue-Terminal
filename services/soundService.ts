@@ -8,6 +8,7 @@ const playSound = (type: 'success' | 'error' | 'click') => {
 
   try {
     // Placeholder for future sound implementation
+    // console.log(`Playing ${type} sound`);
   } catch (error) {
     console.error('Sound playback failed:', error);
   }
