@@ -13,6 +13,7 @@ import {
   TransactionPayment
 } from '../types';
 import ReceiptPreview from './ReceiptPreview';
+import { soundService } from '../services/soundService';
 
 interface POSModalProps {
   user: UserProfile;
@@ -75,6 +76,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
 
     const inCart = cart.find(c => c.item.id === item.id)?.quantity || 0;
     if (available <= inCart) {
+      soundService.play('error');
       alert(`Insufficient Stock: Only ${available} units of ${item.name} available.`);
       return;
     }
@@ -85,6 +87,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
     } else {
       setCart([...cart, { item, quantity: 1 }]);
     }
+    soundService.play('action');
   };
 
   const removeFromCart = (id: string) => {
@@ -213,14 +216,17 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
       if (existingTransaction) {
         await updateDoc(doc(db, 'transactions', existingTransaction.id), txData);
         await batch.commit();
+        soundService.play('success');
         setSavedTransaction({ id: existingTransaction.id, ...txData } as Transaction);
       } else {
         const docRef = await addDoc(collection(db, 'transactions'), txData);
         await batch.commit();
+        soundService.play('success');
         setSavedTransaction({ id: docRef.id, ...txData } as Transaction);
       }
     } catch (err) {
       console.error(err);
+      soundService.play('error');
       alert('Sync Failure: Transaction was not recorded. Retrying terminal handshake.');
     } finally {
       setIsSubmitting(false);

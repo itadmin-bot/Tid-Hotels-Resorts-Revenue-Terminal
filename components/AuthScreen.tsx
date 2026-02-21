@@ -13,6 +13,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 import { BRAND } from '../constants';
 import { UserRole } from '../types';
+import { soundService } from '../services/soundService';
 
 interface AuthScreenProps {
   isRestricted?: boolean;
@@ -77,6 +78,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     try {
       await reload(auth.currentUser);
       if (auth.currentUser.emailVerified) {
+        soundService.play('success');
         setInfo('Verification confirmed. Synchronizing terminal...');
         window.location.reload();
       } else {
@@ -108,6 +110,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     try {
       if (view === 'FORGOT_PASSWORD') {
         await sendPasswordResetEmail(auth, email);
+        soundService.play('action');
         setInfo('Password reset link sent! Please check your corporate email inbox.');
       } else if (view === 'SIGN_IN') {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -118,6 +121,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
         else localStorage.removeItem('tide_remembered_email');
 
         if (!user.emailVerified) {
+          soundService.play('alert');
           setError('Please verify your email address.');
           setLoading(false);
           return;
@@ -129,11 +133,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           const masterCode = codeDoc.exists() ? codeDoc.data().code : DEFAULT_ADMIN_KEY;
           if (accessCode === masterCode) {
             await updateDoc(doc(db, 'users', user.uid), { role: UserRole.ADMIN });
+            soundService.play('success');
           } else {
+            soundService.play('error');
             setError('Invalid Admin Access Key.');
             setLoading(false);
             return;
           }
+        } else {
+          soundService.play('success');
         }
       } else if (view === 'SIGN_UP') {
         // Step 1: Preliminary creation to get UID
@@ -166,6 +174,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
         });
 
         await sendEmailVerification(userCredential.user);
+        soundService.play('success');
         setInfo('Operator account created! Please verify your email via the link sent.');
         setResendCooldown(60);
         setView('SIGN_IN');
@@ -182,6 +191,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
     setLoading(true);
     try {
       await sendEmailVerification(auth.currentUser);
+      soundService.play('action');
       setInfo('A new verification link has been sent to your email.');
       setResendCooldown(60);
     } catch (err: any) {
@@ -198,9 +208,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
       const result = await signInWithPopup(auth, googleProvider);
       if (!result.user.email?.endsWith(BRAND.domain)) {
         await signOut(auth);
+        soundService.play('error');
         setError('Unauthorized domain. Only Tidé Hotel Group accounts permitted.');
+      } else {
+        soundService.play('success');
       }
     } catch (err: any) {
+      soundService.play('error');
       setError(mapAuthError(err));
     } finally {
       setLoading(false);

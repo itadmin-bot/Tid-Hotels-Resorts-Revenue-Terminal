@@ -14,6 +14,7 @@ import {
   Room
 } from '../types';
 import ReceiptPreview from './ReceiptPreview';
+import { soundService } from '../services/soundService';
 
 interface ManageTransactionModalProps {
   transaction: Transaction;
@@ -272,9 +273,11 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
 
       batch.update(doc(db, 'transactions', transaction.id), updates);
       await batch.commit();
+      soundService.play('success');
       onClose();
     } catch (err) {
       console.error(err);
+      soundService.play('error');
       alert('Sync Failure: Error updating ledger. Check terminal authorization.');
     } finally {
       setIsSaving(false);

@@ -14,6 +14,7 @@ import {
   BankAccount
 } from '../types';
 import ReceiptPreview from './ReceiptPreview';
+import { soundService } from '../services/soundService';
 
 interface RoomBooking {
   roomId: string;
@@ -228,9 +229,11 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
 
       const docRef = await addDoc(collection(db, 'transactions'), txData);
       await batch.commit();
+      soundService.play('success');
       setSavedTransaction({ id: docRef.id, ...txData } as Transaction);
     } catch (err) {
       console.error(err);
+      soundService.play('error');
       alert('Synchronization Error: Failure communicating with revenue authority.');
     } finally { setIsSubmitting(false); }
   };
