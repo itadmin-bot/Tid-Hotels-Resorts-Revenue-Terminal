@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '@/firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   UserProfile, 
@@ -12,9 +12,8 @@ import {
   SettlementMethod,
   TransactionPayment,
   BankAccount
-} from '../types';
-import ReceiptPreview from './ReceiptPreview';
-import { soundService } from '../services/soundService';
+} from '@/types';
+import ReceiptPreview from '@/components/ReceiptPreview';
 
 interface RoomBooking {
   roomId: string;
@@ -229,11 +228,9 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
 
       const docRef = await addDoc(collection(db, 'transactions'), txData);
       await batch.commit();
-      soundService.play('success');
       setSavedTransaction({ id: docRef.id, ...txData } as Transaction);
     } catch (err) {
       console.error(err);
-      soundService.play('error');
       alert('Synchronization Error: Failure communicating with revenue authority.');
     } finally { setIsSubmitting(false); }
   };

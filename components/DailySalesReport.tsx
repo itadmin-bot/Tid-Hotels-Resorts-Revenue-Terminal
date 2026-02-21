@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Transaction, SettlementMethod, UnitType } from '../types';
+import { db } from '@/firebase';
+import { Transaction, SettlementMethod, UnitType } from '@/types';
 import { Calendar, Download, TrendingUp, CreditCard, Banknote, Landmark, FileText } from 'lucide-react';
 
 const DailySalesReport: React.FC = () => {

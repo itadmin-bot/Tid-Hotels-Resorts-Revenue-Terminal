@@ -9,9 +9,9 @@ import {
   addDoc
 } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
-import { db } from '../firebase';
-import DailySalesReport from './DailySalesReport';
-import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '../types';
+import { db } from '@/firebase';
+import DailySalesReport from '@/components/DailySalesReport';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '@/types';
 
 interface AdminPanelProps {
   user: UserProfile;

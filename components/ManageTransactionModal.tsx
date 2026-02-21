@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, onSnapshot, collection, writeBatch, increment } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '@/firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   Transaction, 
@@ -12,9 +12,8 @@ import {
   TransactionItem, 
   MenuItem,
   Room
-} from '../types';
-import ReceiptPreview from './ReceiptPreview';
-import { soundService } from '../services/soundService';
+} from '@/types';
+import ReceiptPreview from '@/components/ReceiptPreview';
 
 interface ManageTransactionModalProps {
   transaction: Transaction;
@@ -273,11 +272,9 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
 
       batch.update(doc(db, 'transactions', transaction.id), updates);
       await batch.commit();
-      soundService.play('success');
       onClose();
     } catch (err) {
       console.error(err);
-      soundService.play('error');
       alert('Sync Failure: Error updating ledger. Check terminal authorization.');
     } finally {
       setIsSaving(false);

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '@/firebase';
 import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw } from 'lucide-react';
-import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem } from '../types';
-import { BRAND } from '../constants';
-import POSModal from './POSModal';
-import FolioModal from './FolioModal';
-import ReceiptPreview from './ReceiptPreview';
-import ManageTransactionModal from './ManageTransactionModal';
+import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem } from '@/types';
+import { BRAND } from '@/constants';
+import POSModal from '@/components/POSModal';
+import FolioModal from '@/components/FolioModal';
+import ReceiptPreview from '@/components/ReceiptPreview';
+import ManageTransactionModal from '@/components/ManageTransactionModal';
 
 interface DashboardProps {
   user: UserProfile;

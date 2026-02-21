@@ -1,9 +1,9 @@
 import React from 'react';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
-import { UserProfile, UserRole, AppSettings } from '../types';
-import { BRAND } from '../constants';
+import { auth, db } from '@/firebase';
+import { UserProfile, UserRole, AppSettings } from '@/types';
+import { BRAND } from '@/constants';
 
 interface SidebarProps {
   user: UserProfile;
