@@ -570,7 +570,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           </div>
                         </td>
                         <td className="py-5 text-right">
-                          <button onClick={() => toggleUserRole(u)} className="text-[#C8A862] hover:text-white text-[10px] font-black uppercase tracking-widest bg-[#C8A862]/10 px-3 py-1.5 rounded-lg border border-[#C8A862]/20">Switch Permissions</button>
+                          <div className="flex justify-end items-center gap-3">
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Admin Access</span>
+                            <button 
+                              onClick={() => toggleUserRole(u)}
+                              className={`w-10 h-5 rounded-full relative transition-all ${u.role === UserRole.ADMIN ? 'bg-purple-600' : 'bg-gray-800'}`}
+                            >
+                              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${u.role === UserRole.ADMIN ? 'left-6' : 'left-1'}`}></div>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
