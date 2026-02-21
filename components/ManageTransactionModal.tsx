@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, onSnapshot, collection, writeBatch, increment } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { db } from '../firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   Transaction, 
@@ -12,8 +12,8 @@ import {
   TransactionItem, 
   MenuItem,
   Room
-} from '@/types';
-import ReceiptPreview from '@/components/ReceiptPreview';
+} from '../types';
+import ReceiptPreview from './ReceiptPreview';
 
 interface ManageTransactionModalProps {
   transaction: Transaction;

@@ -9,9 +9,8 @@ import {
   addDoc
 } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
-import { db } from '@/firebase';
-import DailySalesReport from '@/components/DailySalesReport';
-import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '@/types';
+import { db } from '../firebase';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '../types';
 
 interface AdminPanelProps {
   user: UserProfile;
@@ -27,7 +26,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [securityTabCode, setSecurityTabCode] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'Rooms' | 'Menu' | 'Reports' | 'Settings' | 'Accounts' | 'Users' | 'Security'>('Rooms');
+  const [activeTab, setActiveTab] = useState<'Rooms' | 'Menu' | 'Settings' | 'Accounts' | 'Users' | 'Security'>('Rooms');
   const [rooms, setRooms] = useState<Room[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -288,7 +287,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Master Control Panel • {user.displayName}</p>
         </div>
         <div className="bg-[#13263A] rounded-xl p-1.5 flex border border-gray-700 overflow-x-auto gap-1">
-          {['Rooms', 'Menu', 'Reports', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
+          {['Rooms', 'Menu', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-5 py-2 text-[11px] font-black rounded-lg uppercase tracking-widest transition-all shrink-0 ${activeTab === tab ? 'bg-[#C8A862] text-[#0B1C2D] shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
               {tab}
             </button>
@@ -398,10 +397,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               </table>
             </div>
           </div>
-        )}
-
-        {activeTab === 'Reports' && (
-          <DailySalesReport />
         )}
 
         {activeTab === 'Accounts' && settings && (

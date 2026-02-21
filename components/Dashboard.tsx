@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { db } from '../firebase';
 import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw } from 'lucide-react';
-import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem } from '@/types';
-import { BRAND } from '@/constants';
-import POSModal from '@/components/POSModal';
-import FolioModal from '@/components/FolioModal';
-import ReceiptPreview from '@/components/ReceiptPreview';
-import ManageTransactionModal from '@/components/ManageTransactionModal';
+import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem } from '../types';
+import { BRAND } from '../constants';
+import POSModal from './POSModal';
+import FolioModal from './FolioModal';
+import ReceiptPreview from './ReceiptPreview';
+import ManageTransactionModal from './ManageTransactionModal';
 
 interface DashboardProps {
   user: UserProfile;
@@ -23,8 +23,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [unitFilter, setUnitFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -93,12 +91,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         if (unitFilter === 'ZENZA' && t.unit !== UnitType.ZENZA) return false;
         if (unitFilter === 'WHISPERS' && t.unit !== UnitType.WHISPERS) return false;
       }
-
-      // Status Filtering
-      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
-
-      // Method Filtering
-      if (methodFilter !== 'ALL' && t.settlementMethod !== methodFilter) return false;
 
       // Date Range Filtering
       if (!dateRange.start && !dateRange.end) return true;
@@ -219,31 +211,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </select>
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Status</label>
-            <select 
-              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">All Statuses</option>
-              <option value={SettlementStatus.SETTLED}>Settled</option>
-              <option value={SettlementStatus.UNPAID}>Unpaid</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Method</label>
-            <select 
-              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
-              value={methodFilter}
-              onChange={(e) => setMethodFilter(e.target.value)}
-            >
-              <option value="ALL">All Methods</option>
-              <option value={SettlementMethod.POS}>POS Terminal</option>
-              <option value={SettlementMethod.CASH}>Cash</option>
-              <option value={SettlementMethod.TRANSFER}>Transfer</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-[150px] space-y-1">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
               <Calendar className="w-5 h-5 text-[#EAD8B1]" />
               Start Date
@@ -269,12 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={() => { 
-                setDateRange({ start: '', end: '' }); 
-                setUnitFilter('ALL'); 
-                setStatusFilter('ALL');
-                setMethodFilter('ALL');
-              }}
+              onClick={() => { setDateRange({ start: '', end: '' }); setUnitFilter('ALL'); }}
               className="px-4 py-2 bg-gray-800 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
             >
               Reset
