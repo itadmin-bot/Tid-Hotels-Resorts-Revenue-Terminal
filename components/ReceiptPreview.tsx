@@ -178,7 +178,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   </div>
                   <div className="text-[10px] space-y-1 mb-4">
                     {currentBanks.map((b, i) => (
-                      <div key={i} className="font-bold">{b.bank}: {b.accountNumber}</div>
+                      <div key={i} className="font-bold">{b.bank} • {b.accountNumber} • {b.accountName}</div>
                     ))}
                   </div>
                   <div className="text-center italic text-[9px] font-black border-t border-black pt-4 uppercase">Verified Revenue Record</div>
@@ -294,7 +294,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <div className="grid grid-cols-1 gap-2">
                         {currentBanks.map((b, i) => (
                           <div key={i} className="text-[11px] font-black uppercase bg-gray-50 p-2 rounded">
-                            {b.bank} • <span className="text-[#C8A862]">{b.accountNumber}</span>
+                            {b.bank} • <span className="text-[#C8A862]">{b.accountNumber}</span> • {b.accountName}
                           </div>
                         ))}
                       </div>
@@ -349,7 +349,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           </div>
           <div className="bank-info">
             {currentBanks.map((bank, i) => (
-              <div key={i} className="bold uppercase">{bank.bank}: {bank.accountNumber}</div>
+              <div key={i} className="bold uppercase">{bank.bank} • {bank.accountNumber} • {bank.accountName}</div>
             ))}
           </div>
           <div className="divider" style={{marginTop: '4mm'}}></div>

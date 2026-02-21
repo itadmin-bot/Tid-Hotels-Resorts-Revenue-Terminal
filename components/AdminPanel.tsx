@@ -8,7 +8,7 @@ import {
   deleteDoc,
   addDoc
 } from 'firebase/firestore';
-import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee } from 'lucide-react';
+import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
 import { db } from '../firebase';
 import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '../types';
 
@@ -37,6 +37,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
 
   const [showRoomModal, setShowRoomModal] = useState<(Partial<Room> & { addInventory?: number }) | null>(null);
   const [showMenuModal, setShowMenuModal] = useState<(Partial<MenuItem> & { restockAmount?: number }) | null>(null);
+  const [roomSearch, setRoomSearch] = useState('');
+  const [menuSearch, setMenuSearch] = useState('');
 
   useEffect(() => {
     let isSubscribed = true;
@@ -296,9 +298,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       <div className="bg-[#13263A] rounded-2xl border border-gray-700/50 p-8 shadow-2xl min-h-[500px]">
         {activeTab === 'Rooms' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <h2 className="text-lg font-black text-[#C8A862] uppercase tracking-widest">Inventory Management</h2>
-              <button onClick={() => setShowRoomModal({})} className="px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">+ Add Room</button>
+              <div className="flex flex-1 max-w-md gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input 
+                    type="text" 
+                    placeholder="SEARCH ROOMS (NAME OR TYPE)..." 
+                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-[10px] font-black text-white uppercase tracking-widest outline-none focus:border-[#C8A862] transition-all"
+                    value={roomSearch}
+                    onChange={(e) => setRoomSearch(e.target.value)}
+                  />
+                </div>
+                <button onClick={() => setShowRoomModal({})} className="px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all shrink-0">+ Add Room</button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -312,7 +326,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/30">
-                  {rooms.map(r => (
+                  {rooms
+                    .filter(r => 
+                      r.name.toLowerCase().includes(roomSearch.toLowerCase()) || 
+                      r.type.toLowerCase().includes(roomSearch.toLowerCase())
+                    )
+                    .map(r => (
                     <tr key={r.id} className="hover:bg-white/5 transition-colors group">
                       <td className="py-5 font-bold text-white uppercase">{r.name}</td>
                       <td className="py-5 text-gray-400 text-xs uppercase">{r.type}</td>
@@ -332,9 +351,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
 
         {activeTab === 'Menu' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <h2 className="text-lg font-black text-[#C8A862] uppercase tracking-widest">POS Menu Catalog</h2>
-              <button onClick={() => setShowMenuModal({})} className="px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">+ Add Item</button>
+              <div className="flex flex-1 max-w-md gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input 
+                    type="text" 
+                    placeholder="SEARCH MENU ITEMS..." 
+                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-[10px] font-black text-white uppercase tracking-widest outline-none focus:border-[#C8A862] transition-all"
+                    value={menuSearch}
+                    onChange={(e) => setMenuSearch(e.target.value)}
+                  />
+                </div>
+                <button onClick={() => setShowMenuModal({})} className="px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all shrink-0">+ Add Item</button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -348,7 +379,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/30">
-                  {menuItems.map(m => (
+                  {menuItems
+                    .filter(m => m.name.toLowerCase().includes(menuSearch.toLowerCase()))
+                    .map(m => (
                     <tr key={m.id} className="hover:bg-white/5 transition-colors">
                       <td className="py-5 font-bold text-white uppercase">{m.name}</td>
                       <td className="py-5 text-gray-400 text-xs">{m.unit}</td>
