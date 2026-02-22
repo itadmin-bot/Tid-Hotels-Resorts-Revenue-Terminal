@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment, updateDoc } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { db } from '../firebase';
 import { 
   UserProfile, 
   UnitType, 
@@ -11,8 +11,8 @@ import {
   Transaction, 
   TransactionItem,
   TransactionPayment
-} from '@/types';
-import ReceiptPreview from '@/components/ReceiptPreview';
+} from '../types';
+import ReceiptPreview from './ReceiptPreview';
 
 interface POSModalProps {
   user: UserProfile;

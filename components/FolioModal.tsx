@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { db } from '../firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   UserProfile, 
@@ -12,8 +12,8 @@ import {
   SettlementMethod,
   TransactionPayment,
   BankAccount
-} from '@/types';
-import ReceiptPreview from '@/components/ReceiptPreview';
+} from '../types';
+import ReceiptPreview from './ReceiptPreview';
 
 interface RoomBooking {
   roomId: string;

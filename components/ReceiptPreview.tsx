@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '@/firebase';
-import { Transaction, UnitType, AppSettings, BankAccount, TaxConfig } from '@/types';
-import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '@/constants';
+import { db, auth } from '../firebase';
+import { Transaction, UnitType, AppSettings, BankAccount, TaxConfig } from '../types';
+import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '../constants';
 
 interface ReceiptPreviewProps {
   transaction: Transaction;
