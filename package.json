@@ -1,5 +1,5 @@
 {
-  "name": "tidé-hotels-&-resorts-revenue-terminal",
+  "name": "tide-hotels-resorts-revenue-terminal",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,10 +10,12 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.2.0",
     "firebase": "^12.9.0",
     "lucide-react": "^0.575.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

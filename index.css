@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #0B1C2D;
+  color: white;
+  margin: 0;
+  -webkit-print-color-adjust: exact;
+}
+
+@keyframes progress {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-progress {
+  animation: progress 2s infinite ease-in-out;
+}
+
+/* Hide all print functionality from main window to avoid A4 scaling issues */
+@media print {
+  body * { display: none !important; }
+}
+
+.no-print { display: block; }
+@media print { .no-print { display: none !important; } }
+
+/* Enhance native date picker calendar icon visibility */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) sepia(1) saturate(5) hue-rotate(10deg);
+  cursor: pointer;
+}
