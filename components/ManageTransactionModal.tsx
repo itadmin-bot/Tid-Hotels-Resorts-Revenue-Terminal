@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, onSnapshot, collection, writeBatch, increment } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { db } from '../firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   Transaction, 
@@ -12,8 +12,8 @@ import {
   TransactionItem, 
   MenuItem,
   Room
-} from '@/types';
-import ReceiptPreview from '@/components/ReceiptPreview';
+} from '../types';
+import ReceiptPreview from './ReceiptPreview';
 
 interface ManageTransactionModalProps {
   transaction: Transaction;
@@ -53,32 +53,6 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const [selectedBank, setSelectedBank] = useState<BankAccount | undefined>(transaction.selectedBank);
   const [isSaving, setIsSaving] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
-
-  // Real-time synchronization with Firestore
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'transactions', transaction.id), (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data() as Transaction;
-        // Only sync if not currently saving to prevent overwriting local edits
-        if (!isSaving) {
-          setGuestName(data.guestName);
-          setEmail(data.email || '');
-          setPhone(data.phone || '');
-          setIdType(data.identityType || 'National ID');
-          setIdNumber(data.idNumber || '');
-          setItems(data.items || []);
-          setDiscount(data.discountAmount || 0);
-          setSelectedBank(data.selectedBank);
-          setStayPeriod({
-            checkIn: data.roomDetails?.checkIn || '',
-            checkOut: data.roomDetails?.checkOut || '',
-            nights: data.roomDetails?.nights || 1
-          });
-        }
-      }
-    });
-    return () => unsub();
-  }, [transaction.id, isSaving]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -217,13 +191,8 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const projectedBalance = Math.max(0, netTotal - projectedPaidAmount);
 
   const handleUpdate = async () => {
-    if (!guestName.trim()) {
-      alert('GUEST IDENTITY REQUIRED: Full name must be provided for revenue record synchronization.');
-      return;
-    }
-
     if (items.some(i => !i.description || i.price < 0)) {
-      alert('INVENTORY ERROR: Ensure all line items have valid descriptions and non-negative prices.');
+      alert('Error: Ensure all line items have valid descriptions and non-negative prices.');
       return;
     }
 
@@ -303,11 +272,10 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
 
       batch.update(doc(db, 'transactions', transaction.id), updates);
       await batch.commit();
-      alert('AUTHORIZATION SUCCESSFUL: Revenue record has been updated and synchronized with the central ledger.');
       onClose();
     } catch (err) {
       console.error(err);
-      alert('SYNCHRONIZATION ERROR: Failed to update revenue record. Please check your network connection and terminal authorization.');
+      alert('Sync Failure: Error updating ledger. Check terminal authorization.');
     } finally {
       setIsSaving(false);
     }
@@ -323,19 +291,17 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const availableRooms = rooms.filter(r => r.totalInventory > r.bookedCount);
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-      <div className="bg-[#13263A] w-full max-w-3xl rounded-3xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col h-[90vh] max-h-[950px] no-print">
-        {/* Header */}
-        <div className="p-8 border-b border-gray-700 flex justify-between items-center bg-[#0B1C2D] shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="bg-[#13263A] w-full max-w-2xl rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col max-h-[90vh] no-print">
+        <div className="p-6 border-b border-gray-700 flex justify-between items-center bg-[#0B1C2D]/50">
           <div>
-            <h2 className="text-2xl font-black text-[#C8A862] uppercase tracking-tighter">MANAGE REVENUE RECORD</h2>
-            <p className="text-[11px] text-gray-500 font-bold tracking-[0.2em] uppercase">{transaction.reference} • LOCKED SOURCE: {transaction.unit || 'HOTEL FOLIO'}</p>
+            <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tight">MANAGE REVENUE RECORD</h2>
+            <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">{transaction.reference} • LOCKED SOURCE: {transaction.unit || 'HOTEL FOLIO'}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-3xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-2xl">&times;</button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
           <section className="space-y-4">
             <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-700/50 pb-2">Guest Identity & Stay Period</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -553,19 +519,9 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
           </section>
         </div>
 
-        {/* Footer */}
-        <div className="p-8 bg-[#0B1C2D] border-t border-gray-700 flex gap-6 shrink-0 z-20">
-          <button 
-            onClick={() => setShowReceipt(true)} 
-            className="flex-1 py-6 border-2 border-gray-700 text-gray-300 font-black rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-white/5 transition-all"
-          >
-            PREVIEW DOCUMENT
-          </button>
-          <button 
-            disabled={isSaving} 
-            onClick={handleUpdate} 
-            className="flex-[2] py-6 bg-[#C8A862] text-[#0B1C2D] font-black rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-[#B69651] transition-all shadow-2xl"
-          >
+        <div className="p-6 bg-[#0B1C2D] border-t border-gray-700 flex gap-4">
+          <button onClick={() => setShowReceipt(true)} className="flex-1 py-4 border border-gray-700 text-gray-400 font-black rounded-xl uppercase tracking-widest text-[10px] hover:bg-white/5 transition-all">Preview Document</button>
+          <button disabled={isSaving} onClick={handleUpdate} className="flex-[2] py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl uppercase tracking-widest text-[10px] hover:bg-[#B69651] transition-all">
             {isSaving ? 'SYNCHRONIZING...' : 'AUTHORIZE UPDATES'}
           </button>
         </div>

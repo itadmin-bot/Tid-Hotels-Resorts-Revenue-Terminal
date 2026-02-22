@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
 import { db } from '../firebase';
-import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction, SettlementMethod, SettlementStatus } from '../types';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '../types';
 
 interface AdminPanelProps {
   user: UserProfile;
@@ -26,11 +26,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [securityTabCode, setSecurityTabCode] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'Rooms' | 'Menu' | 'Settings' | 'Accounts' | 'Users' | 'Security' | 'Reports'>('Rooms');
+  const [activeTab, setActiveTab] = useState<'Rooms' | 'Menu' | 'Settings' | 'Accounts' | 'Users' | 'Security'>('Rooms');
   const [rooms, setRooms] = useState<Room[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -113,13 +111,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       console.error("AdminPanel access code listener error:", err);
     });
 
-    const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
-      if (!isSubscribed) return;
-      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
-    }, (err) => {
-      console.error("AdminPanel transactions listener error:", err);
-    });
-
     return () => { 
       isSubscribed = false;
       clearInterval(clock);
@@ -128,7 +119,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       unsubMenu(); 
       unsubSettings(); 
       unsubCode(); 
-      unsubTransactions();
     };
   }, []);
 
@@ -297,7 +287,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Master Control Panel • {user.displayName}</p>
         </div>
         <div className="bg-[#13263A] rounded-xl p-1.5 flex border border-gray-700 overflow-x-auto gap-1">
-          {['Reports', 'Rooms', 'Menu', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
+          {['Rooms', 'Menu', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-5 py-2 text-[11px] font-black rounded-lg uppercase tracking-widest transition-all shrink-0 ${activeTab === tab ? 'bg-[#C8A862] text-[#0B1C2D] shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
               {tab}
             </button>
@@ -306,163 +296,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       </div>
 
       <div className="bg-[#13263A] rounded-2xl border border-gray-700/50 p-8 shadow-2xl min-h-[500px]">
-        {activeTab === 'Reports' && (
-          <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-widest">Daily Revenue Ledger</h2>
-                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Financial Reconciliation & Audit</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <input 
-                  type="date" 
-                  className="bg-[#0B1C2D] border border-gray-700 rounded-lg px-4 py-2 text-xs font-black text-white uppercase outline-none focus:border-[#C8A862] transition-all accent-[#C8A862]"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                />
-                <button 
-                  onClick={() => {
-                    const dailyTransactions = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
-                    const headers = ['Reference', 'Timestamp', 'Unit', 'Guest', 'Subtotal', 'Tax', 'SC', 'Total', 'Paid', 'Method', 'Status'];
-                    const rows = dailyTransactions.map(t => [
-                      t.reference,
-                      new Date(t.createdAt).toLocaleString(),
-                      t.unit || 'FOLIO',
-                      t.guestName,
-                      t.subtotal,
-                      t.taxAmount,
-                      t.serviceCharge,
-                      t.totalAmount,
-                      t.paidAmount,
-                      t.settlementMethod || 'N/A',
-                      t.status
-                    ]);
-                    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `DAILY_SALES_REPORT_${reportDate}.csv`;
-                    a.click();
-                  }}
-                  className="px-4 py-2 bg-blue-600/10 text-blue-400 border border-blue-600/20 rounded-lg text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all"
-                >
-                  Export CSV
-                </button>
-              </div>
-            </div>
-
-            {(() => {
-              const dailyTransactions = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
-              const grossRevenue = dailyTransactions.reduce((sum, t) => sum + t.totalAmount, 0);
-              const taxLiability = dailyTransactions.reduce((sum, t) => sum + t.taxAmount, 0);
-              const serviceCharge = dailyTransactions.reduce((sum, t) => sum + t.serviceCharge, 0);
-              const netRevenue = dailyTransactions.reduce((sum, t) => sum + t.subtotal, 0);
-
-              const byMethod = {
-                [SettlementMethod.POS]: dailyTransactions.filter(t => t.settlementMethod === SettlementMethod.POS).reduce((sum, t) => sum + t.paidAmount, 0),
-                [SettlementMethod.CASH]: dailyTransactions.filter(t => t.settlementMethod === SettlementMethod.CASH).reduce((sum, t) => sum + t.paidAmount, 0),
-                [SettlementMethod.TRANSFER]: dailyTransactions.filter(t => t.settlementMethod === SettlementMethod.TRANSFER).reduce((sum, t) => sum + t.paidAmount, 0),
-              };
-
-              const byUnit = {
-                [UnitType.ZENZA]: dailyTransactions.filter(t => t.unit === UnitType.ZENZA).reduce((sum, t) => sum + t.totalAmount, 0),
-                [UnitType.WHISPERS]: dailyTransactions.filter(t => t.unit === UnitType.WHISPERS).reduce((sum, t) => sum + t.totalAmount, 0),
-                'FOLIO': dailyTransactions.filter(t => !t.unit || t.type === 'FOLIO').reduce((sum, t) => sum + t.totalAmount, 0),
-              };
-
-              return (
-                <div className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-[#0B1C2D] p-5 rounded-2xl border border-gray-700/50">
-                      <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Gross Revenue</p>
-                      <h3 className="text-2xl font-black text-white">₦{grossRevenue.toLocaleString()}</h3>
-                    </div>
-                    <div className="bg-[#0B1C2D] p-5 rounded-2xl border border-gray-700/50">
-                      <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Tax Liability (VAT)</p>
-                      <h3 className="text-2xl font-black text-blue-400">₦{taxLiability.toLocaleString()}</h3>
-                    </div>
-                    <div className="bg-[#0B1C2D] p-5 rounded-2xl border border-gray-700/50">
-                      <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Service Charge</p>
-                      <h3 className="text-2xl font-black text-purple-400">₦{serviceCharge.toLocaleString()}</h3>
-                    </div>
-                    <div className="bg-[#0B1C2D] p-5 rounded-2xl border border-gray-700/50">
-                      <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Net Revenue</p>
-                      <h3 className="text-2xl font-black text-green-400">₦{netRevenue.toLocaleString()}</h3>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Settlement Channels</h3>
-                      <div className="space-y-3">
-                        {Object.entries(byMethod).map(([method, amount]) => (
-                          <div key={method} className="bg-[#0B1C2D] p-4 rounded-xl border border-gray-700/30 flex justify-between items-center">
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">{method} Terminal</span>
-                            <span className="font-black text-[#C8A862]">₦{amount.toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Unit Performance</h3>
-                      <div className="space-y-3">
-                        {Object.entries(byUnit).map(([unit, amount]) => (
-                          <div key={unit} className="bg-[#0B1C2D] p-4 rounded-xl border border-gray-700/30 flex justify-between items-center">
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">{unit} POS</span>
-                            <span className="font-black text-[#C8A862]">₦{amount.toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Daily Transaction Log</h3>
-                    <div className="overflow-x-auto border border-gray-700/30 rounded-xl">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="text-[9px] text-gray-500 uppercase tracking-widest border-b border-gray-700/30 bg-[#0B1C2D]">
-                            <th className="px-4 py-3">Reference</th>
-                            <th className="px-4 py-3">Time</th>
-                            <th className="px-4 py-3">Guest</th>
-                            <th className="px-4 py-3">Unit</th>
-                            <th className="px-4 py-3 text-right">Total</th>
-                            <th className="px-4 py-3 text-center">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-700/20">
-                          {dailyTransactions.map(t => (
-                            <tr key={t.id} className="text-[10px] hover:bg-white/5 transition-colors">
-                              <td className="px-4 py-3 font-black text-white">{t.reference}</td>
-                              <td className="px-4 py-3 text-gray-400">{new Date(t.createdAt).toLocaleTimeString()}</td>
-                              <td className="px-4 py-3 text-gray-300 font-bold uppercase">{t.guestName}</td>
-                              <td className="px-4 py-3 text-gray-500 font-black">{t.unit || 'FOLIO'}</td>
-                              <td className="px-4 py-3 text-right font-black">₦{t.totalAmount.toLocaleString()}</td>
-                              <td className="px-4 py-3 text-center">
-                                <span className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-widest border ${
-                                  t.status === SettlementStatus.SETTLED ? 'border-green-500/30 text-green-400 bg-green-500/5' : 'border-red-500/30 text-red-400 bg-red-500/5'
-                                }`}>
-                                  {t.status}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                          {dailyTransactions.length === 0 && (
-                            <tr>
-                              <td colSpan={6} className="py-10 text-center text-gray-600 font-black uppercase italic tracking-widest">No records for this date</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
         {activeTab === 'Rooms' && (
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
