@@ -10,9 +10,9 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../firebase';
-import { BRAND } from '../constants';
-import { UserRole } from '../types';
+import { auth, db, googleProvider } from '@/firebase';
+import { BRAND } from '@/constants';
+import { UserRole } from '@/types';
 
 interface AuthScreenProps {
   isRestricted?: boolean;
