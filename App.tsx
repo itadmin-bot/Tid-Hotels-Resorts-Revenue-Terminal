@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut, reload } from 'firebase/auth';
 import { doc, onSnapshot, updateDoc, setDoc, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
-import { auth, db } from '@/firebase';
-import AuthScreen from '@/components/AuthScreen';
-import Dashboard from '@/components/Dashboard';
-import Sidebar from '@/components/Sidebar';
-import AdminPanel from '@/components/AdminPanel';
-import { UserProfile, UserRole, AppSettings, TaxConfig } from '@/types';
-import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '@/constants';
+import { auth, db } from './firebase';
+import AuthScreen from './components/AuthScreen';
+import Dashboard from './components/Dashboard';
+import Sidebar from './components/Sidebar';
+import AdminPanel from './components/AdminPanel';
+import { UserProfile, UserRole, AppSettings, TaxConfig } from './types';
+import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from './constants';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);

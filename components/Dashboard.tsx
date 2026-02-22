@@ -23,8 +23,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [unitFilter, setUnitFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -93,12 +91,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         if (unitFilter === 'ZENZA' && t.unit !== UnitType.ZENZA) return false;
         if (unitFilter === 'WHISPERS' && t.unit !== UnitType.WHISPERS) return false;
       }
-
-      // Status Filtering
-      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
-
-      // Settlement Method Filtering
-      if (methodFilter !== 'ALL' && t.settlementMethod !== methodFilter) return false;
 
       // Date Range Filtering
       if (!dateRange.start && !dateRange.end) return true;
@@ -205,42 +197,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
         {/* Filter Bar */}
         <div className="bg-[#13263A] p-4 rounded-2xl border border-gray-700/30 flex flex-wrap items-end gap-4 shadow-xl">
-          <div className="flex-1 min-w-[180px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Revenue Unit</label>
+          <div className="flex-1 min-w-[200px] space-y-1">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Filter by Revenue Unit</label>
             <select 
               className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
               value={unitFilter}
               onChange={(e) => setUnitFilter(e.target.value)}
             >
-              <option value="ALL">All Streams</option>
+              <option value="ALL">All Revenue Streams</option>
               <option value="ZENZA">Zenza Unit</option>
               <option value="WHISPERS">Whispers Unit</option>
-              <option value="FOLIO">Reservations</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Status</label>
-            <select 
-              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">All Status</option>
-              <option value={SettlementStatus.SETTLED}>Settled</option>
-              <option value={SettlementStatus.UNPAID}>Unpaid</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Method</label>
-            <select 
-              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
-              value={methodFilter}
-              onChange={(e) => setMethodFilter(e.target.value)}
-            >
-              <option value="ALL">All Methods</option>
-              <option value={SettlementMethod.POS}>POS Terminal</option>
-              <option value={SettlementMethod.CASH}>Cash</option>
-              <option value={SettlementMethod.TRANSFER}>Bank Transfer</option>
+              <option value="FOLIO">Reservations (Folio)</option>
             </select>
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
@@ -269,21 +236,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={() => { 
-                setDateRange({ start: '', end: '' }); 
-                setUnitFilter('ALL'); 
-                setStatusFilter('ALL'); 
-                setMethodFilter('ALL'); 
-              }}
+              onClick={() => { setDateRange({ start: '', end: '' }); setUnitFilter('ALL'); }}
               className="px-4 py-2 bg-gray-800 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
             >
-              Global Reset
+              Reset
             </button>
             <button 
               onClick={downloadReport} 
               className="px-4 py-2 bg-blue-600/10 text-blue-400 text-[10px] font-black uppercase rounded-lg border border-blue-600/20 hover:bg-blue-600 hover:text-white transition-all shadow-lg"
             >
-              Export
+              Export Transactions
+            </button>
+            <button 
+              onClick={downloadInventoryReport} 
+              className="px-4 py-2 bg-green-600/10 text-green-500 text-[10px] font-black uppercase rounded-lg border border-green-600/20 hover:bg-green-600 hover:text-white transition-all shadow-lg"
+            >
+              Export Inventory
             </button>
           </div>
         </div>

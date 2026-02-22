@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
 import { db } from '../firebase';
-import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction } from '../types';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '../types';
 
 interface AdminPanelProps {
   user: UserProfile;
@@ -26,13 +26,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [securityTabCode, setSecurityTabCode] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'Rooms' | 'Menu' | 'Settings' | 'Accounts' | 'Users' | 'Security' | 'Reports'>('Rooms');
+  const [activeTab, setActiveTab] = useState<'Rooms' | 'Menu' | 'Settings' | 'Accounts' | 'Users' | 'Security'>('Rooms');
   const [rooms, setRooms] = useState<Room[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [loading, setLoading] = useState(false);
   const [masterCode, setMasterCode] = useState(DEFAULT_ADMIN_KEY);
@@ -113,13 +111,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       console.error("AdminPanel access code listener error:", err);
     });
 
-    const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
-      if (!isSubscribed) return;
-      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
-    }, (err) => {
-      console.error("AdminPanel transactions listener error:", err);
-    });
-
     return () => { 
       isSubscribed = false;
       clearInterval(clock);
@@ -128,7 +119,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       unsubMenu(); 
       unsubSettings(); 
       unsubCode(); 
-      unsubTransactions();
     };
   }, []);
 
@@ -297,7 +287,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Master Control Panel • {user.displayName}</p>
         </div>
         <div className="bg-[#13263A] rounded-xl p-1.5 flex border border-gray-700 overflow-x-auto gap-1">
-          {['Reports', 'Rooms', 'Menu', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
+          {['Rooms', 'Menu', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-5 py-2 text-[11px] font-black rounded-lg uppercase tracking-widest transition-all shrink-0 ${activeTab === tab ? 'bg-[#C8A862] text-[#0B1C2D] shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
               {tab}
             </button>
@@ -306,199 +296,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       </div>
 
       <div className="bg-[#13263A] rounded-2xl border border-gray-700/50 p-8 shadow-2xl min-h-[500px]">
-        {activeTab === 'Reports' && (
-          <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-700/50 pb-6">
-              <div>
-                <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-widest">Revenue Reporting Hub</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">24-Hour Financial Oversight Terminal</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Select Audit Date</label>
-                  <input 
-                    type="date" 
-                    className="bg-[#0B1C2D] border border-gray-700 rounded-lg px-4 py-2 text-xs text-white outline-none focus:border-[#C8A862] transition-all accent-[#C8A862]"
-                    value={reportDate}
-                    onChange={(e) => setReportDate(e.target.value)}
-                  />
-                </div>
-                <button 
-                  onClick={() => {
-                    const filtered = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
-                    const headers = ['Reference', 'Timestamp', 'Type', 'Unit', 'Guest', 'Gross', 'Tax', 'SC', 'Net', 'Method', 'Status'];
-                    const rows = filtered.map(t => [
-                      t.reference,
-                      new Date(t.createdAt).toLocaleString(),
-                      t.type,
-                      t.unit || 'FOLIO',
-                      t.guestName,
-                      t.totalAmount,
-                      t.taxAmount,
-                      t.serviceCharge,
-                      t.totalAmount - t.taxAmount - t.serviceCharge,
-                      t.settlementMethod || 'N/A',
-                      t.status
-                    ]);
-                    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `TIDE_DAILY_LEDGER_${reportDate}.csv`;
-                    a.click();
-                  }}
-                  className="px-6 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg text-[10px] uppercase tracking-widest hover:bg-[#B69651] transition-all mt-4"
-                >
-                  Export Daily Ledger
-                </button>
-              </div>
-            </div>
-
-            {(() => {
-              const dailyTransactions = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
-              const gross = dailyTransactions.reduce((a, b) => a + b.totalAmount, 0);
-              const tax = dailyTransactions.reduce((a, b) => a + b.taxAmount, 0);
-              const sc = dailyTransactions.reduce((a, b) => a + b.serviceCharge, 0);
-              const net = gross - tax - sc;
-
-              const posPayments = dailyTransactions.reduce((acc, t) => {
-                const p = (t.payments || []).filter(pay => pay.method === 'POS').reduce((a, b) => a + b.amount, 0);
-                return acc + p;
-              }, 0);
-              const cashPayments = dailyTransactions.reduce((acc, t) => {
-                const p = (t.payments || []).filter(pay => pay.method === 'CASH').reduce((a, b) => a + b.amount, 0);
-                return acc + p;
-              }, 0);
-              const transferPayments = dailyTransactions.reduce((acc, t) => {
-                const p = (t.payments || []).filter(pay => pay.method === 'TRANSFER').reduce((a, b) => a + b.amount, 0);
-                return acc + p;
-              }, 0);
-
-              const zenzaRev = dailyTransactions.filter(t => t.unit === 'Zenza').reduce((a, b) => a + b.totalAmount, 0);
-              const whispersRev = dailyTransactions.filter(t => t.unit === 'Whispers').reduce((a, b) => a + b.totalAmount, 0);
-              const folioRev = dailyTransactions.filter(t => t.type === 'FOLIO').reduce((a, b) => a + b.totalAmount, 0);
-
-              return (
-                <div className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 shadow-xl">
-                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Gross Revenue</p>
-                      <h3 className="text-2xl font-black text-white tracking-tighter">₦{gross.toLocaleString()}</h3>
-                    </div>
-                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 shadow-xl">
-                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Tax Liability</p>
-                      <h3 className="text-2xl font-black text-blue-400 tracking-tighter">₦{tax.toLocaleString()}</h3>
-                    </div>
-                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 shadow-xl">
-                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Service Charge</p>
-                      <h3 className="text-2xl font-black text-purple-400 tracking-tighter">₦{sc.toLocaleString()}</h3>
-                    </div>
-                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 shadow-xl">
-                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Net Revenue</p>
-                      <h3 className="text-2xl font-black text-green-400 tracking-tighter">₦{net.toLocaleString()}</h3>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50">
-                      <h4 className="text-xs font-black text-[#C8A862] uppercase tracking-widest mb-6 border-b border-gray-700/50 pb-2">Settlement Channels</h4>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] font-bold text-gray-400 uppercase">POS Terminals</span>
-                          <span className="text-sm font-black text-white">₦{posPayments.toLocaleString()}</span>
-                        </div>
-                        <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-blue-500 h-full" style={{ width: `${(posPayments / (posPayments + cashPayments + transferPayments || 1)) * 100}%` }}></div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] font-bold text-gray-400 uppercase">Cash Settlements</span>
-                          <span className="text-sm font-black text-white">₦{cashPayments.toLocaleString()}</span>
-                        </div>
-                        <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-green-500 h-full" style={{ width: `${(cashPayments / (posPayments + cashPayments + transferPayments || 1)) * 100}%` }}></div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] font-bold text-gray-400 uppercase">Bank Transfers</span>
-                          <span className="text-sm font-black text-white">₦{transferPayments.toLocaleString()}</span>
-                        </div>
-                        <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-purple-500 h-full" style={{ width: `${(transferPayments / (posPayments + cashPayments + transferPayments || 1)) * 100}%` }}></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50">
-                      <h4 className="text-xs font-black text-[#C8A862] uppercase tracking-widest mb-6 border-b border-gray-700/50 pb-2">Unit Performance</h4>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] font-bold text-gray-400 uppercase">Zenza POS</span>
-                          <span className="text-sm font-black text-white">₦{zenzaRev.toLocaleString()}</span>
-                        </div>
-                        <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-purple-600 h-full" style={{ width: `${(zenzaRev / (zenzaRev + whispersRev + folioRev || 1)) * 100}%` }}></div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] font-bold text-gray-400 uppercase">Whispers POS</span>
-                          <span className="text-sm font-black text-white">₦{whispersRev.toLocaleString()}</span>
-                        </div>
-                        <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-blue-400 h-full" style={{ width: `${(whispersRev / (zenzaRev + whispersRev + folioRev || 1)) * 100}%` }}></div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] font-bold text-gray-400 uppercase">Room Folios</span>
-                          <span className="text-sm font-black text-white">₦{folioRev.toLocaleString()}</span>
-                        </div>
-                        <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-[#C8A862] h-full" style={{ width: `${(folioRev / (zenzaRev + whispersRev + folioRev || 1)) * 100}%` }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h4 className="text-xs font-black text-[#C8A862] uppercase tracking-widest border-b border-gray-700/50 pb-2">Daily Transaction Log</h4>
-                    <div className="overflow-x-auto rounded-xl border border-gray-700/30">
-                      <table className="w-full text-left">
-                        <thead className="bg-[#0B1C2D] text-[9px] font-black uppercase tracking-widest text-gray-500">
-                          <tr>
-                            <th className="px-4 py-3">Ref / Time</th>
-                            <th className="px-4 py-3">Guest</th>
-                            <th className="px-4 py-3">Unit</th>
-                            <th className="px-4 py-3 text-right">Amount</th>
-                            <th className="px-4 py-3 text-center">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-700/30">
-                          {dailyTransactions.sort((a, b) => b.createdAt - a.createdAt).map(t => (
-                            <tr key={t.id} className="hover:bg-white/5 transition-colors">
-                              <td className="px-4 py-3">
-                                <div className="text-[11px] font-black text-white">{t.reference}</div>
-                                <div className="text-[9px] text-gray-600 font-bold">{new Date(t.createdAt).toLocaleTimeString()}</div>
-                              </td>
-                              <td className="px-4 py-3 text-[11px] font-bold text-gray-300">{t.guestName}</td>
-                              <td className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase">{t.unit || 'FOLIO'}</td>
-                              <td className="px-4 py-3 text-[11px] font-black text-right text-white">₦{t.totalAmount.toLocaleString()}</td>
-                              <td className="px-4 py-3 text-center">
-                                <span className={`text-[8px] font-black px-2 py-0.5 rounded border ${t.status === 'SETTLED' ? 'border-green-500/30 text-green-400' : 'border-red-500/30 text-red-400'}`}>
-                                  {t.status}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {dailyTransactions.length === 0 && (
-                        <div className="py-12 text-center text-gray-600 font-black uppercase text-[10px] tracking-widest italic">No records for selected date</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
         {activeTab === 'Rooms' && (
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
