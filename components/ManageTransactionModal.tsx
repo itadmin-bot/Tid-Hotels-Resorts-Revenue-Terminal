@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, onSnapshot, collection, writeBatch, increment } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '@/firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   Transaction, 
@@ -12,8 +12,9 @@ import {
   TransactionItem, 
   MenuItem,
   Room
-} from '../types';
-import ReceiptPreview from './ReceiptPreview';
+} from '@/types';
+import SettleBillModal from '@/components/SettleBillModal';
+import ReceiptPreview from '@/components/ReceiptPreview';
 
 interface ManageTransactionModalProps {
   transaction: Transaction;
@@ -47,15 +48,45 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const [items, setItems] = useState<TransactionItem[]>(transaction.items || []);
   
   // Multi-payment / Split Payment Management
-  const [newPayments, setNewPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.POS, amount: 0 }]);
+  const [newPayments, setNewPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.CARD, amount: 0 }]);
   
   const [discount, setDiscount] = useState<number>(transaction.discountAmount || 0);
   const [selectedBank, setSelectedBank] = useState<BankAccount | undefined>(transaction.selectedBank);
   const [isSaving, setIsSaving] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showSettleModal, setShowSettleModal] = useState(false);
+
+  // Real-time synchronization with Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'transactions', transaction.id), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() as Transaction;
+        // Only sync if not currently saving to prevent overwriting local edits
+        if (!isSaving) {
+          setGuestName(data.guestName);
+          setEmail(data.email || '');
+          setPhone(data.phone || '');
+          setIdType(data.identityType || 'National ID');
+          setIdNumber(data.idNumber || '');
+          setItems(data.items || []);
+          setDiscount(data.discountAmount || 0);
+          setSelectedBank(data.selectedBank);
+          setStayPeriod({
+            checkIn: data.roomDetails?.checkIn || '',
+            checkOut: data.roomDetails?.checkOut || '',
+            nights: data.roomDetails?.nights || 1
+          });
+        }
+      }
+    });
+    return () => unsub();
+  }, [transaction.id, isSaving]);
 
   useEffect(() => {
     let isSubscribed = true;
+    if (stayPeriod.checkIn && stayPeriod.checkOut) {
+      setRoomAddDates({ checkIn: stayPeriod.checkIn, checkOut: stayPeriod.checkOut });
+    }
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
       if (!isSubscribed) return;
@@ -84,7 +115,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
       unsubMenu();
       unsubRooms();
     };
-  }, []);
+  }, [stayPeriod.checkIn, stayPeriod.checkOut]);
 
   // Automatic Night Calculation
   useEffect(() => {
@@ -158,12 +189,22 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
 
   // Split Payment Actions
   const addPaymentLine = () => {
-    setNewPayments([...newPayments, { method: SettlementMethod.POS, amount: 0 }]);
+    setNewPayments([...newPayments, { method: SettlementMethod.CARD, amount: 0 }]);
   };
 
   const removePaymentLine = (idx: number) => {
     if (newPayments.length > 1) {
       setNewPayments(newPayments.filter((_, i) => i !== idx));
+    }
+  };
+
+  const settleBalance = () => {
+    if (projectedBalance <= 0) return;
+    const emptyIdx = newPayments.findIndex(p => !p.amount || p.amount === 0);
+    if (emptyIdx !== -1) {
+      updatePaymentLine(emptyIdx, 'amount', projectedBalance);
+    } else {
+      setNewPayments([...newPayments, { method: SettlementMethod.CARD, amount: projectedBalance }]);
     }
   };
 
@@ -190,9 +231,16 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const projectedPaidAmount = currentPaid + totalNewPayment;
   const projectedBalance = Math.max(0, netTotal - projectedPaidAmount);
 
-  const handleUpdate = async () => {
+  const handleUpdate = () => performUpdate(newPayments);
+
+  const performUpdate = async (paymentsToProcess: Partial<TransactionPayment>[]) => {
+    if (!guestName.trim()) {
+      alert('GUEST IDENTITY REQUIRED: Full name must be provided for revenue record synchronization.');
+      return;
+    }
+
     if (items.some(i => !i.description || i.price < 0)) {
-      alert('Error: Ensure all line items have valid descriptions and non-negative prices.');
+      alert('INVENTORY ERROR: Ensure all line items have valid descriptions and non-negative prices.');
       return;
     }
 
@@ -201,18 +249,28 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
     try {
       const updatedPayments = [...(transaction.payments || [])];
       
-      // Process all non-zero new payment lines
-      newPayments.forEach(p => {
+      let totalNewFromThisUpdate = 0;
+      paymentsToProcess.forEach(p => {
         if (p.amount && p.amount > 0) {
+          totalNewFromThisUpdate += p.amount;
           updatedPayments.push({
-            method: p.method || SettlementMethod.POS,
+            method: p.method || SettlementMethod.CARD,
             amount: p.amount,
             timestamp: Date.now()
           });
         }
       });
 
-      // Track new rooms to update inventory
+      const finalPaidAmount = currentPaid + totalNewFromThisUpdate;
+      const finalBalance = Math.max(0, netTotal - finalPaidAmount);
+      
+      let finalStatus = SettlementStatus.UNPAID;
+      if (finalBalance === 0) {
+        finalStatus = SettlementStatus.PAID;
+      } else if (finalPaidAmount > 0) {
+        finalStatus = SettlementStatus.PARTIAL;
+      }
+
       const existingItemIds = new Set(transaction.items.map(i => i.itemId));
       items.forEach(item => {
         if (item.itemId && !existingItemIds.has(item.itemId)) {
@@ -244,10 +302,10 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
         serviceCharge,
         discountAmount: discount,
         totalAmount: netTotal,
-        paidAmount: projectedPaidAmount,
+        paidAmount: finalPaidAmount,
         payments: updatedPayments,
-        balance: projectedBalance,
-        status: projectedBalance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
+        balance: finalBalance,
+        status: finalStatus,
         selectedBank: selectedBank || null,
         updatedAt: Date.now()
       };
@@ -272,10 +330,11 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
 
       batch.update(doc(db, 'transactions', transaction.id), updates);
       await batch.commit();
+      alert('AUTHORIZATION SUCCESSFUL: Revenue record has been updated and synchronized with the central ledger.');
       onClose();
     } catch (err) {
       console.error(err);
-      alert('Sync Failure: Error updating ledger. Check terminal authorization.');
+      alert('SYNCHRONIZATION ERROR: Failed to update revenue record. Please check your network connection and terminal authorization.');
     } finally {
       setIsSaving(false);
     }
@@ -291,17 +350,19 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const availableRooms = rooms.filter(r => r.totalInventory > r.bookedCount);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-[#13263A] w-full max-w-2xl rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col max-h-[90vh] no-print">
-        <div className="p-6 border-b border-gray-700 flex justify-between items-center bg-[#0B1C2D]/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-hidden">
+      <div className="bg-[#13263A] w-full max-w-6xl rounded-3xl border border-gray-700 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto no-print scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-20 p-6 md:p-8 border-b border-gray-700 flex justify-between items-center bg-[#0B1C2D] shrink-0">
           <div>
-            <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tight">MANAGE REVENUE RECORD</h2>
-            <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">{transaction.reference} • LOCKED SOURCE: {transaction.unit || 'HOTEL FOLIO'}</p>
+            <h2 className="text-xl md:text-2xl font-black text-[#C8A862] uppercase tracking-tighter">MANAGE REVENUE RECORD</h2>
+            <p className="text-[10px] md:text-[11px] text-gray-500 font-bold tracking-[0.2em] uppercase">{transaction.reference} • LOCKED SOURCE: {transaction.unit || 'HOTEL FOLIO'}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-2xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-3xl">&times;</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        {/* Content Area */}
+        <div className="p-4 md:p-8 space-y-10">
           <section className="space-y-4">
             <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-700/50 pb-2">Guest Identity & Stay Period</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -370,9 +431,9 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                     </select>
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <button onClick={addItem} className="text-[#C8A862] text-[10px] font-black hover:underline bg-[#C8A862]/10 px-3 py-1 rounded border border-[#C8A862]/20 uppercase tracking-widest flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Manual Entry
+                <div className="flex gap-3">
+                  <button onClick={addItem} className="flex-1 py-3 bg-[#C8A862]/10 border border-[#C8A862] text-[#C8A862] text-[11px] font-black rounded-xl uppercase tracking-widest hover:bg-[#C8A862]/20 transition-all flex items-center justify-center gap-2">
+                    <Plus className="w-4 h-4" /> Add Flexible Charge
                   </button>
                 </div>
               </div>
@@ -420,54 +481,53 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
             </div>
           </section>
 
-          <section className="space-y-4">
-            <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
-              <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Accounting & Split Bill / Payment</h3>
-              <div className="text-[10px] font-black text-green-400 tracking-tighter uppercase">Paid History: ₦{currentPaid.toLocaleString()}</div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-[9px] font-bold text-[#C8A862] uppercase tracking-widest">Add New Payment Rows</label>
+          <section className="space-y-4 bg-[#0B1C2D]/30 p-6 rounded-2xl border border-gray-700/30">
+            <div className="flex justify-between items-center border-b border-gray-700/50 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#C8A862]" />
+                <h3 className="text-[11px] font-black text-[#C8A862] uppercase tracking-[0.2em]">New Settlement Protocol</h3>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] font-black text-green-400 tracking-tighter uppercase">Paid History: ₦{currentPaid.toLocaleString()}</span>
                 <button 
                   onClick={addPaymentLine} 
-                  className="text-[10px] font-black text-[#C8A862] bg-[#C8A862]/10 px-3 py-1 rounded border border-[#C8A862]/20 uppercase tracking-widest hover:bg-[#C8A862]/20"
+                  className="text-[10px] font-black text-[#C8A862] bg-[#C8A862]/10 px-3 py-1 rounded border border-[#C8A862]/20 uppercase tracking-widest hover:bg-[#C8A862]/20 flex items-center gap-1"
                 >
-                  + Split Payment
+                  <Plus className="w-3 h-3" /> Split Payment
                 </button>
               </div>
-
-              <div className="space-y-2">
-                {newPayments.map((p, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 bg-[#C8A862]/5 p-3 rounded-xl border border-[#C8A862]/10 items-center">
-                    <div className="col-span-6">
-                      <select 
-                        className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-xs text-white font-bold outline-none focus:border-[#C8A862]" 
-                        value={p.method} 
-                        onChange={(e) => updatePaymentLine(idx, 'method', e.target.value as SettlementMethod)}
-                      >
-                        <option value={SettlementMethod.POS}>POS Terminal</option>
-                        <option value={SettlementMethod.CASH}>Cash</option>
-                        <option value={SettlementMethod.TRANSFER}>Transfer</option>
-                      </select>
-                    </div>
-                    <div className="col-span-5">
-                      <input 
-                        type="number" 
-                        placeholder="Amount" 
-                        className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-2 text-sm font-black text-white text-right outline-none focus:border-[#C8A862]" 
-                        value={p.amount || ''} 
-                        onChange={(e) => updatePaymentLine(idx, 'amount', parseFloat(e.target.value) || 0)} 
-                      />
-                    </div>
-                    <div className="col-span-1 text-center">
-                      {newPayments.length > 1 && (
-                        <button onClick={() => removePaymentLine(idx)} className="text-red-500/50 hover:text-red-500 transition-colors">&times;</button>
-                      )}
-                    </div>
+            </div>
+            
+            <div className="space-y-4">
+              {newPayments.map((p, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-[#0B1C2D] p-4 rounded-xl border border-gray-700/50 shadow-inner">
+                  <div className="col-span-6">
+                    <label className="text-[8px] font-black text-gray-600 uppercase mb-1 block">Payment Method</label>
+                    <select 
+                      className="w-full bg-[#13263A] border border-gray-700 rounded-lg p-3 text-[11px] font-black text-white uppercase tracking-widest outline-none focus:border-[#C8A862]" 
+                      value={p.method} 
+                      onChange={(e) => updatePaymentLine(idx, 'method', e.target.value as SettlementMethod)}
+                    >
+                      {Object.values(SettlementMethod).map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
                   </div>
-                ))}
-              </div>
+                  <div className="col-span-5">
+                    <label className="text-[8px] font-black text-gray-600 uppercase mb-1 block">Amount to Record (₦)</label>
+                    <input 
+                      type="number" 
+                      placeholder="0.00" 
+                      className="w-full bg-[#13263A] border border-gray-700 rounded-lg p-3 text-sm font-black text-white text-right outline-none focus:border-[#C8A862] tabular-nums" 
+                      value={p.amount || ''} 
+                      onChange={(e) => updatePaymentLine(idx, 'amount', parseFloat(e.target.value) || 0)} 
+                    />
+                  </div>
+                  <div className="col-span-1 text-center">
+                    {newPayments.length > 1 && (
+                      <button onClick={() => removePaymentLine(idx)} className="text-red-500/40 hover:text-red-500 transition-colors text-xl">&times;</button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -475,9 +535,36 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                 <label className="text-[9px] font-black text-gray-600 uppercase tracking-widest block mb-1">Adjustment (Discount)</label>
                 <input type="number" className="w-full bg-transparent text-sm font-black text-[#C8A862] outline-none" value={discount} onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} />
               </div>
-              <div className={`p-4 rounded-xl border flex flex-col justify-center ${projectedBalance > 0 ? 'bg-red-500/5 border-red-500/20 text-red-500' : 'bg-green-500/5 border-green-500/20 text-green-400'}`}>
-                <span className="text-[9px] font-black uppercase tracking-widest mb-1">Remaining Balance</span>
-                <span className="text-lg font-black">₦{projectedBalance.toLocaleString()}</span>
+            <div className={`p-6 rounded-2xl border-2 flex flex-col md:flex-row justify-between items-center gap-4 transition-all ${projectedBalance > 0 ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.1)]' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}>
+                <div className="text-center md:text-left">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 block opacity-70">Current Outstanding Balance</span>
+                  <span className="text-3xl font-black tabular-nums">₦{projectedBalance.toLocaleString()}</span>
+                  <div className="mt-2 flex gap-2">
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-widest border ${
+                      transaction.status === SettlementStatus.PAID ? 'border-green-500/30 text-green-400 bg-green-500/5' : 
+                      transaction.status === SettlementStatus.PARTIAL ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5' :
+                      'border-red-500/30 text-red-400 bg-red-500/5'
+                    }`}>
+                      STATUS: {transaction.status}
+                    </span>
+                  </div>
+                </div>
+                {projectedBalance > 0 && (
+                  <button 
+                    onClick={() => setShowSettleModal(true)}
+                    disabled={isSaving}
+                    className="w-full md:w-auto bg-green-600 text-white text-[11px] font-black px-8 py-4 rounded-xl uppercase tracking-widest hover:bg-green-700 transition-all shadow-xl flex items-center justify-center gap-3 group disabled:opacity-50"
+                  >
+                    <Receipt className="w-5 h-5 group-hover:scale-110 transition-transform" /> 
+                    Settle Outstanding Bill
+                  </button>
+                )}
+                {projectedBalance <= 0 && (
+                  <div className="flex items-center gap-2 text-green-400 font-black uppercase text-[11px] tracking-widest">
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-ping" />
+                    Account Fully Settled
+                  </div>
+                )}
               </div>
             </div>
 
@@ -519,14 +606,44 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
           </section>
         </div>
 
-        <div className="p-6 bg-[#0B1C2D] border-t border-gray-700 flex gap-4">
-          <button onClick={() => setShowReceipt(true)} className="flex-1 py-4 border border-gray-700 text-gray-400 font-black rounded-xl uppercase tracking-widest text-[10px] hover:bg-white/5 transition-all">Preview Document</button>
-          <button disabled={isSaving} onClick={handleUpdate} className="flex-[2] py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl uppercase tracking-widest text-[10px] hover:bg-[#B69651] transition-all">
+        {/* Footer */}
+        <div className="p-8 bg-[#0B1C2D] border-t border-gray-700 flex flex-col md:flex-row gap-4 shrink-0 z-20 sticky bottom-0">
+          <div className="flex gap-4 flex-1">
+            <button 
+              onClick={() => setShowReceipt(true)} 
+              className="flex-1 py-4 border-2 border-gray-700 text-gray-300 font-black rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-white/5 transition-all"
+            >
+              PREVIEW DOCUMENT
+            </button>
+            {projectedBalance > 0 && (
+              <button 
+                onClick={() => setShowSettleModal(true)}
+                disabled={isSaving}
+                className="flex-1 py-4 bg-green-600 text-white font-black rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-green-700 transition-all shadow-lg animate-pulse disabled:opacity-50"
+              >
+                {isSaving ? 'PROCESSING...' : 'SETTLE BALANCE'}
+              </button>
+            )}
+          </div>
+          <button 
+            disabled={isSaving} 
+            onClick={handleUpdate} 
+            className="flex-1 py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-[#B69651] transition-all shadow-2xl disabled:opacity-50"
+          >
             {isSaving ? 'SYNCHRONIZING...' : 'AUTHORIZE UPDATES'}
           </button>
         </div>
       </div>
       {showReceipt && <ReceiptPreview transaction={{ ...transaction, items, totalAmount: netTotal, paidAmount: projectedPaidAmount, balance: projectedBalance }} onClose={() => setShowReceipt(false)} />}
+      {showSettleModal && (
+        <SettleBillModal 
+          transaction={{ ...transaction, items, totalAmount: netTotal, paidAmount: currentPaid, balance: netTotal - currentPaid }} 
+          onClose={() => setShowSettleModal(false)} 
+          onSuccess={() => {
+            // Success handled by real-time listener
+          }}
+        />
+      )}
     </div>
   );
 };

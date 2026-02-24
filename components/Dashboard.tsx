@@ -23,6 +23,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [unitFilter, setUnitFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -31,24 +33,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
     const transactionsRef = collection(db, 'transactions');
     
-    // Determine the start of the current day for non-admin client-side filtering
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const startTimestamp = startOfToday.getTime();
-
-    const q = isAdminUser
-      ? query(transactionsRef, orderBy('createdAt', 'desc'))
-      : query(transactionsRef, where('createdBy', '==', user.uid));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!isSubscribed) return;
-      let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-      
-      if (!isAdminUser) {
-        data = data
-          .filter(t => t.createdAt >= startTimestamp)
-          .sort((a, b) => b.createdAt - a.createdAt);
+    let q;
+    if (isAdminUser) {
+      q = query(transactionsRef, orderBy('createdAt', 'desc'));
+    } else {
+      // Non-admin users see transactions for their assigned unit
+      if (user.assignedUnit && user.assignedUnit !== 'ALL') {
+        q = query(transactionsRef, where('unit', '==', user.assignedUnit));
+      } else {
+        // Fallback to transactions they created if no unit assigned
+        q = query(transactionsRef, where('createdBy', '==', user.uid));
       }
+    }
+
+    const unsubscribe = onSnapshot(q as any, (snapshot: any) => {
+      if (!isSubscribed) return;
+      let data = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Transaction));
+      
+      // Sort by createdAt desc if not already sorted by query (Firestore requires indexes for multi-field sorting)
+      data.sort((a, b) => b.createdAt - a.createdAt);
       
       setTransactions(data);
     }, (error: any) => {
@@ -91,6 +94,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         if (unitFilter === 'ZENZA' && t.unit !== UnitType.ZENZA) return false;
         if (unitFilter === 'WHISPERS' && t.unit !== UnitType.WHISPERS) return false;
       }
+
+      // Status Filtering
+      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+
+      // Method Filtering
+      if (methodFilter !== 'ALL' && t.settlementMethod !== methodFilter) return false;
 
       // Date Range Filtering
       if (!dateRange.start && !dateRange.end) return true;
@@ -181,6 +190,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }
   };
 
+  const setQuickFilter = (type: 'TODAY' | 'YESTERDAY' | 'WEEK') => {
+    const now = new Date();
+    const start = new Date();
+    const end = new Date();
+    
+    if (type === 'TODAY') {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === 'YESTERDAY') {
+      start.setDate(now.getDate() - 1);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(now.getDate() - 1);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === 'WEEK') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      start.setDate(diff);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    }
+    
+    setDateRange({
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="no-print space-y-6">
@@ -197,17 +233,43 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
         {/* Filter Bar */}
         <div className="bg-[#13263A] p-4 rounded-2xl border border-gray-700/30 flex flex-wrap items-end gap-4 shadow-xl">
-          <div className="flex-1 min-w-[200px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Filter by Revenue Unit</label>
+          <div className="flex-1 min-w-[150px] space-y-1">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Revenue Unit</label>
             <select 
               className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
               value={unitFilter}
               onChange={(e) => setUnitFilter(e.target.value)}
             >
-              <option value="ALL">All Revenue Streams</option>
+              <option value="ALL">All Streams</option>
               <option value="ZENZA">Zenza Unit</option>
               <option value="WHISPERS">Whispers Unit</option>
-              <option value="FOLIO">Reservations (Folio)</option>
+              <option value="FOLIO">Folios</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-[150px] space-y-1">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Status</label>
+            <select 
+              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">All Status</option>
+              <option value={SettlementStatus.PAID}>Paid</option>
+              <option value={SettlementStatus.PARTIAL}>Partial</option>
+              <option value={SettlementStatus.UNPAID}>Unpaid</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-[150px] space-y-1">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Method</label>
+            <select 
+              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
+              value={methodFilter}
+              onChange={(e) => setMethodFilter(e.target.value)}
+            >
+              <option value="ALL">All Methods</option>
+              <option value={SettlementMethod.CARD}>Card / POS</option>
+              <option value={SettlementMethod.CASH}>Cash</option>
+              <option value={SettlementMethod.TRANSFER}>Bank Transfer</option>
             </select>
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
@@ -235,11 +297,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             />
           </div>
           <div className="flex gap-2">
+            <div className="flex bg-[#0B1C2D] rounded-lg p-1 border border-gray-700">
+              <button onClick={() => setQuickFilter('TODAY')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors">Today</button>
+              <button onClick={() => setQuickFilter('YESTERDAY')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors border-l border-gray-700">Yesterday</button>
+              <button onClick={() => setQuickFilter('WEEK')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors border-l border-gray-700">This Week</button>
+            </div>
             <button 
-              onClick={() => { setDateRange({ start: '', end: '' }); setUnitFilter('ALL'); }}
+              onClick={() => { 
+                setDateRange({ start: '', end: '' }); 
+                setUnitFilter('ALL'); 
+                setStatusFilter('ALL');
+                setMethodFilter('ALL');
+              }}
               className="px-4 py-2 bg-gray-800 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
             >
-              Reset
+              Reset All
             </button>
             <button 
               onClick={downloadReport} 
@@ -334,12 +406,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   </td>
                   <td className="px-6 py-5 text-center">
                     <span className={`px-2 py-1 rounded text-[9px] font-black tracking-widest border ${
-                      t.status === SettlementStatus.SETTLED ? 'border-green-500/30 text-green-400 bg-green-500/5' : 'border-red-500/30 text-red-400 bg-red-500/5'
+                      t.status === SettlementStatus.PAID ? 'border-green-500/30 text-green-400 bg-green-500/5' : 
+                      t.status === SettlementStatus.PARTIAL ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5' :
+                      'border-red-500/30 text-red-400 bg-red-500/5'
                     }`}>
                       {t.status}
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right space-x-2">
+                    {t.status !== SettlementStatus.PAID && (
+                      <button 
+                        onClick={() => setManagingTransaction(t)} 
+                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all animate-pulse"
+                      >
+                        Settle
+                      </button>
+                    )}
                     {t.type === 'POS' && (
                       <button 
                         onClick={() => { setPosEditingTransaction(t); setShowPOS(true); }} 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '@/firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
 import { 
   UserProfile, 
@@ -9,15 +9,18 @@ import {
   AppSettings,
   Transaction,
   TransactionItem,
+  MenuItem,
   SettlementMethod,
   TransactionPayment,
   BankAccount
-} from '../types';
-import ReceiptPreview from './ReceiptPreview';
+} from '@/types';
+import ReceiptPreview from '@/components/ReceiptPreview';
 
 interface RoomBooking {
   roomId: string;
   quantity: number;
+  checkIn: string;
+  checkOut: string;
 }
 
 interface FolioModalProps {
@@ -27,10 +30,13 @@ interface FolioModalProps {
 
 const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [guest, setGuest] = useState({ name: '', idType: 'National ID', idNumber: '', email: '', phone: '' });
   const [stayPeriod, setStayPeriod] = useState({ checkIn: '', checkOut: '', nights: 1 });
-  const [bookings, setBookings] = useState<RoomBooking[]>([{ roomId: '', quantity: 1 }]);
+  const [bookings, setBookings] = useState<RoomBooking[]>([{ roomId: '', quantity: 1, checkIn: '', checkOut: '' }]);
+  const [additionalCharges, setAdditionalCharges] = useState<TransactionItem[]>([]);
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.TRANSFER, amount: 0 }]);
   const [targetBank, setTargetBank] = useState<BankAccount | 'ALL' | null>(null);
   const [discount, setDiscount] = useState(0);
@@ -45,6 +51,20 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       setRooms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)));
     }, (err) => {
       console.error("FolioModal rooms listener error:", err);
+    });
+
+    const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      if (!isSubscribed) return;
+      setMenuItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
+    }, (err) => {
+      console.error("FolioModal menu listener error:", err);
+    });
+
+    const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
+      if (!isSubscribed) return;
+      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
+    }, (err) => {
+      console.error("FolioModal transactions listener error:", err);
     });
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
@@ -63,6 +83,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     return () => { 
       isSubscribed = false;
       unsubRooms(); 
+      unsubMenu();
+      unsubTransactions();
       unsubSettings(); 
     };
   }, []);
@@ -87,7 +109,23 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     }
   }, [stayPeriod.checkIn, stayPeriod.checkOut]);
 
-  const addRoomRow = () => setBookings([...bookings, { roomId: '', quantity: 1 }]);
+  // Sync room dates with main stay period if they are empty
+  useEffect(() => {
+    if (stayPeriod.checkIn && stayPeriod.checkOut) {
+      setBookings(prev => prev.map(b => ({
+        ...b,
+        checkIn: b.checkIn || stayPeriod.checkIn,
+        checkOut: b.checkOut || stayPeriod.checkOut
+      })));
+    }
+  }, [stayPeriod.checkIn, stayPeriod.checkOut]);
+
+  const addRoomRow = () => setBookings([...bookings, { 
+    roomId: '', 
+    quantity: 1, 
+    checkIn: stayPeriod.checkIn, 
+    checkOut: stayPeriod.checkOut 
+  }]);
   const removeRoomRow = (idx: number) => {
     if (bookings.length > 1) {
       setBookings(bookings.filter((_, i) => i !== idx));
@@ -112,10 +150,86 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     setPayments(newPayments);
   };
 
+  const addCharge = (item?: MenuItem) => {
+    if (item) {
+      setAdditionalCharges([...additionalCharges, {
+        itemId: item.id,
+        description: item.name,
+        quantity: 1,
+        price: item.price,
+        total: item.price
+      }]);
+    } else {
+      setAdditionalCharges([...additionalCharges, {
+        description: '',
+        quantity: 1,
+        price: 0,
+        total: 0
+      }]);
+    }
+  };
+
+  const updateCharge = (idx: number, field: keyof TransactionItem, value: any) => {
+    const newCharges = [...additionalCharges];
+    (newCharges[idx] as any)[field] = value;
+    if (field === 'quantity' || field === 'price') {
+      newCharges[idx].total = (newCharges[idx].quantity || 0) * (newCharges[idx].price || 0);
+    }
+    setAdditionalCharges(newCharges);
+  };
+
+  const removeCharge = (idx: number) => {
+    setAdditionalCharges(additionalCharges.filter((_, i) => i !== idx));
+  };
+
+  const isRoomAvailable = (roomId: string, checkIn: string, checkOut: string) => {
+    if (!roomId || !checkIn || !checkOut) return true;
+    const start = new Date(checkIn).getTime();
+    const end = new Date(checkOut).getTime();
+    
+    const overlaps = transactions.filter(t => {
+      if (t.type !== 'FOLIO' || t.status === SettlementStatus.PAID) return false;
+      
+      const roomItems = t.items.filter(i => i.itemId === roomId);
+      if (roomItems.length === 0) return false;
+      
+      // Check if any room item in the transaction overlaps
+      return roomItems.some(item => {
+        // We need to parse the dates from description if they aren't stored separately
+        // But for simplicity and based on current structure, we use the main stay period
+        const tStart = new Date(t.roomDetails?.checkIn || 0).getTime();
+        const tEnd = new Date(t.roomDetails?.checkOut || 0).getTime();
+        return (start < tEnd) && (end > tStart);
+      });
+    });
+    
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return false;
+    
+    const currentlyBooked = overlaps.reduce((acc, t) => {
+      const item = t.items.find(i => i.itemId === roomId);
+      return acc + (item?.quantity || 0);
+    }, 0);
+    
+    return (room.totalInventory - currentlyBooked) > 0;
+  };
+
+  const calculateNights = (startStr: string, endStr: string) => {
+    if (!startStr || !endStr) return 1;
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    start.setHours(12, 0, 0, 0);
+    end.setHours(12, 0, 0, 0);
+    const diffMs = end.getTime() - start.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 1;
+  };
+
   const subtotalItems = bookings.reduce((acc, b) => {
     const room = rooms.find(r => r.id === b.roomId);
-    return acc + (room ? room.price * b.quantity * stayPeriod.nights : 0);
-  }, 0);
+    const nights = calculateNights(b.checkIn, b.checkOut);
+    return acc + (room ? room.price * b.quantity * nights : 0);
+  }, 0) + additionalCharges.reduce((acc, c) => acc + c.total, 0);
 
   const netAfterDiscount = Math.max(0, subtotalItems - discount);
   
@@ -164,6 +278,15 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       return;
     }
 
+    // Overlap Validation
+    for (const b of bookings) {
+      if (!isRoomAvailable(b.roomId, b.checkIn, b.checkOut)) {
+        const room = rooms.find(r => r.id === b.roomId);
+        alert(`Room Conflict: ${room?.name} is not available for the selected dates (${b.checkIn} to ${b.checkOut}).`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     const batch = writeBatch(db);
 
@@ -173,12 +296,13 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         const roomRef = doc(db, 'rooms', b.roomId);
         batch.update(roomRef, { bookedCount: increment(b.quantity) });
 
+        const nights = calculateNights(b.checkIn, b.checkOut);
         return {
           itemId: b.roomId,
-          description: `${room.name} (${room.type}) x ${stayPeriod.nights} Nights`,
+          description: `${room.name} (${room.type}) • ${b.checkIn} to ${b.checkOut} (${nights} Nights)`,
           quantity: b.quantity,
-          price: room.price * stayPeriod.nights,
-          total: room.price * b.quantity * stayPeriod.nights
+          price: room.price * nights,
+          total: room.price * b.quantity * nights
         };
       });
 
@@ -187,6 +311,13 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
           amount: p.amount as number,
           timestamp: Date.now()
       }));
+
+      let finalStatus = SettlementStatus.UNPAID;
+      if (balance <= 0) {
+        finalStatus = SettlementStatus.PAID;
+      } else if (totalPaid > 0) {
+        finalStatus = SettlementStatus.PARTIAL;
+      }
 
       // If 'ALL' is selected, selectedBank is null so receipt shows all banks
       const selectedBankFinal = targetBank === 'ALL' ? null : targetBank;
@@ -200,7 +331,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         idNumber: guest.idNumber,
         email: guest.email,
         phone: guest.phone,
-        items: transactionItems,
+        items: [...transactionItems, ...additionalCharges],
         selectedBank: selectedBankFinal,
         roomDetails: {
           roomName: bookings.length === 1 ? rooms.find(r => r.id === bookings[0].roomId)!.name : 'Multiple Rooms',
@@ -217,7 +348,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         paidAmount: totalPaid,
         payments: finalPayments,
         balance: Math.max(0, balance),
-        status: balance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
+        status: finalStatus,
         settlementMethod: finalPayments.length > 0 ? finalPayments[0].method : SettlementMethod.TRANSFER,
         createdBy: user.uid,
         userId: user.uid,
@@ -258,7 +389,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-2xl">&times;</button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
           <section className="space-y-4">
             <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Guest Identity</h3>
             <div className="space-y-4">
@@ -318,27 +449,84 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               <button onClick={addRoomRow} className="px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">+ Add Room</button>
             </div>
             {bookings.map((booking, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-3 items-end bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 relative group">
-                <div className="col-span-8 space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">Select Room Type</label>
-                  <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={booking.roomId} onChange={(e) => updateBooking(idx, 'roomId', e.target.value)}>
-                    <option value="" disabled>Select Room Type</option>
-                    {rooms.map(r => (
-                      <option key={r.id} value={r.id}>{r.name} ({r.type}) - ₦{r.price.toLocaleString()}/night</option>
-                    ))}
-                  </select>
+              <div key={idx} className="space-y-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 relative group">
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-8 space-y-1">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase">Select Room Type</label>
+                    <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={booking.roomId} onChange={(e) => updateBooking(idx, 'roomId', e.target.value)}>
+                      <option value="" disabled>Select Room Type</option>
+                      {rooms.map(r => (
+                        <option key={r.id} value={r.id}>{r.name} ({r.type}) - ₦{r.price.toLocaleString()}/night</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-3 space-y-1">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase">Room Qty</label>
+                    <input type="number" min="1" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-center" value={booking.quantity} onChange={(e) => updateBooking(idx, 'quantity', parseInt(e.target.value) || 1)} />
+                  </div>
+                  <div className="col-span-1 text-center">
+                    {bookings.length > 1 && (
+                      <button onClick={() => removeRoomRow(idx)} className="text-red-500 text-2xl leading-none">&times;</button>
+                    )}
+                  </div>
                 </div>
-                <div className="col-span-3 space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">Room Qty</label>
-                  <input type="number" min="1" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-center" value={booking.quantity} onChange={(e) => updateBooking(idx, 'quantity', parseInt(e.target.value) || 1)} />
-                </div>
-                <div className="col-span-1 text-center">
-                   {bookings.length > 1 && (
-                     <button onClick={() => removeRoomRow(idx)} className="text-red-500 text-2xl leading-none">&times;</button>
-                   )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase">Room Check-In</label>
+                    <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={booking.checkIn} onChange={(e) => updateBooking(idx, 'checkIn', e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase">Room Check-Out</label>
+                    <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={booking.checkOut} onChange={(e) => updateBooking(idx, 'checkOut', e.target.value)} />
+                  </div>
                 </div>
               </div>
             ))}
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
+              <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Guest Charges & Extras</h3>
+              <div className="flex gap-2">
+                <select 
+                  className="bg-[#0B1C2D] border border-gray-700 rounded px-2 py-1 text-[9px] font-black text-white uppercase outline-none focus:border-[#C8A862]"
+                  onChange={(e) => {
+                    const item = menuItems.find(m => m.id === e.target.value);
+                    if (item) addCharge(item);
+                    e.target.value = '';
+                  }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>Add from Menu</option>
+                  {menuItems.map(m => (
+                    <option key={m.id} value={m.id}>{m.name} (₦{m.price.toLocaleString()})</option>
+                  ))}
+                </select>
+                <button onClick={() => addCharge()} className="px-3 py-1.5 border border-[#C8A862] bg-[#C8A862]/10 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/20 transition-all">+ Add Flexible Charge</button>
+              </div>
+            </div>
+            {additionalCharges.map((charge, idx) => (
+              <div key={idx} className="grid grid-cols-12 gap-3 items-end bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 relative group">
+                <div className="col-span-6 space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Description</label>
+                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={charge.description} onChange={(e) => updateCharge(idx, 'description', e.target.value)} placeholder="Charge description" />
+                </div>
+                <div className="col-span-2 space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Qty</label>
+                  <input type="number" min="1" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-center" value={charge.quantity} onChange={(e) => updateCharge(idx, 'quantity', parseInt(e.target.value) || 1)} />
+                </div>
+                <div className="col-span-3 space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Price (₦)</label>
+                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-right" value={charge.price} onChange={(e) => updateCharge(idx, 'price', parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="col-span-1 text-center">
+                  <button onClick={() => removeCharge(idx)} className="text-red-500 text-2xl leading-none">&times;</button>
+                </div>
+              </div>
+            ))}
+            {additionalCharges.length === 0 && (
+              <p className="text-[10px] text-gray-600 italic text-center py-2">No additional charges added</p>
+            )}
           </section>
 
           <section className="space-y-4">
@@ -365,9 +553,9 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
             {payments.map((p, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 items-center">
                 <div className="col-span-6">
-                   <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={p.method} onChange={(e) => updatePayment(idx, 'method', e.target.value)}>
+                   <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={p.method} onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}>
                     <option value={SettlementMethod.TRANSFER}>Transfer</option>
-                    <option value={SettlementMethod.POS}>POS Terminal</option>
+                    <option value={SettlementMethod.CARD}>Card / POS</option>
                     <option value={SettlementMethod.CASH}>Cash</option>
                   </select>
                 </div>

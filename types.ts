@@ -5,12 +5,13 @@ export enum UnitType {
 
 export enum SettlementStatus {
   UNPAID = 'UNPAID',
-  SETTLED = 'SETTLED'
+  PARTIAL = 'PARTIAL',
+  PAID = 'PAID'
 }
 
 export enum SettlementMethod {
-  POS = 'POS',
   CASH = 'CASH',
+  CARD = 'CARD',
   TRANSFER = 'TRANSFER'
 }
 
@@ -138,4 +139,5 @@ export interface UserProfile {
   lastActive?: number;
   onlineSince?: number;
   isOnline?: boolean;
+  assignedUnit?: UnitType | 'ALL';
 }

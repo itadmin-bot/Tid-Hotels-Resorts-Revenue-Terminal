@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
 import { db } from '../firebase';
-import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig } from '../types';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction } from '../types';
 
 interface AdminPanelProps {
   user: UserProfile;
@@ -26,11 +26,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [securityTabCode, setSecurityTabCode] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'Rooms' | 'Menu' | 'Settings' | 'Accounts' | 'Users' | 'Security'>('Rooms');
+  const [activeTab, setActiveTab] = useState<'Rooms' | 'Menu' | 'Settings' | 'Accounts' | 'Users' | 'Security' | 'Reports'>('Rooms');
   const [rooms, setRooms] = useState<Room[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [loading, setLoading] = useState(false);
   const [masterCode, setMasterCode] = useState(DEFAULT_ADMIN_KEY);
@@ -111,6 +113,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       console.error("AdminPanel access code listener error:", err);
     });
 
+    const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
+      if (!isSubscribed) return;
+      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
+    }, (err) => {
+      console.error("AdminPanel transactions listener error:", err);
+    });
+
     return () => { 
       isSubscribed = false;
       clearInterval(clock);
@@ -119,6 +128,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       unsubMenu(); 
       unsubSettings(); 
       unsubCode(); 
+      unsubTransactions();
     };
   }, []);
 
@@ -287,7 +297,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Master Control Panel • {user.displayName}</p>
         </div>
         <div className="bg-[#13263A] rounded-xl p-1.5 flex border border-gray-700 overflow-x-auto gap-1">
-          {['Rooms', 'Menu', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
+          {['Rooms', 'Menu', 'Reports', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-5 py-2 text-[11px] font-black rounded-lg uppercase tracking-widest transition-all shrink-0 ${activeTab === tab ? 'bg-[#C8A862] text-[#0B1C2D] shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
               {tab}
             </button>
@@ -296,6 +306,187 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       </div>
 
       <div className="bg-[#13263A] rounded-2xl border border-gray-700/50 p-8 shadow-2xl min-h-[500px]">
+        {activeTab === 'Reports' && (
+          <div className="space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-widest">Revenue Reporting Hub</h2>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Financial Oversight & Audit Control</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-black text-gray-500 uppercase mb-1">Select Audit Date</label>
+                  <input 
+                    type="date" 
+                    className="bg-[#0B1C2D] border border-gray-700 rounded-lg px-4 py-2 text-xs text-white font-bold outline-none focus:border-[#C8A862] accent-[#C8A862]"
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => {
+                    const dailyTx = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
+                    const headers = ['Reference', 'Time', 'Type', 'Unit', 'Guest', 'Total', 'Paid', 'Balance', 'Method', 'Cashier'];
+                    const rows = dailyTx.map(t => [
+                      t.reference,
+                      new Date(t.createdAt).toLocaleTimeString(),
+                      t.type,
+                      t.unit || 'FOLIO',
+                      t.guestName,
+                      t.totalAmount,
+                      t.paidAmount,
+                      t.balance,
+                      t.settlementMethod,
+                      t.cashierName
+                    ]);
+                    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `TIDE_AUDIT_${reportDate}.csv`;
+                    a.click();
+                  }}
+                  className="px-6 py-2 bg-blue-600/10 border border-blue-600/30 text-blue-400 rounded-lg text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all self-end h-[38px]"
+                >
+                  Export Ledger
+                </button>
+              </div>
+            </div>
+
+            {(() => {
+              const dailyTx = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
+              const gross = dailyTx.reduce((acc, t) => acc + t.totalAmount, 0);
+              const settled = dailyTx.reduce((acc, t) => acc + t.paidAmount, 0);
+              const tax = dailyTx.reduce((acc, t) => acc + (t.taxAmount || 0), 0);
+              const sc = dailyTx.reduce((acc, t) => acc + (t.serviceCharge || 0), 0);
+              const net = gross - tax - sc;
+
+              const byMethod = dailyTx.reduce((acc, t) => {
+                const method = t.settlementMethod || 'UNSPECIFIED';
+                acc[method] = (acc[method] || 0) + t.paidAmount;
+                return acc;
+              }, {} as Record<string, number>);
+
+              const byUnit = dailyTx.reduce((acc, t) => {
+                const unit = t.unit || 'FOLIO';
+                acc[unit] = (acc[unit] || 0) + t.totalAmount;
+                return acc;
+              }, {} as Record<string, number>);
+
+              const byStatus = dailyTx.reduce((acc, t) => {
+                acc[t.status] = (acc[t.status] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>);
+
+              return (
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-[#C8A862]/30 transition-all">
+                      <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Gross Revenue</p>
+                      <h3 className="text-2xl font-black text-white">₦{gross.toLocaleString()}</h3>
+                      <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Total Valuation for {reportDate}</div>
+                    </div>
+                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-blue-500/30 transition-all">
+                      <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Tax Liability (VAT)</p>
+                      <h3 className="text-2xl font-black text-blue-400">₦{tax.toLocaleString()}</h3>
+                      <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Calculated at {((settings?.vat || 0.075) * 100).toFixed(1)}%</div>
+                    </div>
+                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-purple-500/30 transition-all">
+                      <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Service Charge</p>
+                      <h3 className="text-2xl font-black text-purple-400">₦{sc.toLocaleString()}</h3>
+                      <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Calculated at {((settings?.serviceCharge || 0.10) * 100).toFixed(1)}%</div>
+                    </div>
+                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-green-500/30 transition-all">
+                      <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Net Revenue</p>
+                      <h3 className="text-2xl font-black text-green-400">₦{net.toLocaleString()}</h3>
+                      <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Gross minus Taxes & Charges</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 space-y-4">
+                      <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30 pb-2">Settlement Channels</h3>
+                      <div className="space-y-3">
+                        {Object.entries(byMethod).map(([method, amount]) => (
+                          <div key={method} className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-gray-400 uppercase">{method}</span>
+                            <span className="text-xs font-black text-white">₦{amount.toLocaleString()}</span>
+                          </div>
+                        ))}
+                        {Object.keys(byMethod).length === 0 && <p className="text-[10px] text-gray-600 italic">No settlements recorded</p>}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 space-y-4">
+                      <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30 pb-2">Unit Performance</h3>
+                      <div className="space-y-3">
+                        {Object.entries(byUnit).map(([unit, amount]) => (
+                          <div key={unit} className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-gray-400 uppercase">{unit} POS</span>
+                            <span className="text-xs font-black text-white">₦{amount.toLocaleString()}</span>
+                          </div>
+                        ))}
+                        {Object.keys(byUnit).length === 0 && <p className="text-[10px] text-gray-600 italic">No unit activity recorded</p>}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 space-y-4">
+                      <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30 pb-2">Status Distribution</h3>
+                      <div className="space-y-3">
+                        {Object.entries(byStatus).map(([status, count]) => (
+                          <div key={status} className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-gray-400 uppercase">{status}</span>
+                            <span className="text-xs font-black text-white">{count} Transactions</span>
+                          </div>
+                        ))}
+                        {Object.keys(byStatus).length === 0 && <p className="text-[10px] text-gray-600 italic">No status data</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30 pb-2">Daily Transaction Log</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="text-[9px] text-gray-600 uppercase tracking-widest">
+                            <th className="pb-3">Ref</th>
+                            <th className="pb-3">Time</th>
+                            <th className="pb-3">Guest</th>
+                            <th className="pb-3 text-right">Total</th>
+                            <th className="pb-3 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/30">
+                          {dailyTx.map(t => (
+                            <tr key={t.id} className="text-[10px]">
+                              <td className="py-3 font-bold text-white uppercase">{t.reference}</td>
+                              <td className="py-3 text-gray-500">{new Date(t.createdAt).toLocaleTimeString()}</td>
+                              <td className="py-3 text-gray-400 uppercase">{t.guestName}</td>
+                              <td className="py-3 text-right font-black">₦{t.totalAmount.toLocaleString()}</td>
+                              <td className="py-3 text-right">
+                                <span className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase ${t.status === 'SETTLED' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                  {t.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                          {dailyTx.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="py-10 text-center text-gray-600 font-black uppercase tracking-widest italic">No transactions for selected date</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
         {activeTab === 'Rooms' && (
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -533,6 +724,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   <tr className="text-[10px] text-gray-500 uppercase tracking-widest border-b border-gray-700/50">
                     <th className="pb-4">Operator</th>
                     <th className="pb-4">Role</th>
+                    <th className="pb-4">Assigned Unit</th>
                     <th className="pb-4">Session Context</th>
                     <th className="pb-4 text-center">Live Status</th>
                     <th className="pb-4 text-right">Action</th>
@@ -551,6 +743,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest ${u.role === UserRole.ADMIN ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>
                             {u.role}
                           </span>
+                        </td>
+                        <td className="py-5">
+                          <select 
+                            className="bg-[#0B1C2D] border border-gray-700 rounded px-2 py-1 text-[9px] font-black text-white uppercase outline-none focus:border-[#C8A862]"
+                            value={u.assignedUnit || 'ALL'}
+                            onChange={(e) => updateDoc(doc(db, 'users', u.uid), { assignedUnit: e.target.value })}
+                          >
+                            <option value="ALL">All Units</option>
+                            <option value={UnitType.ZENZA}>Zenza</option>
+                            <option value={UnitType.WHISPERS}>Whispers</option>
+                          </select>
                         </td>
                         <td className="py-5">
                           <div className="text-[10px] font-black uppercase text-gray-400">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '@/firebase';
 import { 
   UserProfile, 
   UnitType, 
@@ -11,8 +11,8 @@ import {
   Transaction, 
   TransactionItem,
   TransactionPayment
-} from '../types';
-import ReceiptPreview from './ReceiptPreview';
+} from '@/types';
+import ReceiptPreview from '@/components/ReceiptPreview';
 
 interface POSModalProps {
   user: UserProfile;
@@ -27,7 +27,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<{item: MenuItem, quantity: number}[]>([]);
   const [guest, setGuest] = useState({ name: existingTransaction?.guestName || 'Walk-in Guest' });
-  const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.POS, amount: 0 }]);
+  const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.CARD, amount: 0 }]);
   const [discount, setDiscount] = useState(existingTransaction?.discountAmount || 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
@@ -139,7 +139,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
   const totalPaid = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0) + previousPaidAmount;
   const balance = Math.max(0, finalTotal - totalPaid);
 
-  const addPaymentRow = () => setPayments([...payments, { method: SettlementMethod.POS, amount: 0 }]);
+  const addPaymentRow = () => setPayments([...payments, { method: SettlementMethod.CARD, amount: 0 }]);
   const removePaymentRow = (idx: number) => {
     if (payments.length > 1) setPayments(payments.filter((_, i) => i !== idx));
   };
@@ -185,6 +185,13 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
 
       const allPayments = [...(existingTransaction?.payments || []), ...newPayments];
 
+      let finalStatus = SettlementStatus.UNPAID;
+      if (balance === 0) {
+        finalStatus = SettlementStatus.PAID;
+      } else if (totalPaid > 0) {
+        finalStatus = SettlementStatus.PARTIAL;
+      }
+
       const txData: any = {
         reference: existingTransaction?.reference || `POS-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'POS',
@@ -200,8 +207,8 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
         paidAmount: totalPaid,
         payments: allPayments,
         balance: balance,
-        status: balance <= 0 ? SettlementStatus.SETTLED : SettlementStatus.UNPAID,
-        settlementMethod: allPayments.length > 0 ? allPayments[allPayments.length - 1].method : SettlementMethod.POS,
+        status: finalStatus,
+        settlementMethod: allPayments.length > 0 ? allPayments[allPayments.length - 1].method : SettlementMethod.CARD,
         selectedBank: selectedBank || null,
         createdBy: existingTransaction?.createdBy || user.uid,
         userId: existingTransaction?.userId || user.uid,
@@ -401,7 +408,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                       <div key={idx} className="flex gap-3 items-center">
                         <div className="flex-1 bg-[#0B1C2D]/50 border border-white/10 rounded-2xl p-1 overflow-hidden relative">
                           <select className="w-full bg-transparent p-4 text-[11px] text-white font-black uppercase tracking-widest outline-none appearance-none cursor-pointer" value={p.method} onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}>
-                            <option value={SettlementMethod.POS}>POS</option>
+                            <option value={SettlementMethod.CARD}>CARD / POS</option>
                             <option value={SettlementMethod.CASH}>CASH</option>
                             <option value={SettlementMethod.TRANSFER}>TRANSFER</option>
                           </select>
