@@ -371,35 +371,15 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                 <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none font-bold" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
               </div>
               
-              {transaction.type === 'FOLIO' && (
-                <div className="col-span-2 grid grid-cols-2 gap-4 bg-[#0B1C2D]/30 p-4 rounded-xl border border-gray-700/30">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-[#EAD8B1]" />
-                      Check-In Date
-                    </label>
-                    <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkIn} onChange={(e) => setStayPeriod({...stayPeriod, checkIn: e.target.value})} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-[#EAD8B1]" />
-                      Check-Out Date
-                    </label>
-                    <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkOut} onChange={(e) => setStayPeriod({...stayPeriod, checkOut: e.target.value})} />
-                  </div>
-                  <div className="col-span-2 text-center pt-2">
-                    <span className="text-[10px] font-black text-[#C8A862] uppercase tracking-widest">{stayPeriod.nights} Nights Calculated</span>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[9px] font-bold text-gray-600 uppercase mb-1 block">Email</label>
+                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
-              )}
-
-              <div>
-                <label className="text-[9px] font-bold text-gray-600 uppercase mb-1 block">Email</label>
-                <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div>
-                <label className="text-[9px] font-bold text-gray-600 uppercase mb-1 block">Phone</label>
-                <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <div>
+                  <label className="text-[9px] font-bold text-gray-600 uppercase mb-1 block">Phone</label>
+                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
               </div>
             </div>
           </section>
@@ -418,6 +398,17 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                     <div className="flex gap-1 items-center">
                       <Calendar className="w-5 h-5 text-[#EAD8B1]" />
                       <input type="date" className="bg-transparent text-[9px] text-white outline-none" value={roomAddDates.checkOut} onChange={(e) => setRoomAddDates({...roomAddDates, checkOut: e.target.value})} />
+                    </div>
+                    <div className="px-2 py-1 bg-[#C8A862]/10 border border-[#C8A862]/20 rounded text-[9px] font-black text-[#C8A862] uppercase tracking-widest ml-1">
+                      {(() => {
+                        const start = new Date(roomAddDates.checkIn);
+                        const end = new Date(roomAddDates.checkOut);
+                        start.setHours(12, 0, 0, 0);
+                        end.setHours(12, 0, 0, 0);
+                        const diffMs = end.getTime() - start.getTime();
+                        const nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+                        return `${nights} Nights`;
+                      })()}
                     </div>
                     <select 
                       className="bg-[#C8A862]/10 border border-[#C8A862]/20 rounded px-2 py-1 text-[9px] font-black text-[#C8A862] outline-none uppercase tracking-widest ml-2"

@@ -34,8 +34,12 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [guest, setGuest] = useState({ name: '', idType: 'National ID', idNumber: '', email: '', phone: '' });
-  const [stayPeriod, setStayPeriod] = useState({ checkIn: '', checkOut: '', nights: 1 });
-  const [bookings, setBookings] = useState<RoomBooking[]>([{ roomId: '', quantity: 1, checkIn: '', checkOut: '' }]);
+  const [bookings, setBookings] = useState<RoomBooking[]>([{ 
+    roomId: '', 
+    quantity: 1, 
+    checkIn: new Date().toISOString().split('T')[0], 
+    checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0] 
+  }]);
   const [additionalCharges, setAdditionalCharges] = useState<TransactionItem[]>([]);
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.TRANSFER, amount: 0 }]);
   const [targetBank, setTargetBank] = useState<BankAccount | 'ALL' | null>(null);
@@ -89,43 +93,17 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     };
   }, []);
 
-  // AUTOMATIC NIGHT CALCULATION
-  useEffect(() => {
-    if (stayPeriod.checkIn && stayPeriod.checkOut) {
-      const start = new Date(stayPeriod.checkIn);
-      const end = new Date(stayPeriod.checkOut);
-      
-      // Standardize to 12PM to avoid DST and timezone shift issues
-      start.setHours(12, 0, 0, 0);
-      end.setHours(12, 0, 0, 0);
-      
-      const diffMs = end.getTime() - start.getTime();
-      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-      const finalNights = diffDays > 0 ? diffDays : 1;
-      
-      if (finalNights !== stayPeriod.nights) {
-        setStayPeriod(prev => ({ ...prev, nights: finalNights }));
-      }
-    }
-  }, [stayPeriod.checkIn, stayPeriod.checkOut]);
-
   // Sync room dates with main stay period if they are empty
-  useEffect(() => {
-    if (stayPeriod.checkIn && stayPeriod.checkOut) {
-      setBookings(prev => prev.map(b => ({
-        ...b,
-        checkIn: b.checkIn || stayPeriod.checkIn,
-        checkOut: b.checkOut || stayPeriod.checkOut
-      })));
-    }
-  }, [stayPeriod.checkIn, stayPeriod.checkOut]);
+  const addRoomRow = () => {
+    const lastBooking = bookings[bookings.length - 1];
+    setBookings([...bookings, { 
+      roomId: '', 
+      quantity: 1, 
+      checkIn: lastBooking?.checkIn || new Date().toISOString().split('T')[0], 
+      checkOut: lastBooking?.checkOut || new Date(Date.now() + 86400000).toISOString().split('T')[0] 
+    }]);
+  };
 
-  const addRoomRow = () => setBookings([...bookings, { 
-    roomId: '', 
-    quantity: 1, 
-    checkIn: stayPeriod.checkIn, 
-    checkOut: stayPeriod.checkOut 
-  }]);
   const removeRoomRow = (idx: number) => {
     if (bookings.length > 1) {
       setBookings(bookings.filter((_, i) => i !== idx));
@@ -273,8 +251,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       return;
     }
 
-    if (!stayPeriod.checkIn || !stayPeriod.checkOut || bookings.some(b => !b.roomId)) {
-      alert('Incomplete Manifest: Please finalize stay period and room selections.');
+    if (bookings.some(b => !b.roomId || !b.checkIn || !b.checkOut)) {
+      alert('Incomplete Manifest: Please finalize room selections and stay dates.');
       return;
     }
 
@@ -322,6 +300,13 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       // If 'ALL' is selected, selectedBank is null so receipt shows all banks
       const selectedBankFinal = targetBank === 'ALL' ? null : targetBank;
 
+      // Derive overall stay period from bookings
+      const checkIns = bookings.map(b => new Date(b.checkIn).getTime());
+      const checkOuts = bookings.map(b => new Date(b.checkOut).getTime());
+      const minCheckIn = new Date(Math.min(...checkIns)).toISOString().split('T')[0];
+      const maxCheckOut = new Date(Math.max(...checkOuts)).toISOString().split('T')[0];
+      const totalNights = calculateNights(minCheckIn, maxCheckOut);
+
       const txData = {
         reference: `RES-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'FOLIO',
@@ -335,10 +320,10 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         selectedBank: selectedBankFinal,
         roomDetails: {
           roomName: bookings.length === 1 ? rooms.find(r => r.id === bookings[0].roomId)!.name : 'Multiple Rooms',
-          checkIn: stayPeriod.checkIn,
-          checkOut: stayPeriod.checkOut,
-          nights: stayPeriod.nights,
-          rate: subtotalItems / stayPeriod.nights
+          checkIn: minCheckIn,
+          checkOut: maxCheckOut,
+          nights: totalNights,
+          rate: subtotalItems / totalNights
         },
         subtotal: baseVal,
         taxAmount: vatSum,
@@ -399,23 +384,6 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-[#EAD8B1]" />
-                    Stay Duration Protocol
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="date" className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkIn} onChange={(e) => setStayPeriod({...stayPeriod, checkIn: e.target.value})} />
-                    <input type="date" className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={stayPeriod.checkOut} onChange={(e) => setStayPeriod({...stayPeriod, checkOut: e.target.value})} />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                   <label className="text-[9px] font-bold text-gray-500 uppercase">Folio Stay Summary</label>
-                   <div className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-[#C8A862] font-black uppercase tracking-widest text-center">{stayPeriod.nights} Calculated Nights</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
                   <label className="text-[9px] font-bold text-gray-500 uppercase">Corporate/Personal Email <span className="text-red-500">*</span></label>
                   <input type="email" placeholder="guest@example.com" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" value={guest.email} onChange={(e) => setGuest({...guest, email: e.target.value})} />
                 </div>
@@ -470,7 +438,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-gray-500 uppercase">Room Check-In</label>
                     <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={booking.checkIn} onChange={(e) => updateBooking(idx, 'checkIn', e.target.value)} />
@@ -478,6 +446,12 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-gray-500 uppercase">Room Check-Out</label>
                     <input type="date" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] accent-[#C8A862]" value={booking.checkOut} onChange={(e) => updateBooking(idx, 'checkOut', e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase">Nights</label>
+                    <div className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-[#C8A862] font-black text-center">
+                      {calculateNights(booking.checkIn, booking.checkOut)} Nights
+                    </div>
                   </div>
                 </div>
               </div>
