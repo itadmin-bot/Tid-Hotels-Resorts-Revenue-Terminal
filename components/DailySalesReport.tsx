@@ -187,6 +187,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                       <th className="p-4">Time</th>
                       <th className="p-4">Guest</th>
                       <th className="p-4">Method</th>
+                      <th className="p-4">Status</th>
                       <th className="p-4 text-right">Amount (₦)</th>
                       <th className="p-4 text-right">Terminal Actions</th>
                     </tr>
@@ -204,6 +205,15 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                             'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                           }`}>
                             {t.settlementMethod || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                            t.status === 'PAID' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                            t.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                            'bg-red-500/10 text-red-400 border border-red-500/20'
+                          }`}>
+                            {t.status}
                           </span>
                         </td>
                         <td className="p-4 text-right font-black text-white text-[11px]">₦{t.totalAmount.toLocaleString()}</td>

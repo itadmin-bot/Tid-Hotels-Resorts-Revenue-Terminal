@@ -157,6 +157,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                     <span>Ref: #{transaction.reference.split('-').pop()}</span>
                     <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
                   </div>
+                  <div className="text-[10px] font-black uppercase mt-1">Guest: {transaction.guestName}</div>
+                  <div className="text-[10px] font-bold uppercase">Operator: {transaction.cashierName}</div>
                   <div className="border-b border-black border-dashed my-3"></div>
                   <div className="space-y-2 mb-4">
                     {transaction.items.map((item, idx) => {
@@ -197,7 +199,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <div className="space-y-1 text-xs font-bold uppercase">
                         <p><span className="text-gray-400">Reference:</span> {transaction.reference}</p>
                         <p><span className="text-gray-400">Date Issued:</span> {new Date(transaction.createdAt).toLocaleDateString()}</p>
-                        <p><span className="text-gray-400">Operator:</span> {transaction.cashierName}</p>
+                        <p><span className="text-gray-400">Served by:</span> {transaction.cashierName}</p>
                       </div>
                     </div>
                   </div>
@@ -325,9 +327,12 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             <span>REF: #{transaction.reference.split('-').pop()}</span>
             <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
           </div>
+          <div className="item-row uppercase bold" style={{fontSize: '10px', marginTop: '1mm'}}>
+            <span>GUEST: {transaction.guestName.toUpperCase()}</span>
+          </div>
           <div className="item-row uppercase bold">
             <span>UNIT: {transaction.unit?.toUpperCase() || 'GENERAL'}</span>
-            <span>OP: {transaction.cashierName.split(' ')[0].toUpperCase()}</span>
+            <span>OP: {transaction.cashierName.toUpperCase()}</span>
           </div>
           <div className="divider"></div>
           {transaction.items.map((item, idx) => {
@@ -368,7 +373,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <div className="invoice-title">Reservation Folio</div>
               <div className="meta-row uppercase">Ref: {transaction.reference}</div>
               <div className="meta-row uppercase">Date: {new Date(transaction.createdAt).toLocaleDateString()}</div>
-              <div className="meta-row uppercase">Cashier: {transaction.cashierName}</div>
+              <div className="meta-row uppercase">Served by: {transaction.cashierName}</div>
             </div>
           </div>
 

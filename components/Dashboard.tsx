@@ -190,7 +190,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }
   };
 
-  const setQuickFilter = (type: 'TODAY' | 'YESTERDAY' | 'WEEK') => {
+  const setQuickFilter = (type: 'TODAY' | 'YESTERDAY' | 'WEEK' | 'MONTH' | 'YEAR') => {
     const now = new Date();
     const start = new Date();
     const end = new Date();
@@ -207,6 +207,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       const day = now.getDay();
       const diff = now.getDate() - day + (day === 0 ? -6 : 1);
       start.setDate(diff);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === 'MONTH') {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === 'YEAR') {
+      start.setMonth(0, 1);
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
     }
@@ -300,7 +308,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             <div className="flex bg-[#0B1C2D] rounded-lg p-1 border border-gray-700">
               <button onClick={() => setQuickFilter('TODAY')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors">Today</button>
               <button onClick={() => setQuickFilter('YESTERDAY')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors border-l border-gray-700">Yesterday</button>
-              <button onClick={() => setQuickFilter('WEEK')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors border-l border-gray-700">This Week</button>
+              <button onClick={() => setQuickFilter('WEEK')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors border-l border-gray-700">Week</button>
+              <button onClick={() => setQuickFilter('MONTH')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors border-l border-gray-700">Month</button>
+              <button onClick={() => setQuickFilter('YEAR')} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest hover:text-[#C8A862] transition-colors border-l border-gray-700">Year</button>
             </div>
             <button 
               onClick={() => { 
