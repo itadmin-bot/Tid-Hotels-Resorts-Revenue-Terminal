@@ -343,37 +343,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 <div className="flex gap-2 self-end">
                   <button 
                     onClick={() => {
-                      const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' });
-                      const timeFormatter = new Intl.DateTimeFormat('en-GB', { 
-                        timeZone: 'Africa/Lagos',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                      });
-
                       const dailyTx = transactions.filter(t => {
-                        const tDate = dateFormatter.format(new Date(t.createdAt));
-                        const dateMatch = tDate === reportDate;
+                        const dateMatch = new Date(t.createdAt).toISOString().split('T')[0] === reportDate;
                         const unitMatch = reportUnit === 'ALL' || t.unit === reportUnit;
                         return dateMatch && unitMatch;
                       });
-                      const headers = ['Reference', 'Date', 'Time', 'Type', 'Unit', 'Guest', 'Total', 'Paid', 'Balance', 'Method', 'Cashier'];
-                      const rows = dailyTx.map(t => {
-                        const dt = new Date(t.createdAt);
-                        return [
-                          t.reference,
-                          dateFormatter.format(dt),
-                          timeFormatter.format(dt),
-                          t.type,
-                          t.unit || 'FOLIO',
-                          `"${t.guestName}"`,
-                          t.totalAmount,
-                          t.paidAmount,
-                          t.balance,
-                          t.settlementMethod,
-                          t.cashierName
-                        ];
-                      });
+                      const headers = ['Reference', 'Time', 'Type', 'Unit', 'Guest', 'Total', 'Paid', 'Balance', 'Method', 'Cashier'];
+                      const rows = dailyTx.map(t => [
+                        t.reference,
+                        new Date(t.createdAt).toLocaleTimeString(),
+                        t.type,
+                        t.unit || 'FOLIO',
+                        t.guestName,
+                        t.totalAmount,
+                        t.paidAmount,
+                        t.balance,
+                        t.settlementMethod,
+                        t.cashierName
+                      ]);
                       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
                       const blob = new Blob([csv], { type: 'text/csv' });
                       const url = window.URL.createObjectURL(blob);
@@ -574,17 +561,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                         </select>
                         <button 
                           onClick={() => {
-                            const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' });
-                            const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', { 
-                              timeZone: 'Africa/Lagos',
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              second: '2-digit'
-                            });
-
                             const filtered = menuItems.filter(m => {
                               const unitMatch = reportUnit === 'ALL' || m.unit === reportUnit || m.unit === 'ALL';
                               if (!unitMatch) return false;
@@ -618,7 +594,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                             const html = `
                               <html>
                                 <head>
-                                  <title>Inventory Audit Report - ${reportUnit} - ${dateFormatter.format(new Date())}</title>
+                                  <title>Inventory Audit Report - ${reportUnit} - ${new Date().toLocaleDateString()}</title>
                                   <style>
                                     body { font-family: sans-serif; padding: 40px; color: #333; }
                                     h1 { text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #333; padding-bottom: 10px; }
@@ -634,7 +610,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                                   <div class="header-meta">
                                     <div>Unit: ${reportUnit}</div>
                                     <div>Filter: ${inventoryReportFilter}</div>
-                                    <div>Date: ${dateTimeFormatter.format(new Date())}</div>
+                                    <div>Date: ${new Date().toLocaleString()}</div>
                                   </div>
                                   <table>
                                     <thead>

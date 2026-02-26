@@ -103,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       // Date Range Filtering
       if (!dateRange.start && !dateRange.end) return true;
-      const tDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date(t.createdAt));
+      const tDate = new Date(t.createdAt).toISOString().split('T')[0];
       if (dateRange.start && tDate < dateRange.start) return false;
       if (dateRange.end && tDate > dateRange.end) return false;
       
@@ -123,21 +123,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const downloadReport = () => {
     // Adding 'Payment Method' and explicit 'Transaction Date' for enhanced compliance
     const headers = ['Reference', 'Transaction Date', 'Time', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
-    
-    const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' });
-    const timeFormatter = new Intl.DateTimeFormat('en-GB', { 
-      timeZone: 'Africa/Lagos',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-
     const rows = filteredTransactions.map(t => {
       const dt = new Date(t.createdAt);
       return [
         `"${t.reference}"`,
-        dateFormatter.format(dt),
-        timeFormatter.format(dt),
+        dt.toLocaleDateString(),
+        dt.toLocaleTimeString(),
         t.type,
         t.unit || 'Hotel Folio',
         t.source || 'App',

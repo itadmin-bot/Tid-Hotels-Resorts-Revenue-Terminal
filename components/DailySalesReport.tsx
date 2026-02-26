@@ -15,15 +15,15 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
 
   useEffect(() => {
     setLoading(true);
-    // Nigeria is UTC+1. We define the day boundaries explicitly in that timezone
-    // to ensure consistency across all users regardless of their local browser timezone.
-    const startOfDay = new Date(`${selectedDate}T00:00:00+01:00`).getTime();
-    const endOfDay = new Date(`${selectedDate}T23:59:59.999+01:00`).getTime();
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
     const q = query(
       collection(db, 'transactions'),
-      where('createdAt', '>=', startOfDay),
-      where('createdAt', '<=', endOfDay)
+      where('createdAt', '>=', startOfDay.getTime()),
+      where('createdAt', '<=', endOfDay.getTime())
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -65,31 +65,16 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
   };
 
   const handleExport = () => {
-    const headers = ['Reference', 'Date', 'Time', 'Guest', 'Type', 'Unit', 'Method', 'Total'];
-    const timeFormatter = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Africa/Lagos',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-    const dateFormatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Africa/Lagos'
-    });
-
-    const rows = transactions.map(t => {
-      const dt = new Date(t.createdAt);
-      return [
-        t.reference,
-        dateFormatter.format(dt),
-        timeFormatter.format(dt),
-        `"${t.guestName}"`,
-        t.type,
-        t.unit || 'N/A',
-        t.settlementMethod || 'N/A',
-        t.totalAmount
-      ];
-    });
+    const headers = ['Reference', 'Time', 'Guest', 'Type', 'Unit', 'Method', 'Total'];
+    const rows = transactions.map(t => [
+      t.reference,
+      new Date(t.createdAt).toLocaleTimeString(),
+      t.guestName,
+      t.type,
+      t.unit || 'N/A',
+      t.settlementMethod || 'N/A',
+      t.totalAmount
+    ]);
 
     const csvContent = [
       headers.join(','),

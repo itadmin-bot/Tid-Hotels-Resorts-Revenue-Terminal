@@ -13,7 +13,6 @@ import {
   MenuItem,
   Room
 } from '@/types';
-import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 import SettleBillModal from '@/components/SettleBillModal';
 import ReceiptPreview from '@/components/ReceiptPreview';
 
@@ -584,7 +583,14 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                       <div className="col-span-5 flex flex-col">
                         <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Transaction Timestamp</span>
                         <span className="text-[10px] text-gray-400 font-medium">
-                          {formatToLocalDate(p.timestamp)} {formatToLocalTime(p.timestamp)}
+                          {new Date(p.timestamp).toLocaleString('en-GB', { 
+                            day: '2-digit', 
+                            month: 'short', 
+                            year: 'numeric',
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}
                         </span>
                       </div>
                       <div className="col-span-3 flex flex-col text-right">
