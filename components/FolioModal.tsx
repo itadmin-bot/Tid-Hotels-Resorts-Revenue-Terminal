@@ -34,6 +34,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [guest, setGuest] = useState({ name: '', idType: 'National ID', idNumber: '', email: '', phone: '' });
+  const [orderReference, setOrderReference] = useState('');
   const [bookings, setBookings] = useState<RoomBooking[]>([{ 
     roomId: '', 
     quantity: 1, 
@@ -312,6 +313,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         type: 'FOLIO',
         source: 'App',
         guestName: guest.name,
+        orderReference,
         identityType: guest.idType,
         idNumber: guest.idNumber,
         email: guest.email,
@@ -381,6 +383,10 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-gray-500 uppercase">Guest Full Name <span className="text-red-500">*</span></label>
                 <input placeholder="Enter full legal name" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none font-bold focus:border-[#C8A862]" value={guest.name} onChange={(e) => setGuest({...guest, name: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-gray-500 uppercase">Order Reference (Manual Tracking)</label>
+                <input placeholder="Enter manual order reference" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" value={orderReference} onChange={(e) => setOrderReference(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">

@@ -27,6 +27,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<{item: MenuItem, quantity: number}[]>([]);
   const [guest, setGuest] = useState({ name: existingTransaction?.guestName || 'Walk-in Guest' });
+  const [orderReference, setOrderReference] = useState(existingTransaction?.orderReference || '');
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.CARD, amount: 0 }]);
   const [discount, setDiscount] = useState(existingTransaction?.discountAmount || 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -198,6 +199,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
         unit, // This is the locked unit chosen at the start
         source: 'App',
         guestName: guest.name,
+        orderReference,
         items: allItems,
         subtotal: baseVal,
         taxAmount: vatSum,
@@ -347,6 +349,10 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
             {/* Guest Input (Design Match) */}
             <div className="bg-[#0B1C2D] border border-white/10 rounded-2xl p-1 shadow-inner">
                <input className="w-full bg-transparent p-5 text-sm text-white font-black uppercase tracking-widest outline-none placeholder:text-gray-700" placeholder="Walk-in Guest" value={guest.name} onChange={(e) => setGuest({...guest, name: e.target.value})} />
+            </div>
+
+            <div className="bg-[#0B1C2D] border border-white/10 rounded-2xl p-1 shadow-inner">
+               <input className="w-full bg-transparent p-5 text-sm text-white font-black uppercase tracking-widest outline-none placeholder:text-gray-700" placeholder="Order Reference (Manual)" value={orderReference} onChange={(e) => setOrderReference(e.target.value)} />
             </div>
 
             {/* Cart Items List */}

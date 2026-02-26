@@ -108,6 +108,7 @@ export interface Transaction {
   status: SettlementStatus;
   settlementMethod?: SettlementMethod;
   selectedBank?: BankAccount;
+  orderReference?: string;
   createdBy: string;
   userId: string;
   cashierName: string;

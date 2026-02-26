@@ -26,6 +26,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const [menuCatalog, setMenuCatalog] = useState<MenuItem[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [guestName, setGuestName] = useState(transaction.guestName);
+  const [orderReference, setOrderReference] = useState(transaction.orderReference || '');
   const [email, setEmail] = useState(transaction.email || '');
   const [phone, setPhone] = useState(transaction.phone || '');
   const [idType, setIdType] = useState(transaction.identityType || 'National ID');
@@ -64,6 +65,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
         // Only sync if not currently saving to prevent overwriting local edits
         if (!isSaving) {
           setGuestName(data.guestName);
+          setOrderReference(data.orderReference || '');
           setEmail(data.email || '');
           setPhone(data.phone || '');
           setIdType(data.identityType || 'National ID');
@@ -292,6 +294,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
 
       const updates: any = {
         guestName,
+        orderReference,
         email,
         phone,
         identityType: idType,
@@ -369,6 +372,11 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
               <div className="col-span-2">
                 <label className="text-[9px] font-bold text-gray-600 uppercase mb-1 block">Guest Full Name</label>
                 <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none font-bold" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+              </div>
+
+              <div className="col-span-2">
+                <label className="text-[9px] font-bold text-gray-600 uppercase mb-1 block">Order Reference (Manual Tracking)</label>
+                <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={orderReference} onChange={(e) => setOrderReference(e.target.value)} />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
