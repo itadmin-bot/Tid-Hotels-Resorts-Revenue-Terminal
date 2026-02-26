@@ -155,7 +155,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <div className="border-b border-black border-dashed my-3"></div>
                   <div className="flex justify-between text-[11px] font-bold uppercase">
                     <span>Ref: #{transaction.reference.split('-').pop()}</span>
-                    <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
+                    <span>{new Date(transaction.createdAt).toLocaleDateString()} {new Date(transaction.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   <div className="text-[10px] font-black uppercase mt-1">Guest: {transaction.guestName}</div>
                   <div className="text-[10px] font-bold uppercase">Operator: {transaction.cashierName}</div>
@@ -198,7 +198,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <h2 className="text-2xl font-black uppercase mb-4 tracking-tight">Reservation Folio</h2>
                       <div className="space-y-1 text-xs font-bold uppercase">
                         <p><span className="text-gray-400">Reference:</span> {transaction.reference}</p>
-                        <p><span className="text-gray-400">Date Issued:</span> {new Date(transaction.createdAt).toLocaleDateString()}</p>
+                        <p><span className="text-gray-400">Date Issued:</span> {new Date(transaction.createdAt).toLocaleDateString()} {new Date(transaction.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                         <p><span className="text-gray-400">Served by:</span> {transaction.cashierName}</p>
                       </div>
                     </div>
@@ -325,7 +325,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           <div className="divider"></div>
           <div className="item-row uppercase bold">
             <span>REF: #{transaction.reference.split('-').pop()}</span>
-            <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
+            <span>{new Date(transaction.createdAt).toLocaleDateString()} {new Date(transaction.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <div className="item-row uppercase bold" style={{fontSize: '10px', marginTop: '1mm'}}>
             <span>GUEST: {transaction.guestName.toUpperCase()}</span>
@@ -372,7 +372,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             <div className="invoice-meta">
               <div className="invoice-title">Reservation Folio</div>
               <div className="meta-row uppercase">Ref: {transaction.reference}</div>
-              <div className="meta-row uppercase">Date: {new Date(transaction.createdAt).toLocaleDateString()}</div>
+              <div className="meta-row uppercase">Date: {new Date(transaction.createdAt).toLocaleDateString()} {new Date(transaction.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
               <div className="meta-row uppercase">Served by: {transaction.cashierName}</div>
             </div>
           </div>
