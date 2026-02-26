@@ -33,6 +33,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportUnit, setReportUnit] = useState<'ALL' | UnitType>('ALL');
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [loading, setLoading] = useState(false);
   const [masterCode, setMasterCode] = useState(DEFAULT_ADMIN_KEY);
@@ -236,7 +237,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       unit: showMenuModal.unit || 'ALL',
       initialStock: currentInitialStock + restock,
       soldCount: showMenuModal.soldCount || 0,
-      lowStockThreshold: Number(showMenuModal.lowStockThreshold) || 3
+      lowStockThreshold: Number(showMenuModal.lowStockThreshold) || 3,
+      parStock: Number(showMenuModal.parStock) || 0
     };
     
     if (showMenuModal.id) {
@@ -315,6 +317,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex flex-col">
+                  <label className="text-[9px] font-black text-gray-500 uppercase mb-1">Audit Unit</label>
+                  <select 
+                    className="bg-[#0B1C2D] border border-gray-700 rounded-lg px-4 py-2 text-xs text-white font-bold outline-none focus:border-[#C8A862]"
+                    value={reportUnit}
+                    onChange={(e) => setReportUnit(e.target.value as any)}
+                  >
+                    <option value="ALL">All Units</option>
+                    <option value={UnitType.ZENZA}>Zenza Unit</option>
+                    <option value={UnitType.WHISPERS}>Whispers Unit</option>
+                  </select>
+                </div>
+                <div className="flex flex-col">
                   <label className="text-[9px] font-black text-gray-500 uppercase mb-1">Select Audit Date</label>
                   <input 
                     type="date" 
@@ -323,34 +337,78 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     onChange={(e) => setReportDate(e.target.value)}
                   />
                 </div>
-                <button 
-                  onClick={() => {
-                    const dailyTx = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
-                    const headers = ['Reference', 'Time', 'Type', 'Unit', 'Guest', 'Total', 'Paid', 'Balance', 'Method', 'Cashier'];
-                    const rows = dailyTx.map(t => [
-                      t.reference,
-                      new Date(t.createdAt).toLocaleTimeString(),
-                      t.type,
-                      t.unit || 'FOLIO',
-                      t.guestName,
-                      t.totalAmount,
-                      t.paidAmount,
-                      t.balance,
-                      t.settlementMethod,
-                      t.cashierName
-                    ]);
-                    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `TIDE_AUDIT_${reportDate}.csv`;
-                    a.click();
-                  }}
-                  className="px-6 py-2 bg-blue-600/10 border border-blue-600/30 text-blue-400 rounded-lg text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all self-end h-[38px]"
-                >
-                  Export Ledger
-                </button>
+                <div className="flex gap-2 self-end">
+                  <button 
+                    onClick={() => {
+                      const dailyTx = transactions.filter(t => {
+                        const dateMatch = new Date(t.createdAt).toISOString().split('T')[0] === reportDate;
+                        const unitMatch = reportUnit === 'ALL' || t.unit === reportUnit;
+                        return dateMatch && unitMatch;
+                      });
+                      const headers = ['Reference', 'Time', 'Type', 'Unit', 'Guest', 'Total', 'Paid', 'Balance', 'Method', 'Cashier'];
+                      const rows = dailyTx.map(t => [
+                        t.reference,
+                        new Date(t.createdAt).toLocaleTimeString(),
+                        t.type,
+                        t.unit || 'FOLIO',
+                        t.guestName,
+                        t.totalAmount,
+                        t.paidAmount,
+                        t.balance,
+                        t.settlementMethod,
+                        t.cashierName
+                      ]);
+                      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `TIDE_AUDIT_${reportUnit}_${reportDate}.csv`;
+                      a.click();
+                    }}
+                    className="px-6 py-2 bg-blue-600/10 border border-blue-600/30 text-blue-400 rounded-lg text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all h-[38px]"
+                  >
+                    Export Ledger
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Par Stock', 'Audit Status', 'Price (N)', 'Total Item Revenue (N)'];
+                      const itemsToExport = menuItems.filter(m => {
+                        if (reportUnit === 'ALL') return true;
+                        return m.unit === reportUnit || m.unit === 'ALL';
+                      });
+                      const rows = itemsToExport.map(m => {
+                        const sold = m.soldCount || 0;
+                        const remaining = m.initialStock - sold;
+                        const par = m.parStock || 0;
+                        const status = remaining <= par ? 'ORDER NOW' : 'OK';
+                        return [
+                          `"${m.name}"`,
+                          `"${m.category}"`,
+                          m.unit,
+                          m.initialStock,
+                          sold,
+                          remaining,
+                          m.lowStockThreshold || 0,
+                          par,
+                          status,
+                          m.price,
+                          sold * m.price
+                        ];
+                      });
+                      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `TIDE_INVENTORY_${reportUnit}_${new Date().toISOString().split('T')[0]}.csv`;
+                      a.click();
+                    }}
+                    className="px-6 py-2 bg-green-600/10 border border-green-600/30 text-green-500 rounded-lg text-[10px] font-black uppercase hover:bg-green-600 hover:text-white transition-all h-[38px]"
+                  >
+                    Export Inventory
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -590,6 +648,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           <th className="pb-4">Category</th>
                           <th className="pb-4">Stock Status</th>
                           <th className="pb-4 text-center">Reorder Level</th>
+                          <th className="pb-4 text-center">Par Stock</th>
+                          <th className="pb-4 text-center">Audit Status</th>
                           <th className="pb-4 text-right">Price (₦)</th>
                           <th className="pb-4 text-right">Actions</th>
                         </tr>
@@ -598,6 +658,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                         {groupItems.map(m => {
                           const remaining = m.initialStock - (m.soldCount || 0);
                           const isLow = remaining <= (m.lowStockThreshold || 3);
+                          const isBelowPar = remaining <= (m.parStock || 0);
                           return (
                             <tr key={m.id} className="hover:bg-white/5 transition-colors group">
                               <td className="py-5">
@@ -610,15 +671,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                                   <div className="text-xs font-black text-white">{remaining} / {m.initialStock}</div>
                                   <div className="w-24 h-1 bg-gray-800 rounded-full overflow-hidden">
                                     <div 
-                                      className={`h-full transition-all ${isLow ? 'bg-red-500' : 'bg-green-500'}`} 
+                                      className={`h-full transition-all ${isBelowPar ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-green-500'}`} 
                                       style={{ width: `${Math.min(100, (remaining / m.initialStock) * 100)}%` }}
                                     ></div>
                                   </div>
                                 </div>
                               </td>
                               <td className="py-5 text-center">
-                                <span className={`px-2 py-1 rounded text-[10px] font-black ${isLow ? 'bg-red-500/10 text-red-500' : 'bg-gray-800 text-gray-500'}`}>
+                                <span className={`px-2 py-1 rounded text-[10px] font-black ${isLow ? 'bg-orange-500/10 text-orange-500' : 'bg-gray-800 text-gray-500'}`}>
                                   {m.lowStockThreshold || 3}
+                                </span>
+                              </td>
+                              <td className="py-5 text-center">
+                                <span className={`px-2 py-1 rounded text-[10px] font-black ${isBelowPar ? 'bg-red-500/10 text-red-500' : 'bg-gray-800 text-gray-500'}`}>
+                                  {m.parStock || 0}
+                                </span>
+                              </td>
+                              <td className="py-5 text-center">
+                                <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter ${isBelowPar ? 'bg-red-600 text-white animate-pulse' : 'bg-green-500/10 text-green-400'}`}>
+                                  {isBelowPar ? 'ORDER NOW' : 'OK'}
                                 </span>
                               </td>
                               <td className="py-5 font-black text-right text-white">₦{m.price.toLocaleString()}</td>
@@ -970,6 +1041,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-gray-500 uppercase">Low Stock Alert Threshold</label>
                   <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" placeholder="Default: 3" value={showMenuModal.lowStockThreshold || ''} onChange={(e) => setShowMenuModal({...showMenuModal, lowStockThreshold: Number(e.target.value)})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Par Stock (Ideal Minimum)</label>
+                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" placeholder="e.g. 8" value={showMenuModal.parStock || ''} onChange={(e) => setShowMenuModal({...showMenuModal, parStock: Number(e.target.value)})} />
                 </div>
               </div>
               <div className="flex gap-4 pt-4">

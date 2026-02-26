@@ -155,7 +155,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   const downloadInventoryReport = () => {
-    const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Price (N)', 'Total Item Revenue (N)'];
+    const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Par Stock', 'Audit Status', 'Price (N)', 'Total Item Revenue (N)'];
     
     // Filter items based on the active unit filter
     const itemsToExport = menuItems.filter(m => {
@@ -169,6 +169,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const rows = itemsToExport.map(m => {
       const sold = m.soldCount || 0;
       const remaining = m.initialStock - sold;
+      const parStock = m.parStock || 0;
+      const auditStatus = remaining <= parStock ? 'ORDER NOW' : 'OK';
       return [
         `"${m.name}"`,
         `"${m.category}"`,
@@ -177,6 +179,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         sold,
         remaining,
         m.lowStockThreshold || 0,
+        parStock,
+        auditStatus,
         m.price,
         sold * m.price
       ];

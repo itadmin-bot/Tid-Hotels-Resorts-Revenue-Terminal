@@ -47,6 +47,7 @@ export interface MenuItem {
   initialStock: number;
   soldCount: number;
   lowStockThreshold?: number;
+  parStock?: number;
 }
 
 export interface AppNotification {
