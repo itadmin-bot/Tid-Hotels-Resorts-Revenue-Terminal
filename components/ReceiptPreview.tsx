@@ -3,7 +3,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/firebase';
 import { Transaction, UnitType, AppSettings, BankAccount, TaxConfig } from '@/types';
 import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '@/constants';
-import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
 interface ReceiptPreviewProps {
   transaction: Transaction;
@@ -156,7 +156,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <div className="border-b border-black border-dashed my-3"></div>
                   <div className="flex justify-between text-[11px] font-bold uppercase">
                     <span>Ref: #{transaction.reference.split('-').pop()}</span>
-                    <span>{formatToLocalDate(transaction.createdAt)} {formatToLocalTime(transaction.createdAt)}</span>
+                    <span>{formatDate(transaction.createdAt)} {formatTime(transaction.createdAt)}</span>
                   </div>
                   <div className="text-[10px] font-black uppercase mt-1">Guest: {transaction.guestName}</div>
                   <div className="text-[10px] font-bold uppercase">Operator: {transaction.cashierName}</div>
@@ -200,7 +200,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <div className="space-y-1 text-xs font-bold uppercase">
                         <p><span className="text-gray-400">Reference:</span> {transaction.reference}</p>
                         {transaction.orderReference && <p><span className="text-gray-400">Order Ref:</span> {transaction.orderReference}</p>}
-                        <p><span className="text-gray-400">Date Issued:</span> {formatToLocalDate(transaction.createdAt)} {formatToLocalTime(transaction.createdAt)}</p>
+                        <p><span className="text-gray-400">Date Issued:</span> {formatDate(transaction.createdAt)} {formatTime(transaction.createdAt)}</p>
                         <p><span className="text-gray-400">Served by:</span> {transaction.cashierName}</p>
                       </div>
                     </div>
@@ -223,11 +223,11 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                           <p className="text-sm font-black uppercase">{transaction.roomDetails.roomName}</p>
                           <div className="flex justify-between text-xs font-bold py-1">
                             <span className="text-gray-500 uppercase">Check-In:</span>
-                            <span>{formatToLocalDate(transaction.roomDetails.checkIn)}</span>
+                            <span>{formatDate(transaction.roomDetails.checkIn)}</span>
                           </div>
                           <div className="flex justify-between text-xs font-bold py-1">
                             <span className="text-gray-500 uppercase">Check-Out:</span>
-                            <span>{formatToLocalDate(transaction.roomDetails.checkOut)}</span>
+                            <span>{formatDate(transaction.roomDetails.checkOut)}</span>
                           </div>
                           <div className="flex justify-between text-xs font-black py-1 border-t border-gray-50 mt-1">
                             <span className="text-gray-500 uppercase tracking-widest text-[9px]">Duration:</span>
@@ -327,7 +327,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           <div className="divider"></div>
           <div className="item-row uppercase bold">
             <span>REF: #{transaction.reference.split('-').pop()}</span>
-            <span>{formatToLocalDate(transaction.createdAt)} {formatToLocalTime(transaction.createdAt)}</span>
+            <span>{formatDate(transaction.createdAt)} {formatTime(transaction.createdAt)}</span>
           </div>
           {transaction.orderReference && (
             <div className="item-row uppercase bold" style={{fontSize: '10px'}}>
@@ -380,7 +380,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <div className="invoice-title">Reservation Folio</div>
               <div className="meta-row uppercase">Ref: {transaction.reference}</div>
               {transaction.orderReference && <div className="meta-row uppercase">Order Ref: {transaction.orderReference}</div>}
-              <div className="meta-row uppercase">Date: {formatToLocalDate(transaction.createdAt)} {formatToLocalTime(transaction.createdAt)}</div>
+              <div className="meta-row uppercase">Date: {formatDate(transaction.createdAt)} {formatTime(transaction.createdAt)}</div>
               <div className="meta-row uppercase">Served by: {transaction.cashierName}</div>
             </div>
           </div>
@@ -398,8 +398,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               {transaction.roomDetails ? (
                 <div className="uppercase">
                   <div className="bold" style={{marginBottom: '2mm'}}>{transaction.roomDetails.roomName}</div>
-                  <div className="item-row"><span>Check-In:</span> <span className="bold">{formatToLocalDate(transaction.roomDetails.checkIn)}</span></div>
-                  <div className="item-row"><span>Check-Out:</span> <span className="bold">{formatToLocalDate(transaction.roomDetails.checkOut)}</span></div>
+                  <div className="item-row"><span>Check-In:</span> <span className="bold">{formatDate(transaction.roomDetails.checkIn)}</span></div>
+                  <div className="item-row"><span>Check-Out:</span> <span className="bold">{formatDate(transaction.roomDetails.checkOut)}</span></div>
                   <div className="item-row" style={{marginTop: '2mm', borderTop: '1px solid #eee', paddingTop: '1mm'}}><span>Nights:</span> <span className="bold">{transaction.roomDetails.nights}</span></div>
                 </div>
               ) : <div className="bold">Reservation Mapping Data N/A</div>}
