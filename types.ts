@@ -48,6 +48,8 @@ export interface MenuItem {
   soldCount: number;
   lowStockThreshold?: number;
   parStock?: number;
+  minOrderLevelPar?: number;
+  minOrderLevelTotal?: number;
 }
 
 export interface AppNotification {

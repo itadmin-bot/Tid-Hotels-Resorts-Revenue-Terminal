@@ -34,6 +34,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportUnit, setReportUnit] = useState<'ALL' | UnitType>('ALL');
+  const [inventoryReportFilter, setInventoryReportFilter] = useState<'ALL' | 'PAR' | 'REORDER' | 'SOLD_OUT'>('ALL');
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [loading, setLoading] = useState(false);
   const [masterCode, setMasterCode] = useState(DEFAULT_ADMIN_KEY);
@@ -238,7 +239,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       initialStock: currentInitialStock + restock,
       soldCount: showMenuModal.soldCount || 0,
       lowStockThreshold: Number(showMenuModal.lowStockThreshold) || 3,
-      parStock: Number(showMenuModal.parStock) || 0
+      parStock: Number(showMenuModal.parStock) || 0,
+      minOrderLevelPar: Number(showMenuModal.minOrderLevelPar) || 0,
+      minOrderLevelTotal: Number(showMenuModal.minOrderLevelTotal) || 0
     };
     
     if (showMenuModal.id) {
@@ -372,7 +375,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   </button>
                   <button 
                     onClick={() => {
-                      const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Par Stock', 'Audit Status', 'Price (N)', 'Total Item Revenue (N)'];
+                      const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Par Stock', 'Min Order (Par)', 'Min Order (Total)', 'Audit Status', 'Price (N)', 'Total Item Revenue (N)'];
                       const itemsToExport = menuItems.filter(m => {
                         if (reportUnit === 'ALL') return true;
                         return m.unit === reportUnit || m.unit === 'ALL';
@@ -391,6 +394,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           remaining,
                           m.lowStockThreshold || 0,
                           par,
+                          m.minOrderLevelPar || 0,
+                          m.minOrderLevelTotal || 0,
                           status,
                           m.price,
                           sold * m.price
@@ -535,6 +540,147 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                               <td colSpan={5} className="py-10 text-center text-gray-600 font-black uppercase tracking-widest italic">No transactions for selected date</td>
                             </tr>
                           )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-8 border-t border-gray-700/30">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30 pb-2 flex-1">Inventory Audit Report</h3>
+                      <div className="flex items-center gap-3">
+                        <select 
+                          className="bg-[#0B1C2D] border border-gray-700 rounded-lg px-3 py-1 text-[10px] text-white font-bold outline-none focus:border-[#C8A862]"
+                          value={inventoryReportFilter}
+                          onChange={(e) => setInventoryReportFilter(e.target.value as any)}
+                        >
+                          <option value="ALL">All Inventory</option>
+                          <option value="PAR">Below Par Stock</option>
+                          <option value="REORDER">Below Reorder Level</option>
+                          <option value="SOLD_OUT">Sold Out Items</option>
+                        </select>
+                        <button 
+                          onClick={() => {
+                            const filtered = menuItems.filter(m => {
+                              const unitMatch = reportUnit === 'ALL' || m.unit === reportUnit || m.unit === 'ALL';
+                              if (!unitMatch) return false;
+                              const remaining = m.initialStock - (m.soldCount || 0);
+                              if (inventoryReportFilter === 'PAR') return remaining <= (m.parStock || 0);
+                              if (inventoryReportFilter === 'REORDER') return remaining <= (m.lowStockThreshold || 3);
+                              if (inventoryReportFilter === 'SOLD_OUT') return remaining <= 0;
+                              return true;
+                            });
+                            
+                            const printWindow = window.open('', '_blank');
+                            if (!printWindow) return;
+                            
+                            const rowsHtml = filtered.map(m => {
+                              const remaining = m.initialStock - (m.soldCount || 0);
+                              const status = remaining <= (m.parStock || 0) ? 'ORDER NOW' : 'OK';
+                              return `
+                                <tr>
+                                  <td>${m.name}</td>
+                                  <td>${m.category}</td>
+                                  <td>${m.initialStock}</td>
+                                  <td>${m.soldCount || 0}</td>
+                                  <td>${remaining}</td>
+                                  <td>${m.lowStockThreshold || 3}</td>
+                                  <td>${m.parStock || 0}</td>
+                                  <td class="${status === 'ORDER NOW' ? 'status-bad' : ''}">${status}</td>
+                                </tr>
+                              `;
+                            }).join('');
+
+                            const html = `
+                              <html>
+                                <head>
+                                  <title>Inventory Audit Report - ${reportUnit} - ${new Date().toLocaleDateString()}</title>
+                                  <style>
+                                    body { font-family: sans-serif; padding: 40px; color: #333; }
+                                    h1 { text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+                                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 12px; }
+                                    th { background: #f4f4f4; text-transform: uppercase; }
+                                    .status-bad { color: red; font-weight: bold; }
+                                    .header-meta { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 10px; text-transform: uppercase; }
+                                  </style>
+                                </head>
+                                <body>
+                                  <h1>Inventory Audit Report</h1>
+                                  <div class="header-meta">
+                                    <div>Unit: ${reportUnit}</div>
+                                    <div>Filter: ${inventoryReportFilter}</div>
+                                    <div>Date: ${new Date().toLocaleString()}</div>
+                                  </div>
+                                  <table>
+                                    <thead>
+                                      <tr>
+                                        <th>Item Name</th>
+                                        <th>Category</th>
+                                        <th>Initial</th>
+                                        <th>Sold</th>
+                                        <th>Remaining</th>
+                                        <th>Reorder</th>
+                                        <th>Par</th>
+                                        <th>Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${rowsHtml}
+                                    </tbody>
+                                  </table>
+                                  <script>window.print();</script>
+                                </body>
+                              </html>
+                            `;
+                            printWindow.document.write(html);
+                            printWindow.document.close();
+                          }}
+                          className="px-4 py-1 bg-[#C8A862] text-[#0B1C2D] text-[10px] font-black uppercase rounded hover:bg-[#B69651] transition-all"
+                        >
+                          Print PDF
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="text-[9px] text-gray-600 uppercase tracking-widest">
+                            <th className="pb-3">Item</th>
+                            <th className="pb-3">Stock</th>
+                            <th className="pb-3 text-center">Reorder</th>
+                            <th className="pb-3 text-center">Par</th>
+                            <th className="pb-3 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/30">
+                          {menuItems
+                            .filter(m => {
+                              const unitMatch = reportUnit === 'ALL' || m.unit === reportUnit || m.unit === 'ALL';
+                              if (!unitMatch) return false;
+                              const remaining = m.initialStock - (m.soldCount || 0);
+                              if (inventoryReportFilter === 'PAR') return remaining <= (m.parStock || 0);
+                              if (inventoryReportFilter === 'REORDER') return remaining <= (m.lowStockThreshold || 3);
+                              if (inventoryReportFilter === 'SOLD_OUT') return remaining <= 0;
+                              return true;
+                            })
+                            .map(m => {
+                              const remaining = m.initialStock - (m.soldCount || 0);
+                              const status = remaining <= (m.parStock || 0) ? 'ORDER NOW' : 'OK';
+                              return (
+                                <tr key={m.id} className="text-[10px]">
+                                  <td className="py-3 font-bold text-white uppercase">{m.name}</td>
+                                  <td className="py-3 text-gray-400">{remaining} / {m.initialStock}</td>
+                                  <td className="py-3 text-center text-gray-500">{m.lowStockThreshold || 3}</td>
+                                  <td className="py-3 text-center text-gray-500">{m.parStock || 0}</td>
+                                  <td className="py-3 text-right">
+                                    <span className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase ${status === 'OK' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400 animate-pulse'}`}>
+                                      {status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                         </tbody>
                       </table>
                     </div>
@@ -1047,6 +1193,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-gray-500 uppercase">Par Stock (Ideal Minimum)</label>
                   <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" placeholder="e.g. 8" value={showMenuModal.parStock || ''} onChange={(e) => setShowMenuModal({...showMenuModal, parStock: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Min Order (Par Threshold)</label>
+                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" placeholder="Min" value={showMenuModal.minOrderLevelPar || ''} onChange={(e) => setShowMenuModal({...showMenuModal, minOrderLevelPar: Number(e.target.value)})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Min Order (Total Threshold)</label>
+                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" placeholder="Min" value={showMenuModal.minOrderLevelTotal || ''} onChange={(e) => setShowMenuModal({...showMenuModal, minOrderLevelTotal: Number(e.target.value)})} />
                 </div>
               </div>
               <div className="flex gap-4 pt-4">
