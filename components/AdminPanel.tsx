@@ -541,9 +541,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
         )}
 
         {activeTab === 'Menu' && (
-          <div className="space-y-6">
+          <div className="space-y-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-              <h2 className="text-lg font-black text-[#C8A862] uppercase tracking-widest">POS Menu Catalog</h2>
+              <div>
+                <h2 className="text-lg font-black text-[#C8A862] uppercase tracking-widest">POS Menu Catalog</h2>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Manage inventory levels and pricing across property units</p>
+              </div>
               <div className="flex flex-1 max-w-md gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -558,35 +561,91 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 <button onClick={() => setShowMenuModal({})} className="px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all shrink-0">+ Add Item</button>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="text-[10px] text-gray-500 uppercase tracking-widest border-b border-gray-700/50">
-                    <th className="pb-4">Item Name</th>
-                    <th className="pb-4">Unit</th>
-                    <th className="pb-4">Stock</th>
-                    <th className="pb-4 text-right">Price (₦)</th>
-                    <th className="pb-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700/30">
-                  {menuItems
-                    .filter(m => m.name.toLowerCase().includes(menuSearch.toLowerCase()))
-                    .map(m => (
-                    <tr key={m.id} className="hover:bg-white/5 transition-colors">
-                      <td className="py-5 font-bold text-white uppercase">{m.name}</td>
-                      <td className="py-5 text-gray-400 text-xs">{m.unit}</td>
-                      <td className="py-5 text-gray-400 text-xs font-black">{m.initialStock - (m.soldCount || 0)} / {m.initialStock}</td>
-                      <td className="py-5 font-black text-right">{m.price.toLocaleString()}</td>
-                      <td className="py-5 text-right space-x-3">
-                        <button onClick={() => setShowMenuModal(m)} className="text-blue-400 hover:text-white text-[10px] font-black uppercase tracking-widest">Edit</button>
-                        <button onClick={() => deleteDoc(doc(db, 'menu', m.id))} className="text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase tracking-widest">Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+
+            {['ALL', UnitType.ZENZA, UnitType.WHISPERS].map(unitGroup => {
+              const groupItems = menuItems.filter(m => 
+                m.unit === unitGroup && 
+                m.name.toLowerCase().includes(menuSearch.toLowerCase())
+              );
+              
+              if (groupItems.length === 0 && menuSearch === '') return null;
+              if (groupItems.length === 0 && menuSearch !== '') return null;
+
+              return (
+                <div key={unitGroup} className="space-y-4">
+                  <div className="flex items-center gap-3 border-b border-gray-700/50 pb-2">
+                    <h3 className={`text-xs font-black uppercase tracking-widest ${
+                      unitGroup === 'ALL' ? 'text-gray-400' : 
+                      unitGroup === UnitType.ZENZA ? 'text-purple-400' : 'text-blue-400'
+                    }`}>
+                      {unitGroup === 'ALL' ? 'Global Inventory' : `${unitGroup} Unit Inventory`}
+                    </h3>
+                    <span className="px-2 py-0.5 bg-gray-800 rounded text-[9px] font-black text-gray-500">{groupItems.length} Items</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="text-[10px] text-gray-500 uppercase tracking-widest border-b border-gray-700/30">
+                          <th className="pb-4">Item Name</th>
+                          <th className="pb-4">Category</th>
+                          <th className="pb-4">Stock Status</th>
+                          <th className="pb-4 text-center">Reorder Level</th>
+                          <th className="pb-4 text-right">Price (₦)</th>
+                          <th className="pb-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-700/30">
+                        {groupItems.map(m => {
+                          const remaining = m.initialStock - (m.soldCount || 0);
+                          const isLow = remaining <= (m.lowStockThreshold || 3);
+                          return (
+                            <tr key={m.id} className="hover:bg-white/5 transition-colors group">
+                              <td className="py-5">
+                                <div className="font-bold text-white uppercase">{m.name}</div>
+                                {m.description && <div className="text-[9px] text-gray-500 italic truncate max-w-[200px]">{m.description}</div>}
+                              </td>
+                              <td className="py-5 text-gray-400 text-[10px] uppercase">{m.category}</td>
+                              <td className="py-5">
+                                <div className="flex flex-col gap-1">
+                                  <div className="text-xs font-black text-white">{remaining} / {m.initialStock}</div>
+                                  <div className="w-24 h-1 bg-gray-800 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full transition-all ${isLow ? 'bg-red-500' : 'bg-green-500'}`} 
+                                      style={{ width: `${Math.min(100, (remaining / m.initialStock) * 100)}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-5 text-center">
+                                <span className={`px-2 py-1 rounded text-[10px] font-black ${isLow ? 'bg-red-500/10 text-red-500' : 'bg-gray-800 text-gray-500'}`}>
+                                  {m.lowStockThreshold || 3}
+                                </span>
+                              </td>
+                              <td className="py-5 font-black text-right text-white">₦{m.price.toLocaleString()}</td>
+                              <td className="py-5 text-right space-x-3">
+                                <button onClick={() => setShowMenuModal(m)} className="text-blue-400 hover:text-white text-[10px] font-black uppercase tracking-widest">Edit</button>
+                                <button onClick={() => {
+                                  if(confirm(`Permanently delete ${m.name} from the property network?`)) {
+                                    deleteDoc(doc(db, 'menu', m.id));
+                                  }
+                                }} className="text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase tracking-widest">Delete</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {menuItems.length === 0 && (
+              <div className="py-20 text-center">
+                <Coffee className="w-12 h-12 text-gray-700 mx-auto mb-4 opacity-20" />
+                <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.3em] italic">No menu items registered in the property network</p>
+              </div>
+            )}
           </div>
         )}
 

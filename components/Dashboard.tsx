@@ -155,8 +155,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   const downloadInventoryReport = () => {
-    const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Price (N)', 'Total Item Revenue (N)'];
-    const rows = menuItems.map(m => {
+    const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Price (N)', 'Total Item Revenue (N)'];
+    
+    // Filter items based on the active unit filter
+    const itemsToExport = menuItems.filter(m => {
+      if (unitFilter === 'ALL') return true;
+      if (unitFilter === 'ZENZA' && m.unit === UnitType.ZENZA) return true;
+      if (unitFilter === 'WHISPERS' && m.unit === UnitType.WHISPERS) return true;
+      if (unitFilter === 'FOLIO') return false; // Inventory doesn't apply to folios
+      return m.unit === 'ALL';
+    });
+
+    const rows = itemsToExport.map(m => {
       const sold = m.soldCount || 0;
       const remaining = m.initialStock - sold;
       return [
@@ -166,6 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         m.initialStock,
         sold,
         remaining,
+        m.lowStockThreshold || 0,
         m.price,
         sold * m.price
       ];
@@ -176,7 +187,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `TIDE_STOCK_INVENTORY_${new Date().toISOString().split('T')[0]}.csv`;
+    const filterSuffix = unitFilter === 'ALL' ? 'COMPLETE' : unitFilter;
+    a.download = `TIDE_STOCK_INVENTORY_${filterSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
