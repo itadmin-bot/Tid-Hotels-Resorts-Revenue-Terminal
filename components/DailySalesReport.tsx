@@ -67,12 +67,12 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
   const handleExport = () => {
     const headers = ['Reference', 'Time', 'Guest', 'Type', 'Unit', 'Method', 'Total'];
     const rows = transactions.map(t => [
-      t.reference,
-      new Date(t.createdAt).toLocaleTimeString(),
-      t.guestName,
-      t.type,
-      t.unit || 'N/A',
-      t.settlementMethod || 'N/A',
+      `"${t.reference}"`,
+      `"${new Date(t.createdAt).toLocaleTimeString()}"`,
+      `"${t.guestName}"`,
+      `"${t.type}"`,
+      `"${t.unit || 'N/A'}"`,
+      `"${t.settlementMethod || 'N/A'}"`,
       t.totalAmount
     ]);
 

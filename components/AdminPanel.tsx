@@ -32,7 +32,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportDate, setReportDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [reportUnit, setReportUnit] = useState<'ALL' | UnitType>('ALL');
   const [inventoryReportFilter, setInventoryReportFilter] = useState<'ALL' | 'PAR' | 'REORDER' | 'SOLD_OUT'>('ALL');
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -344,22 +344,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   <button 
                     onClick={() => {
                       const dailyTx = transactions.filter(t => {
-                        const dateMatch = new Date(t.createdAt).toISOString().split('T')[0] === reportDate;
+                        const dateMatch = new Date(t.createdAt).toLocaleDateString('en-CA') === reportDate;
                         const unitMatch = reportUnit === 'ALL' || t.unit === reportUnit;
                         return dateMatch && unitMatch;
                       });
                       const headers = ['Reference', 'Time', 'Type', 'Unit', 'Guest', 'Total', 'Paid', 'Balance', 'Method', 'Cashier'];
                       const rows = dailyTx.map(t => [
-                        t.reference,
-                        new Date(t.createdAt).toLocaleTimeString(),
-                        t.type,
-                        t.unit || 'FOLIO',
-                        t.guestName,
+                        `"${t.reference}"`,
+                        `"${new Date(t.createdAt).toLocaleTimeString()}"`,
+                        `"${t.type}"`,
+                        `"${t.unit || 'FOLIO'}"`,
+                        `"${t.guestName}"`,
                         t.totalAmount,
                         t.paidAmount,
                         t.balance,
-                        t.settlementMethod,
-                        t.cashierName
+                        `"${t.settlementMethod || 'N/A'}"`,
+                        `"${t.cashierName}"`
                       ]);
                       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
                       const blob = new Blob([csv], { type: 'text/csv' });
@@ -418,7 +418,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
             </div>
 
             {(() => {
-              const dailyTx = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
+              const dailyTx = transactions.filter(t => new Date(t.createdAt).toLocaleDateString('en-CA') === reportDate);
               const gross = dailyTx.reduce((acc, t) => acc + t.totalAmount, 0);
               const settled = dailyTx.reduce((acc, t) => acc + t.paidAmount, 0);
               const tax = dailyTx.reduce((acc, t) => acc + (t.taxAmount || 0), 0);
