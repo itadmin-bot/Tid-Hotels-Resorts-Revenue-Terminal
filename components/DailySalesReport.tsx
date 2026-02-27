@@ -3,27 +3,25 @@ import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firest
 import { db } from '@/firebase';
 import { Transaction, SettlementMethod, UnitType } from '@/types';
 import { Calendar, Download, TrendingUp, CreditCard, Banknote, Landmark, FileText } from 'lucide-react';
+import { formatToLocalDate, formatToLocalTime, getDayRange } from '@/utils/dateUtils';
 
 interface DailySalesReportProps {
   onManage?: (transaction: Transaction) => void;
 }
 
 const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(formatToLocalDate(Date.now()));
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { start, end } = getDayRange(selectedDate);
 
     const q = query(
       collection(db, 'transactions'),
-      where('createdAt', '>=', startOfDay.getTime()),
-      where('createdAt', '<=', endOfDay.getTime())
+      where('createdAt', '>=', start),
+      where('createdAt', '<=', end)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -67,12 +65,12 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
   const handleExport = () => {
     const headers = ['Reference', 'Time', 'Guest', 'Type', 'Unit', 'Method', 'Total'];
     const rows = transactions.map(t => [
-      t.reference,
-      new Date(t.createdAt).toLocaleTimeString(),
-      t.guestName,
-      t.type,
-      t.unit || 'N/A',
-      t.settlementMethod || 'N/A',
+      `"${t.reference}"`,
+      `"${formatToLocalTime(t.createdAt)}"`,
+      `"${t.guestName}"`,
+      `"${t.type}"`,
+      `"${t.unit || 'N/A'}"`,
+      `"${t.settlementMethod || 'N/A'}"`,
       t.totalAmount
     ]);
 
@@ -196,7 +194,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                     {transactions.map(t => (
                       <tr key={t.id} className="hover:bg-white/5 transition-colors">
                         <td className="p-4 font-mono text-[10px] text-gray-400">#{t.reference.split('-').pop()}</td>
-                        <td className="p-4 text-[10px] font-bold text-white">{new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td className="p-4 text-[10px] font-bold text-white">{formatToLocalTime(t.createdAt)}</td>
                         <td className="p-4 text-[10px] font-black text-white uppercase truncate max-w-[120px]">{t.guestName}</td>
                         <td className="p-4">
                           <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${

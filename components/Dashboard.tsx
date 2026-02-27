@@ -2,23 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw } from 'lucide-react';
-import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem } from '../types';
+import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem, AppSettings } from '../types';
 import { BRAND } from '../constants';
+import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 import POSModal from './POSModal';
 import FolioModal from './FolioModal';
+import ProformaModal from './ProformaModal';
 import ReceiptPreview from './ReceiptPreview';
+import ProformaPreview from './ProformaPreview';
 import ManageTransactionModal from './ManageTransactionModal';
 
 interface DashboardProps {
   user: UserProfile;
+  settings: AppSettings | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showPOS, setShowPOS] = useState(false);
   const [posEditingTransaction, setPosEditingTransaction] = useState<Transaction | null>(null);
   const [showFolio, setShowFolio] = useState(false);
+  const [showProforma, setShowProforma] = useState(false);
+  const [proformaEditingTransaction, setProformaEditingTransaction] = useState<Transaction | null>(null);
   const [managingTransaction, setManagingTransaction] = useState<Transaction | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -103,7 +109,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       // Date Range Filtering
       if (!dateRange.start && !dateRange.end) return true;
-      const tDate = new Date(t.createdAt).toISOString().split('T')[0];
+      const tDate = formatToLocalDate(t.createdAt);
       if (dateRange.start && tDate < dateRange.start) return false;
       if (dateRange.end && tDate > dateRange.end) return false;
       
@@ -124,11 +130,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     // Adding 'Payment Method' and explicit 'Transaction Date' for enhanced compliance
     const headers = ['Reference', 'Transaction Date', 'Time', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
     const rows = filteredTransactions.map(t => {
-      const dt = new Date(t.createdAt);
       return [
         `"${t.reference}"`,
-        dt.toLocaleDateString(),
-        dt.toLocaleTimeString(),
+        formatToLocalDate(t.createdAt),
+        formatToLocalTime(t.createdAt),
         t.type,
         t.unit || 'Hotel Folio',
         t.source || 'App',
@@ -254,6 +259,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           <div className="flex gap-2">
             <button onClick={() => setShowPOS(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Walk-In POS</button>
             <button onClick={() => setShowFolio(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Reservation Entry</button>
+            <button onClick={() => setShowProforma(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Proforma Invoice</button>
           </div>
         </div>
 
@@ -392,7 +398,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{t.unit || 'FOLIO'}</span>
                     </div>
                     <div className="text-sm font-black text-white">{t.reference}</div>
-                    <div className="text-[10px] text-gray-600 font-bold">{new Date(t.createdAt).toLocaleString()}</div>
+                    <div className="text-[10px] text-gray-600 font-bold">{formatToLocalDate(t.createdAt)} {formatToLocalTime(t.createdAt)}</div>
                   </td>
                   <td className="px-6 py-5">
                     <div className="text-sm font-bold text-gray-200">{t.guestName}</div>
@@ -458,13 +464,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         POS Add
                       </button>
                     )}
+                    {t.type === 'PROFORMA' && (
+                      <button 
+                        onClick={() => { setProformaEditingTransaction(t); setShowProforma(true); }} 
+                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/20 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all"
+                      >
+                        Edit Proforma
+                      </button>
+                    )}
                     <button 
                       onClick={() => setManagingTransaction(t)} 
                       className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
                     >
                       Manage
                     </button>
-                    <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">Receipt</button>
+                    <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">
+                      {t.type === 'PROFORMA' ? 'Invoice' : 'Receipt'}
+                    </button>
                     {user.role === UserRole.ADMIN && (
                       <button onClick={() => handleDelete(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-red-900/20 text-red-400 border border-red-500/20 hover:bg-red-900/40 rounded transition-all">Delete</button>
                     )}
@@ -481,13 +497,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {showPOS && <POSModal user={user} existingTransaction={posEditingTransaction || undefined} onClose={() => { setShowPOS(false); setPosEditingTransaction(null); }} />}
       {showFolio && <FolioModal user={user} onClose={() => setShowFolio(false)} />}
+      {showProforma && <ProformaModal user={user} existingTransaction={proformaEditingTransaction || undefined} onClose={() => { setShowProforma(false); setProformaEditingTransaction(null); }} />}
       {managingTransaction && (
         <ManageTransactionModal 
           transaction={managingTransaction} 
           onClose={() => setManagingTransaction(null)} 
         />
       )}
-      {viewingReceipt && <ReceiptPreview transaction={viewingReceipt} onClose={() => setViewingReceipt(null)} />}
+      {viewingReceipt && (
+        viewingReceipt.type === 'PROFORMA' ? (
+          <ProformaPreview transaction={viewingReceipt} settings={settings} onClose={() => setViewingReceipt(null)} />
+        ) : (
+          <ReceiptPreview transaction={viewingReceipt} onClose={() => setViewingReceipt(null)} />
+        )
+      )}
     </div>
   );
 };

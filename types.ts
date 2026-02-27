@@ -80,6 +80,7 @@ export interface AppSettings {
   zenzaBanks: BankAccount[];
   whispersBanks: BankAccount[];
   invoiceBanks: BankAccount[];
+  proformaBanks: BankAccount[];
 }
 
 export interface TransactionPayment {
@@ -91,15 +92,21 @@ export interface TransactionPayment {
 export interface Transaction {
   id: string;
   reference: string;
-  type: 'POS' | 'FOLIO';
+  type: 'POS' | 'FOLIO' | 'PROFORMA';
   unit?: UnitType;
   source: string;
   guestName: string;
+  organisation?: string;
+  address?: string;
+  event?: string;
+  eventPeriod?: string;
   identityType?: string;
   idNumber?: string;
   email?: string;
   phone?: string;
   items: TransactionItem[];
+  proformaRooms?: ProformaRoomItem[];
+  proformaFood?: ProformaFoodItem[];
   subtotal: number;
   taxAmount: number;
   serviceCharge: number;
@@ -124,6 +131,31 @@ export interface Transaction {
     nights: number;
     rate: number;
   };
+}
+
+export interface ProformaRoomItem {
+  startDate: string;
+  endDate: string;
+  noOfDays: number;
+  description: string;
+  qty: number;
+  unitRate: number;
+  discountedRate: number;
+  total: number;
+  comments?: string;
+}
+
+export interface ProformaFoodItem {
+  startDate: string;
+  endDate: string;
+  noOfDays: number;
+  description: string;
+  qty: number;
+  duration?: string;
+  unitRate: number;
+  discountedRate: number;
+  total: number;
+  comment?: string;
 }
 
 export interface TransactionItem {

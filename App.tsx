@@ -82,7 +82,8 @@ const App: React.FC = () => {
           taxes: data.taxes || defaultTaxes,
           zenzaBanks: data.zenzaBanks || [ZENZA_BANK],
           whispersBanks: data.whispersBanks || [WHISPERS_BANK],
-          invoiceBanks: data.invoiceBanks || INVOICE_BANKS
+          invoiceBanks: data.invoiceBanks || INVOICE_BANKS,
+          proformaBanks: data.proformaBanks || []
         };
         setSettings(updatedSettings);
         document.title = `${updatedSettings.hotelName} - Revenue Terminal`;
@@ -280,7 +281,7 @@ const App: React.FC = () => {
     <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white">
       <Sidebar user={userProfile!} settings={settings} activeView={activeView} onViewChange={setActiveView} />
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        {activeView === 'LEDGER' ? <Dashboard user={userProfile!} /> : <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
+        {activeView === 'LEDGER' ? <Dashboard user={userProfile!} settings={settings} /> : <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
       </main>
     </div>
   );

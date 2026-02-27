@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
+import { formatToLocalDate } from '@/utils/dateUtils';
 import { 
   UserProfile, 
   SettlementStatus,
@@ -38,8 +39,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [bookings, setBookings] = useState<RoomBooking[]>([{ 
     roomId: '', 
     quantity: 1, 
-    checkIn: new Date().toISOString().split('T')[0], 
-    checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0] 
+    checkIn: formatToLocalDate(Date.now()), 
+    checkOut: formatToLocalDate(Date.now() + 86400000) 
   }]);
   const [additionalCharges, setAdditionalCharges] = useState<TransactionItem[]>([]);
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.TRANSFER, amount: 0 }]);
@@ -100,8 +101,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     setBookings([...bookings, { 
       roomId: '', 
       quantity: 1, 
-      checkIn: lastBooking?.checkIn || new Date().toISOString().split('T')[0], 
-      checkOut: lastBooking?.checkOut || new Date(Date.now() + 86400000).toISOString().split('T')[0] 
+      checkIn: lastBooking?.checkIn || formatToLocalDate(Date.now()), 
+      checkOut: lastBooking?.checkOut || formatToLocalDate(Date.now() + 86400000) 
     }]);
   };
 
@@ -304,8 +305,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       // Derive overall stay period from bookings
       const checkIns = bookings.map(b => new Date(b.checkIn).getTime());
       const checkOuts = bookings.map(b => new Date(b.checkOut).getTime());
-      const minCheckIn = new Date(Math.min(...checkIns)).toISOString().split('T')[0];
-      const maxCheckOut = new Date(Math.max(...checkOuts)).toISOString().split('T')[0];
+      const minCheckIn = formatToLocalDate(Math.min(...checkIns));
+      const maxCheckOut = formatToLocalDate(Math.max(...checkOuts));
       const totalNights = calculateNights(minCheckIn, maxCheckOut);
 
       const txData = {

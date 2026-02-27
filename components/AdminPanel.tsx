@@ -11,6 +11,7 @@ import {
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
 import { db } from '../firebase';
 import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction } from '../types';
+import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 
 interface AdminPanelProps {
   user: UserProfile;
@@ -101,7 +102,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           taxes: data.taxes || [],
           zenzaBanks: Array.isArray(data.zenzaBanks) ? data.zenzaBanks : [],
           whispersBanks: Array.isArray(data.whispersBanks) ? data.whispersBanks : [],
-          invoiceBanks: Array.isArray(data.invoiceBanks) ? data.invoiceBanks : []
+          invoiceBanks: Array.isArray(data.invoiceBanks) ? data.invoiceBanks : [],
+          proformaBanks: Array.isArray(data.proformaBanks) ? data.proformaBanks : []
         } as AppSettings);
       }
     }, (err) => {
@@ -163,7 +165,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     await handleUpdateSettings('taxes', updatedTaxes);
   };
 
-  const handleUpdateBank = async (bankType: 'zenzaBanks' | 'whispersBanks' | 'invoiceBanks', index: number, field: keyof BankAccount, value: string) => {
+  const handleUpdateBank = async (bankType: 'zenzaBanks' | 'whispersBanks' | 'invoiceBanks' | 'proformaBanks', index: number, field: keyof BankAccount, value: string) => {
     if (!settings) return;
     const currentBanks = [...(settings[bankType] || [])];
     if (currentBanks[index]) {
@@ -172,14 +174,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
     }
   };
 
-  const handleAddBank = (bankType: 'zenzaBanks' | 'whispersBanks' | 'invoiceBanks') => {
+  const handleAddBank = (bankType: 'zenzaBanks' | 'whispersBanks' | 'invoiceBanks' | 'proformaBanks') => {
     if (!settings) return;
     const newBank: BankAccount = { bank: 'Institution Name', accountNumber: '0000000000', accountName: settings.hotelName };
     const currentBanks = Array.isArray(settings[bankType]) ? settings[bankType] : [];
     handleUpdateSettings(bankType, [...currentBanks, newBank]);
   };
 
-  const handleRemoveBank = (bankType: 'zenzaBanks' | 'whispersBanks' | 'invoiceBanks', index: number) => {
+  const handleRemoveBank = (bankType: 'zenzaBanks' | 'whispersBanks' | 'invoiceBanks' | 'proformaBanks', index: number) => {
     if (!settings || !confirm('Permanently remove this bank account?')) return;
     const currentBanks = Array.isArray(settings[bankType]) ? settings[bankType] : [];
     const updatedBanks = currentBanks.filter((_, i) => i !== index);
@@ -344,7 +346,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   <button 
                     onClick={() => {
                       const dailyTx = transactions.filter(t => {
-                        const dateMatch = new Date(t.createdAt).toISOString().split('T')[0] === reportDate;
+                        const dateMatch = formatToLocalDate(t.createdAt) === reportDate;
                         const unitMatch = reportUnit === 'ALL' || t.unit === reportUnit;
                         return dateMatch && unitMatch;
                       });
@@ -418,7 +420,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
             </div>
 
             {(() => {
-              const dailyTx = transactions.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === reportDate);
+              const dailyTx = transactions.filter(t => formatToLocalDate(t.createdAt) === reportDate);
               const gross = dailyTx.reduce((acc, t) => acc + t.totalAmount, 0);
               const settled = dailyTx.reduce((acc, t) => acc + t.paidAmount, 0);
               const tax = dailyTx.reduce((acc, t) => acc + (t.taxAmount || 0), 0);
@@ -516,6 +518,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           <tr className="text-[9px] text-gray-600 uppercase tracking-widest">
                             <th className="pb-3">Ref</th>
                             <th className="pb-3">Time</th>
+                            <th className="pb-3">Type</th>
                             <th className="pb-3">Guest</th>
                             <th className="pb-3 text-right">Total</th>
                             <th className="pb-3 text-right">Status</th>
@@ -525,11 +528,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           {dailyTx.map(t => (
                             <tr key={t.id} className="text-[10px]">
                               <td className="py-3 font-bold text-white uppercase">{t.reference}</td>
-                              <td className="py-3 text-gray-500">{new Date(t.createdAt).toLocaleTimeString()}</td>
+                              <td className="py-3 text-gray-500">{formatToLocalTime(t.createdAt)}</td>
+                              <td className="py-3 text-gray-500 uppercase font-bold">{t.type}</td>
                               <td className="py-3 text-gray-400 uppercase">{t.guestName}</td>
                               <td className="py-3 text-right font-black">₦{t.totalAmount.toLocaleString()}</td>
                               <td className="py-3 text-right">
-                                <span className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase ${t.status === 'SETTLED' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                <span className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase ${
+                                  t.status === 'PAID' || t.status === 'SETTLED' ? 'bg-green-500/10 text-green-400' : 
+                                  t.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400' :
+                                  'bg-red-500/10 text-red-400'
+                                }`}>
                                   {t.status}
                                 </span>
                               </td>
@@ -872,7 +880,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
             {[
               { label: 'ZENZA POS ACCOUNTS', type: 'zenzaBanks' as const },
               { label: 'WHISPERS POS ACCOUNTS', type: 'whispersBanks' as const },
-              { label: 'GENERAL INVOICE ACCOUNTS', type: 'invoiceBanks' as const }
+              { label: 'GENERAL INVOICE ACCOUNTS', type: 'invoiceBanks' as const },
+              { label: 'PROFORMA INVOICE ACCOUNTS', type: 'proformaBanks' as const }
             ].map((acc) => (
               <section key={acc.type} className="space-y-6">
                 <div className="flex justify-between items-center">
