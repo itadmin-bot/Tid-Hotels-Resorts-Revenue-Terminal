@@ -103,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       // Date Range Filtering
       if (!dateRange.start && !dateRange.end) return true;
-      const tDate = new Date(t.createdAt).toLocaleDateString('en-CA');
+      const tDate = new Date(t.createdAt).toISOString().split('T')[0];
       if (dateRange.start && tDate < dateRange.start) return false;
       if (dateRange.end && tDate > dateRange.end) return false;
       
@@ -127,18 +127,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       const dt = new Date(t.createdAt);
       return [
         `"${t.reference}"`,
-        `"${dt.toLocaleDateString()}"`,
-        `"${dt.toLocaleTimeString()}"`,
-        `"${t.type}"`,
-        `"${t.unit || 'Hotel Folio'}"`,
-        `"${t.source || 'App'}"`,
+        dt.toLocaleDateString(),
+        dt.toLocaleTimeString(),
+        t.type,
+        t.unit || 'Hotel Folio',
+        t.source || 'App',
         `"${t.guestName}"`,
         `"${t.items.map(i => `${i.description} (x${i.quantity})`).join('; ')}"`,
         t.totalAmount,
         t.paidAmount,
         t.balance,
-        `"${t.status}"`,
-        `"${t.settlementMethod || 'N/A'}"`,
+        t.status,
+        t.settlementMethod || 'N/A', // Payment Method correctly mapped
         `"${t.cashierName}"`
       ];
     });
@@ -237,13 +237,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       end.setHours(23, 59, 59, 999);
     }
     
-    const formatDate = (d: Date) => {
-      return d.toLocaleDateString('en-CA');
-    };
-    
     setDateRange({
-      start: formatDate(start),
-      end: formatDate(end)
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
     });
   };
 
