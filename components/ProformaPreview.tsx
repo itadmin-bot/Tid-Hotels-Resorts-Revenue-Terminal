@@ -23,27 +23,32 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
-      <div className="flex flex-col gap-4 w-full max-w-[210mm]">
-        <div className="flex justify-between items-center no-print">
-          <div className="flex gap-2">
-            <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-[#C8A862] text-black font-bold rounded-lg text-xs uppercase tracking-widest">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md no-print">
+      <div className="flex flex-col h-full w-full max-w-6xl p-4">
+        <div className="flex justify-between items-center mb-6 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 bg-[#C8A862] rounded-full"></div>
+            <h3 className="text-white font-bold tracking-widest uppercase text-sm">Proforma Invoice Dispatch</h3>
+          </div>
+          <div className="flex gap-4">
+            <button onClick={handlePrint} className="px-8 py-2.5 bg-[#C8A862] text-black font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2">
               <Printer className="w-4 h-4" /> Print A4
             </button>
-            <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-xs uppercase tracking-widest">
+            <button onClick={handleDownload} className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2">
               <Download className="w-4 h-4" /> Download PDF
             </button>
+            <button onClick={onClose} className="px-8 py-2.5 border border-gray-600 text-white rounded-lg transition-colors hover:bg-gray-800 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+              <X className="w-4 h-4" /> Close
+            </button>
           </div>
-          <button onClick={onClose} className="p-2 text-white hover:text-[#C8A862] transition-colors">
-            <X className="w-8 h-8" />
-          </button>
         </div>
 
-        <div 
-          ref={printRef}
-          className="bg-white text-black p-[15mm] shadow-2xl min-h-[297mm] w-full mx-auto font-sans text-[10pt] leading-tight print:shadow-none print:p-0"
-          id="proforma-invoice"
-        >
+        <div className="flex-1 bg-[#0B1C2D] p-4 md:p-8 rounded-2xl shadow-inner mx-auto overflow-auto w-full flex justify-center border border-white/5">
+          <div 
+            ref={printRef}
+            className="bg-white text-black p-[15mm] shadow-2xl min-h-[297mm] w-[210mm] max-w-full font-sans text-[10pt] leading-tight print:shadow-none print:p-0"
+            id="proforma-invoice"
+          >
           {/* Header */}
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2">
@@ -354,6 +359,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             Best,<br /><br />
             {transaction.preparedBy || 'Lois'}<br />
             For: Tidé Hotels
+          </div>
           </div>
         </div>
       </div>
