@@ -13,7 +13,58 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
-    window.print();
+    const printWindow = window.open('', '_blank', 'width=1000,height=900');
+    if (!printWindow || !settings) return;
+
+    const content = document.getElementById('proforma-invoice-print')?.innerHTML;
+
+    const style = `
+      @page { size: 210mm 297mm; margin: 0 !important; }
+      html, body { margin: 0 !important; padding: 0 !important; width: 210mm !important; height: 297mm !important; background: #ffffff !important; -webkit-print-color-adjust: exact; font-family: 'Inter', sans-serif !important; }
+      * { box-sizing: border-box !important; }
+      .print-shell { width: 210mm !important; min-height: 297mm !important; padding: 15mm !important; box-sizing: border-box !important; color: #000 !important; position: relative; }
+      .header { text-align: center; margin-bottom: 8mm; }
+      .hotel-name { font-size: 28px; font-weight: 900; color: #0B1C2D; font-style: italic; margin-bottom: 1mm; }
+      .hotel-name span { color: #C8A862; }
+      .hotel-addr { font-size: 9px; font-weight: bold; letter-spacing: 0.3em; margin-bottom: 3mm; text-transform: uppercase; color: #666; }
+      .invoice-title-box { background: #eee; padding: 2mm 0; font-size: 14px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 6mm; }
+      .section-title { background: #f5f5f5; padding: 1mm 2mm; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; border-left: 4px solid #C8A862; margin-bottom: 3mm; }
+      .grid { display: grid; grid-template-columns: 120px 1fr; gap: 1mm; margin-bottom: 6mm; font-size: 11px; }
+      .grid div:nth-child(odd) { font-weight: bold; text-transform: uppercase; }
+      .grid div:nth-child(even) { text-transform: uppercase; }
+      .table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; table-layout: fixed; }
+      .table th { text-align: center; font-size: 8px; font-weight: 900; text-transform: uppercase; padding: 2mm; border: 1px solid #000; background: #f9f9f9; }
+      .table td { padding: 2mm; border: 1px solid #000; font-size: 10px; word-wrap: break-word; text-align: center; }
+      .table td.text-left { text-align: left; }
+      .table td.text-right { text-align: right; }
+      .totals-box { display: flex; justify-content: flex-end; margin-bottom: 6mm; }
+      .totals-table { width: 64mm; font-size: 11px; }
+      .total-row { display: flex; justify-content: space-between; padding: 1.5mm 0; border-bottom: 1px solid #000; }
+      .grand-total { background: #f97316; color: #fff; padding: 2mm; font-weight: 900; border-bottom: none; }
+      .notes { font-size: 8px; line-height: 1.4; margin-bottom: 6mm; }
+      .notes-title { color: #dc2626; font-weight: bold; margin-bottom: 1mm; }
+      .bank-section { border-top: 2px solid #000; padding-top: 4mm; margin-bottom: 6mm; }
+      .bank-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; font-size: 8px; }
+      .bank-item { border-left: 1px solid #eee; padding-left: 2mm; }
+      .footer-msg { font-size: 10px; font-style: italic; color: #666; margin-bottom: 8mm; }
+      .signature { font-size: 11px; font-weight: bold; }
+    `;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>PROFORMA_${transaction.reference}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+          <style>${style}</style>
+        </head>
+        <body>
+          <div class="print-shell">${content}</div>
+          <script>window.focus(); setTimeout(() => { window.print(); window.close(); }, 600);</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const handleDownload = () => {
@@ -215,25 +266,9 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                   </div>
                 ))
               ) : (
-                <>
-                  <div className="space-y-1">
-                    <div className="flex justify-between"><span className="font-bold">BANK NAME:</span></div>
-                    <div className="flex justify-between"><span className="font-bold">ACCOUNT NAME:</span></div>
-                    <div className="flex justify-between"><span className="font-bold">ACCOUNT NUMBER:</span></div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between"><span className="font-bold">BENEFICIARY ACCOUNT BANK NAME:</span> <span>ZENITH BANK</span></div>
-                    <div className="flex justify-between"><span className="font-bold">BENEFICIARY ACCOUNT NAME:</span> <span>TIDÉ HOTELS AND RESORTS</span></div>
-                    <div className="flex justify-between"><span className="font-bold">BENEFICIARY ACCOUNT NUMBER:</span> <span>NGN: 1311027935</span></div>
-                    <div className="flex justify-between"><span className="font-bold">BENEFICIARY ADDRESS:</span> <span className="text-right">Plot 1722, Adetokunbo Ademola, Crescent, Cadastral Zone, Wuse II, Abuja, Nigeria</span></div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between"><span className="font-bold">INTERMEDIARY BANK NAME:</span> <span>CITIBANK</span></div>
-                    <div className="flex justify-between"><span className="font-bold">ZENITH BANK ACCOUNT WITH INTERMEDIARY:</span> <span>5240004548</span></div>
-                    <div className="flex justify-between"><span className="font-bold">SORT CODE:</span> <span>057080510</span></div>
-                    <div className="flex justify-between"><span className="font-bold">SWIFT CODE:</span> <span>ZEIBNGLA</span></div>
-                  </div>
-                </>
+                <div className="col-span-full py-4 text-center text-gray-400 italic">
+                  No bank accounts configured for proforma invoices.
+                </div>
               )}
             </div>
           </div>
@@ -245,7 +280,129 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
 
           <div className="text-[9pt] font-bold">
             Best,<br /><br />
-            Lois<br />
+            {transaction.preparedBy || 'Lois'}<br />
+            For: Tidé Hotels
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden" aria-hidden="true">
+        <div id="proforma-invoice-print">
+          <div className="header">
+            <div className="hotel-name"><span>TIDÉ</span> HOTELS & RESORTS</div>
+            <div className="hotel-addr">38 S.O Williams Street, Off Anthony Enahoro Street, Abuja</div>
+            <div className="invoice-title-box">PROFORMA INVOICE</div>
+          </div>
+
+          <div className="section-title">Customer Details</div>
+          <div className="grid">
+            <div>Name:</div><div>{transaction.guestName}</div>
+            <div>Organisation:</div><div>{transaction.organisation}</div>
+            <div>Address:</div><div>{transaction.address}</div>
+            <div>Event:</div><div>{transaction.event}</div>
+            <div>Event Period:</div><div>{transaction.eventPeriod}</div>
+          </div>
+
+          <div className="section-title">Room Booking and Meeting Spaces</div>
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{width: '30px'}}>#</th>
+                <th>START DATE</th>
+                <th>END DATE</th>
+                <th>DAYS</th>
+                <th style={{width: '30%'}}>DESCRIPTION</th>
+                <th>QTY</th>
+                <th>RATE</th>
+                <th>DISC. RATE</th>
+                <th>TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transaction.proformaRooms?.map((item, idx) => (
+                <tr key={idx}>
+                  <td>{idx + 1}</td>
+                  <td>{item.startDate}</td>
+                  <td>{item.endDate}</td>
+                  <td>{item.noOfDays}</td>
+                  <td className="text-left">{item.description}</td>
+                  <td>{item.qty}</td>
+                  <td className="text-right">₦{item.unitRate.toLocaleString()}</td>
+                  <td className="text-right">₦{item.discountedRate.toLocaleString()}</td>
+                  <td className="text-right" style={{fontWeight: 'bold'}}>₦{item.total.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="section-title">Food & Beverage Requirement</div>
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{width: '30px'}}>#</th>
+                <th>START DATE</th>
+                <th style={{width: '40%'}}>DESCRIPTION</th>
+                <th>QTY</th>
+                <th>DURATION</th>
+                <th>RATE</th>
+                <th>DISC. RATE</th>
+                <th>TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transaction.proformaFood?.map((item, idx) => (
+                <tr key={idx}>
+                  <td>{(transaction.proformaRooms?.length || 0) + idx + 1}</td>
+                  <td>{item.startDate}</td>
+                  <td className="text-left">{item.description}</td>
+                  <td>{item.qty}</td>
+                  <td>{item.duration}</td>
+                  <td className="text-right">₦{item.unitRate.toLocaleString()}</td>
+                  <td className="text-right">₦{item.discountedRate.toLocaleString()}</td>
+                  <td className="text-right" style={{fontWeight: 'bold'}}>₦{item.total.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="totals-box">
+            <div className="totals-table">
+              <div className="total-row"><span>SUB TOTAL</span><span style={{fontWeight: '900'}}>₦{transaction.subtotal.toLocaleString()}</span></div>
+              <div className="total-row"><span>Service Charge</span><span style={{fontWeight: '900'}}>₦{transaction.serviceCharge.toLocaleString()}</span></div>
+              <div className="total-row"><span>VAT / Taxes</span><span style={{fontWeight: '900'}}>₦{transaction.taxAmount.toLocaleString()}</span></div>
+              <div className="total-row grand-total"><span>GRAND TOTAL</span><span>₦{transaction.totalAmount.toLocaleString()}</span></div>
+            </div>
+          </div>
+
+          <div className="notes">
+            <div className="notes-title">Note:</div>
+            <p>1. To confirm your booking, the following payments are required:</p>
+            <p style={{paddingLeft: '4mm'}}>A) Reservation Deposit (30%): A non-refundable deposit of 30% of the total estimated invoice is required upon signing this agreement to secure the event date.</p>
+            <p style={{paddingLeft: '4mm'}}>B) Refundable Security Deposit (10%): A separate refundable deposit of 10% of the total estimated invoice is also due upon signing.</p>
+            <p style={{paddingLeft: '4mm'}}>C) Final Payment: The remaining balance of 60% of the total estimated invoice is due seven (7) business days prior to the event date.</p>
+            <p>2. Final Settlement & Security Deposit Refund</p>
+            <p>The 10% security deposit will be refunded within ten (10) business days following the event, subject to deductions for any documented damages or incidental charges.</p>
+          </div>
+
+          <div className="bank-section">
+            <div className="bank-grid">
+              {settings?.proformaBanks?.map((bank, idx) => (
+                <div key={idx} className="bank-item">
+                  <div><strong>BANK NAME:</strong> {bank.bank}</div>
+                  <div><strong>ACCOUNT NAME:</strong> {bank.accountName}</div>
+                  <div><strong>ACCOUNT NUMBER:</strong> {bank.accountNumber}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="footer-msg">
+            We are truly grateful for your partnership and remain dedicated to providing the exceptional service that defines the Tidé legacy
+          </div>
+
+          <div className="signature">
+            Best,<br /><br />
+            {transaction.preparedBy || 'Lois'}<br />
             For: Tidé Hotels
           </div>
         </div>

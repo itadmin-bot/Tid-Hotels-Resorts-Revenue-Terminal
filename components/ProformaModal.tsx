@@ -37,7 +37,8 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
     address: existingTransaction?.address || '', 
     event: existingTransaction?.event || '', 
     eventPeriod: existingTransaction?.eventPeriod || '',
-    unit: existingTransaction?.unit || '' as UnitType | ''
+    unit: existingTransaction?.unit || '' as UnitType | '',
+    preparedBy: existingTransaction?.preparedBy || ''
   });
   
   const [roomItems, setRoomItems] = useState<ProformaRoomItem[]>(existingTransaction?.proformaRooms || [{
@@ -244,6 +245,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
         proformaRooms: roomItems,
         proformaFood: foodItems,
         items: transactionItems,
+        preparedBy: customer.preparedBy,
         subtotal: baseVal,
         taxAmount: vatSum,
         serviceCharge: scSum,
@@ -286,9 +288,13 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
             <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">PROFORMA SAVED</h2>
-          <div className="flex gap-4">
-            <button onClick={() => setShowPreview(true)} className="flex-1 py-4 bg-[#C8A862] text-black font-bold rounded-xl uppercase text-xs tracking-widest">View/Print</button>
-            <button onClick={onClose} className="flex-1 py-4 bg-gray-700 text-white font-bold rounded-xl uppercase text-xs tracking-widest">Done</button>
+          <div className="flex flex-col gap-3">
+            <button onClick={() => setShowPreview(true)} className="w-full py-4 bg-[#C8A862] text-black font-bold rounded-xl uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+              <Printer className="w-4 h-4" /> View & Print Invoice
+            </button>
+            <button onClick={onClose} className="w-full py-4 bg-gray-700 text-white font-bold rounded-xl uppercase text-xs tracking-widest">
+              Return to Dashboard
+            </button>
           </div>
         </div>
       </div>
@@ -296,7 +302,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
   }
 
   if (showPreview && savedTransaction) {
-    return <ProformaPreview transaction={savedTransaction} onClose={onClose} />;
+    return <ProformaPreview transaction={savedTransaction} settings={settings} onClose={onClose} />;
   }
 
   return (
@@ -343,6 +349,15 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   <option value={UnitType.ZENZA}>Zenza Unit</option>
                   <option value={UnitType.WHISPERS}>Whispers Unit</option>
                 </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-gray-500 uppercase">Prepared By</label>
+                <input 
+                  placeholder="Enter name of person preparing invoice"
+                  className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" 
+                  value={customer.preparedBy} 
+                  onChange={(e) => setCustomer({...customer, preparedBy: e.target.value})} 
+                />
               </div>
             </div>
           </section>

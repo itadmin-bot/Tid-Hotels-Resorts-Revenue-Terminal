@@ -122,6 +122,7 @@ export interface Transaction {
   createdBy: string;
   userId: string;
   cashierName: string;
+  preparedBy?: string;
   createdAt: number;
   updatedAt: number;
   roomDetails?: {
