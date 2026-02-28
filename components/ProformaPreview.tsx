@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Transaction, AppSettings, BankAccount } from '@/types';
 import { BRAND } from '@/constants';
 import { Printer, Download, X } from 'lucide-react';
+import { printProformaInvoice } from '@/utils/proformaPrint';
 
 interface ProformaPreviewProps {
   transaction: Transaction;
@@ -13,58 +14,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank', 'width=1000,height=900');
-    if (!printWindow || !settings) return;
-
-    const content = document.getElementById('proforma-invoice-print')?.innerHTML;
-
-    const style = `
-      @page { size: 210mm 297mm; margin: 0 !important; }
-      html, body { margin: 0 !important; padding: 0 !important; width: 210mm !important; height: 297mm !important; background: #ffffff !important; -webkit-print-color-adjust: exact; font-family: 'Inter', sans-serif !important; }
-      * { box-sizing: border-box !important; }
-      .print-shell { width: 210mm !important; min-height: 297mm !important; padding: 15mm !important; box-sizing: border-box !important; color: #000 !important; position: relative; }
-      .header { text-align: center; margin-bottom: 8mm; }
-      .hotel-name { font-size: 28px; font-weight: 900; color: #0B1C2D; font-style: italic; margin-bottom: 1mm; }
-      .hotel-name span { color: #C8A862; }
-      .hotel-addr { font-size: 9px; font-weight: bold; letter-spacing: 0.3em; margin-bottom: 3mm; text-transform: uppercase; color: #666; }
-      .invoice-title-box { background: #eee; padding: 2mm 0; font-size: 14px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 6mm; }
-      .section-title { background: #f5f5f5; padding: 1mm 2mm; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; border-left: 4px solid #C8A862; margin-bottom: 3mm; }
-      .grid { display: grid; grid-template-columns: 120px 1fr; gap: 1mm; margin-bottom: 6mm; font-size: 11px; }
-      .grid div:nth-child(odd) { font-weight: bold; text-transform: uppercase; }
-      .grid div:nth-child(even) { text-transform: uppercase; }
-      .table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; table-layout: fixed; }
-      .table th { text-align: center; font-size: 8px; font-weight: 900; text-transform: uppercase; padding: 2mm; border: 1px solid #000; background: #f9f9f9; }
-      .table td { padding: 2mm; border: 1px solid #000; font-size: 10px; word-wrap: break-word; text-align: center; }
-      .table td.text-left { text-align: left; }
-      .table td.text-right { text-align: right; }
-      .totals-box { display: flex; justify-content: flex-end; margin-bottom: 6mm; }
-      .totals-table { width: 64mm; font-size: 11px; }
-      .total-row { display: flex; justify-content: space-between; padding: 1.5mm 0; border-bottom: 1px solid #000; }
-      .grand-total { background: #f97316; color: #fff; padding: 2mm; font-weight: 900; border-bottom: none; }
-      .notes { font-size: 8px; line-height: 1.4; margin-bottom: 6mm; }
-      .notes-title { color: #dc2626; font-weight: bold; margin-bottom: 1mm; }
-      .bank-section { border-top: 2px solid #000; padding-top: 4mm; margin-bottom: 6mm; }
-      .bank-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; font-size: 8px; }
-      .bank-item { border-left: 1px solid #eee; padding-left: 2mm; }
-      .footer-msg { font-size: 10px; font-style: italic; color: #666; margin-bottom: 8mm; }
-      .signature { font-size: 11px; font-weight: bold; }
-    `;
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>PROFORMA_${transaction.reference}</title>
-          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-          <style>${style}</style>
-        </head>
-        <body>
-          <div class="print-shell">${content}</div>
-          <script>window.focus(); setTimeout(() => { window.print(); window.close(); }, 600);</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    printProformaInvoice(transaction, settings);
   };
 
   const handleDownload = () => {

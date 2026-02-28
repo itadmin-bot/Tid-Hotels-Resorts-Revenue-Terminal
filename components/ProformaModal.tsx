@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { Calendar, Plus, Trash2, Save, X, Download, Printer } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, X, Download, Printer, FileText } from 'lucide-react';
+import { printProformaInvoice } from '@/utils/proformaPrint';
 import { BRAND } from '@/constants';
 import { formatToLocalDate } from '@/utils/dateUtils';
 import { 
@@ -280,29 +281,42 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
     }
   };
 
-  if (savedTransaction && !showPreview) {
+  if (savedTransaction) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 text-center space-y-6">
+        <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 text-center space-y-6 relative">
           <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
             <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">PROFORMA SAVED</h2>
           <div className="flex flex-col gap-3">
-            <button onClick={() => setShowPreview(true)} className="w-full py-4 bg-[#C8A862] text-black font-bold rounded-xl uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-              <Printer className="w-4 h-4" /> View & Print Invoice
+            <button 
+              onClick={() => printProformaInvoice(savedTransaction, settings)} 
+              className="w-full py-4 bg-[#C8A862] text-black font-bold rounded-xl uppercase text-xs tracking-widest flex items-center justify-center gap-2"
+            >
+              <Printer className="w-4 h-4" /> Print Invoice (New Tab)
+            </button>
+            <button 
+              onClick={() => setShowPreview(true)} 
+              className="w-full py-4 bg-gray-600 text-white font-bold rounded-xl uppercase text-xs tracking-widest flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4" /> View Invoice Preview
             </button>
             <button onClick={onClose} className="w-full py-4 bg-gray-700 text-white font-bold rounded-xl uppercase text-xs tracking-widest">
               Return to Dashboard
             </button>
           </div>
         </div>
+
+        {showPreview && (
+          <ProformaPreview 
+            transaction={savedTransaction} 
+            settings={settings} 
+            onClose={() => setShowPreview(false)} 
+          />
+        )}
       </div>
     );
-  }
-
-  if (showPreview && savedTransaction) {
-    return <ProformaPreview transaction={savedTransaction} settings={settings} onClose={onClose} />;
   }
 
   return (
