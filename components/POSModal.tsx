@@ -445,6 +445,15 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                     <span className="text-3xl font-black text-white tracking-tighter uppercase">₦{finalTotal.toLocaleString()}</span>
                   </div>
 
+                  <div className="space-y-2">
+                    {taxes.map(tax => (
+                      <div key={tax.id} className="flex justify-between items-center text-[10px] font-bold uppercase text-gray-500">
+                        <span>{tax.name}:</span>
+                        <span>₦{(baseVal * tax.rate).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+
                   <div className="space-y-4 pt-2">
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-black text-green-500 uppercase tracking-widest">SETTLED AMOUNT</span>

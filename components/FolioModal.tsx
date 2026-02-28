@@ -571,16 +571,24 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                 <div className={`text-xl font-black ${totalPaid > 0 ? 'text-green-500' : 'text-gray-500'}`}>{totalPaid > 0 ? `₦${totalPaid.toLocaleString()}` : 'NO PAYMENT'}</div>
               </div>
             </div>
-            <div className="text-right space-y-4">
-              <div>
-                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Net Valuation ({isInclusive ? 'Inc.' : 'Excl.'})</div>
-                <div className="text-3xl font-black tracking-tighter text-[#C8A862]">₦{finalTotal.toLocaleString()}</div>
-              </div>
-              <div>
-                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Folio Outstanding</div>
-                <div className={`text-xl font-black ${balance > 0 ? 'text-red-500' : 'text-gray-600'}`}>₦{Math.max(0, balance).toLocaleString()}</div>
-              </div>
-            </div>
+                  <div className="text-right space-y-4">
+                    <div>
+                      <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Net Valuation ({isInclusive ? 'Inc.' : 'Excl.'})</div>
+                      <div className="text-3xl font-black tracking-tighter text-[#C8A862]">₦{finalTotal.toLocaleString()}</div>
+                    </div>
+                    <div className="space-y-1">
+                      {taxes.filter(t => t.visibleOnReceipt).map(tax => (
+                        <div key={tax.id} className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
+                          <span>{tax.name}:</span>
+                          <span>₦{(baseVal * tax.rate).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Folio Outstanding</div>
+                      <div className={`text-xl font-black ${balance > 0 ? 'text-red-500' : 'text-gray-600'}`}>₦{Math.max(0, balance).toLocaleString()}</div>
+                    </div>
+                  </div>
           </div>
           <button 
             disabled={isSubmitting || !guest.name || !guest.idNumber || !guest.email} 

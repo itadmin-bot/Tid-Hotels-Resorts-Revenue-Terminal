@@ -547,9 +547,19 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-[#13263A] rounded-xl border border-gray-800">
-                <label className="text-[9px] font-black text-gray-600 uppercase tracking-widest block mb-1">Adjustment (Discount)</label>
-                <input type="number" className="w-full bg-transparent text-sm font-black text-[#C8A862] outline-none" value={discount} onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} />
+              <div className="space-y-3">
+                <div className="p-4 bg-[#13263A] rounded-xl border border-gray-800">
+                  <label className="text-[9px] font-black text-gray-600 uppercase tracking-widest block mb-1">Adjustment (Discount)</label>
+                  <input type="number" className="w-full bg-transparent text-sm font-black text-[#C8A862] outline-none" value={discount} onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="space-y-1">
+                  {taxes.map(tax => (
+                    <div key={tax.id} className="flex justify-between text-[10px] font-bold uppercase text-gray-500 px-1">
+                      <span>{tax.name}:</span>
+                      <span>₦{(baseValue * tax.rate).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             <div className={`p-6 rounded-2xl border-2 flex flex-col md:flex-row justify-between items-center gap-4 transition-all ${projectedBalance > 0 ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.1)]' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}>
                 <div className="text-center md:text-left">

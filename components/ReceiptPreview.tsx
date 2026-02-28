@@ -113,20 +113,35 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
     printWindow.document.close();
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const contentId = isPos ? 'thermal-pos-docket' : 'a4-folio-invoice';
     const element = document.getElementById(contentId);
     if (!element) return;
 
-    const opt = {
-      margin: 10,
-      filename: `RECEIPT_${transaction.reference}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: 'mm' as const, format: isPos ? [80, 200] as [number, number] : 'a4' as const, orientation: 'portrait' as const }
-    };
+    try {
+      const opt = {
+        margin: 10,
+        filename: `RECEIPT_${transaction.reference}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false,
+          letterRendering: true,
+          allowTaint: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: isPos ? [80, 200] as [number, number] : 'a4', 
+          orientation: 'portrait' 
+        }
+      };
 
-    html2pdf().set(opt).from(element).save();
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      alert('Failed to generate PDF. Please try printing instead.');
+    }
   };
 
   if (!settings) return null;
@@ -201,6 +216,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <div className="border-y border-black py-2 my-3 flex justify-between text-lg font-black uppercase">
                     <span>TOTAL:</span>
                     <span>₦{transaction.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="space-y-1 mb-4">
+                    {taxesToDisplay.map(tax => (
+                      <div key={tax.id} className="flex justify-between text-[10px] font-bold uppercase">
+                        <span>{tax.name}:</span>
+                        <span>₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
+                      </div>
+                    ))}
                   </div>
                   <div className="text-[10px] space-y-1 mb-4">
                     {currentBanks.map((b, i) => (
@@ -381,6 +404,14 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           <div className="total-box uppercase">
             <span>TOTAL:</span>
             <span>₦{transaction.totalAmount.toLocaleString()}</span>
+          </div>
+          <div style={{marginBottom: '3mm'}}>
+            {taxesToDisplay.map(tax => (
+              <div key={tax.id} className="item-row uppercase bold" style={{fontSize: '10px'}}>
+                <span>{tax.name}:</span>
+                <span>₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
+              </div>
+            ))}
           </div>
           <div className="bank-info">
             {currentBanks.map((bank, i) => (
