@@ -71,6 +71,13 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
     </div>
   `).join('') || '<div class="col-span-full py-4 text-center text-gray-400 italic">No bank accounts configured.</div>';
 
+  const taxRows = settings.taxes?.filter(t => t.visibleOnReceipt).map(tax => `
+    <div class="total-row">
+      <span>${tax.name}</span>
+      <span style="font-weight: 900">₦${(transaction.subtotal * tax.rate).toLocaleString()}</span>
+    </div>
+  `).join('') || '';
+
   const content = `
     <div class="header">
       <div class="hotel-name"><span>TIDÉ</span> HOTELS & RESORTS</div>
@@ -129,8 +136,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
     <div class="totals-box">
       <div class="totals-table">
         <div class="total-row"><span>SUB TOTAL</span><span style="font-weight: 900">₦${transaction.subtotal.toLocaleString()}</span></div>
-        <div class="total-row"><span>Service Charge</span><span style="font-weight: 900">₦${transaction.serviceCharge.toLocaleString()}</span></div>
-        <div class="total-row"><span>VAT / Taxes</span><span style="font-weight: 900">₦${transaction.taxAmount.toLocaleString()}</span></div>
+        ${taxRows}
         <div class="total-row grand-total"><span>GRAND TOTAL</span><span>₦${transaction.totalAmount.toLocaleString()}</span></div>
       </div>
     </div>

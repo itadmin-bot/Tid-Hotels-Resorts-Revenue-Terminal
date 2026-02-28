@@ -221,18 +221,34 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const grossSubtotal = items.reduce((acc, curr) => acc + curr.total, 0);
   const netTotal = Math.max(0, grossSubtotal - discount);
   
-  const vatRate = settings?.vat || 0.075;
-  const scRate = settings?.serviceCharge || 0.10;
-  const divisor = 1 + vatRate + scRate;
-  
-  const baseValue = netTotal / divisor;
-  const taxAmount = baseValue * vatRate;
-  const serviceCharge = baseValue * scRate;
+  const taxes = (settings?.taxes || []).filter(t => t.visibleOnReceipt);
+  const isInclusive = settings?.isTaxInclusive ?? true;
+  const sumTaxRates = taxes.reduce((acc, t) => acc + t.rate, 0);
+
+  let baseValue = 0;
+  let taxAmount = 0;
+  let serviceCharge = 0;
+  let finalTotal = 0;
+
+  if (isInclusive) {
+    finalTotal = netTotal;
+    baseValue = finalTotal / (1 + sumTaxRates);
+  } else {
+    baseValue = netTotal;
+    finalTotal = baseValue * (1 + sumTaxRates);
+  }
+
+  taxes.forEach(t => {
+    const amt = baseValue * t.rate;
+    if (t.type === 'VAT') taxAmount += amt;
+    else if (t.type === 'SC') serviceCharge += amt;
+    else taxAmount += amt;
+  });
   
   const currentPaid = transaction.paidAmount || 0;
   const totalNewPayment = newPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
   const projectedPaidAmount = currentPaid + totalNewPayment;
-  const projectedBalance = Math.max(0, netTotal - projectedPaidAmount);
+  const projectedBalance = Math.max(0, finalTotal - projectedPaidAmount);
 
   const handleUpdate = () => performUpdate(newPayments);
 
@@ -265,7 +281,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
       });
 
       const finalPaidAmount = currentPaid + totalNewFromThisUpdate;
-      const finalBalance = Math.max(0, netTotal - finalPaidAmount);
+      const finalBalance = Math.max(0, finalTotal - finalPaidAmount);
       
       let finalStatus = SettlementStatus.UNPAID;
       if (finalBalance === 0) {
@@ -305,7 +321,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
         taxAmount,
         serviceCharge,
         discountAmount: discount,
-        totalAmount: netTotal,
+        totalAmount: finalTotal,
         paidAmount: finalPaidAmount,
         payments: updatedPayments,
         balance: finalBalance,

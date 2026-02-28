@@ -178,7 +178,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
   const subtotal = roomItems.reduce((acc, item) => acc + item.total, 0) + foodItems.reduce((acc, item) => acc + item.total, 0);
   
   // DYNAMIC TAX CALCULATION (Matching Folio/POS logic)
-  const taxes = settings?.taxes || [];
+  const taxes = (settings?.taxes || []).filter(t => t.visibleOnReceipt);
   const isInclusive = settings?.isTaxInclusive ?? true;
   const sumTaxRates = taxes.reduce((acc, t) => acc + t.rate, 0);
 
@@ -491,14 +491,12 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   <span className="text-gray-500 uppercase font-bold">Sub Total:</span>
                   <span className="text-white font-black">₦{baseVal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500 uppercase font-bold">Service Charge:</span>
-                  <span className="text-white font-black">₦{scSum.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500 uppercase font-bold">VAT / Taxes:</span>
-                  <span className="text-white font-black">₦{vatSum.toLocaleString()}</span>
-                </div>
+                {taxes.map(tax => (
+                  <div key={tax.id} className="flex justify-between text-xs">
+                    <span className="text-gray-500 uppercase font-bold">{tax.name}:</span>
+                    <span className="text-white font-black">₦{(baseVal * tax.rate).toLocaleString()}</span>
+                  </div>
+                ))}
                 <div className="flex justify-between text-lg border-t border-gray-700 pt-3">
                   <span className="text-[#C8A862] uppercase font-black">Grand Total:</span>
                   <span className="text-[#C8A862] font-black">₦{grandTotal.toLocaleString()}</span>

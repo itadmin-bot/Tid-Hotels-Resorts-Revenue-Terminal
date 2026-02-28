@@ -3,6 +3,7 @@ import { Transaction, AppSettings, BankAccount } from '@/types';
 import { BRAND } from '@/constants';
 import { Printer, Download, X } from 'lucide-react';
 import { printProformaInvoice } from '@/utils/proformaPrint';
+import html2pdf from 'html2pdf.js';
 
 interface ProformaPreviewProps {
   transaction: Transaction;
@@ -18,8 +19,19 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
   };
 
   const handleDownload = () => {
-    // Basic implementation: trigger print which allows save as PDF
-    window.print();
+    const element = document.getElementById('proforma-invoice');
+    if (!element) return;
+
+    const opt = {
+      margin: 10,
+      filename: `PROFORMA_${transaction.reference}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+    };
+
+    // New Promise-based usage:
+    html2pdf().set(opt).from(element).save();
   };
 
   return (
@@ -323,8 +335,12 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
           <div className="totals-box">
             <div className="totals-table">
               <div className="total-row"><span>SUB TOTAL</span><span style={{fontWeight: '900'}}>₦{transaction.subtotal.toLocaleString()}</span></div>
-              <div className="total-row"><span>Service Charge</span><span style={{fontWeight: '900'}}>₦{transaction.serviceCharge.toLocaleString()}</span></div>
-              <div className="total-row"><span>VAT / Taxes</span><span style={{fontWeight: '900'}}>₦{transaction.taxAmount.toLocaleString()}</span></div>
+              {settings?.taxes.filter(t => t.visibleOnReceipt).map(tax => (
+                <div key={tax.id} className="total-row">
+                  <span>{tax.name}</span>
+                  <span style={{fontWeight: '900'}}>₦{(transaction.subtotal * tax.rate).toLocaleString()}</span>
+                </div>
+              ))}
               <div className="total-row grand-total"><span>GRAND TOTAL</span><span>₦{transaction.totalAmount.toLocaleString()}</span></div>
             </div>
           </div>

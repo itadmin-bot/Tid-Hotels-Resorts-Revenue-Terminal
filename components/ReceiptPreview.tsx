@@ -4,6 +4,8 @@ import { db, auth } from '@/firebase';
 import { Transaction, UnitType, AppSettings, BankAccount, TaxConfig } from '@/types';
 import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '@/constants';
 import { formatDate, formatTime } from '@/utils/dateUtils';
+import { Printer, Download, X } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
 interface ReceiptPreviewProps {
   transaction: Transaction;
@@ -111,6 +113,22 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
     printWindow.document.close();
   };
 
+  const handleDownload = () => {
+    const contentId = isPos ? 'thermal-pos-docket' : 'a4-folio-invoice';
+    const element = document.getElementById(contentId);
+    if (!element) return;
+
+    const opt = {
+      margin: 10,
+      filename: `RECEIPT_${transaction.reference}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm' as const, format: isPos ? [80, 200] as [number, number] : 'a4' as const, orientation: 'portrait' as const }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  };
+
   if (!settings) return null;
 
   const bankList: BankAccount[] = isPos 
@@ -138,10 +156,15 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <h3 className="text-white font-bold tracking-widest uppercase text-sm">Revenue Authority Dispatch Hub</h3>
             </div>
             <div className="flex gap-4">
-              <button onClick={handlePrint} className="px-8 py-2.5 bg-[#C8A862] text-black font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest">
-                Print {isPos ? 'Thermal Docket' : 'Corporate A4 Folio'}
+              <button onClick={handlePrint} className="px-8 py-2.5 bg-[#C8A862] text-black font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2">
+                <Printer className="w-4 h-4" /> Print {isPos ? 'Thermal' : 'A4 Folio'}
               </button>
-              <button onClick={onClose} className="px-8 py-2.5 border border-gray-600 text-white rounded-lg transition-colors hover:bg-gray-800 font-bold text-xs uppercase tracking-widest">Close Hub</button>
+              <button onClick={handleDownload} className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2">
+                <Download className="w-4 h-4" /> Download PDF
+              </button>
+              <button onClick={onClose} className="px-8 py-2.5 border border-gray-600 text-white rounded-lg transition-colors hover:bg-gray-800 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                <X className="w-4 h-4" /> Close Hub
+              </button>
             </div>
           </div>
 
