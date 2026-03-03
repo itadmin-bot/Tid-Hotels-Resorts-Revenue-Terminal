@@ -315,6 +315,42 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
     }
   };
 
+  const handleDeletePayment = async (idx: number) => {
+    if (user.role !== UserRole.ADMIN) return;
+    if (!confirm('Are you sure you want to remove this payment record? This action cannot be undone.')) return;
+
+    setIsSaving(true);
+    try {
+      const updatedPayments = [...(transaction.payments || [])];
+      updatedPayments.splice(idx, 1);
+
+      const newPaidAmount = updatedPayments.reduce((acc, p) => acc + p.amount, 0);
+      const newBalance = Math.max(0, finalTotal - newPaidAmount);
+      
+      let newStatus = SettlementStatus.UNPAID;
+      if (newBalance === 0) {
+        newStatus = SettlementStatus.PAID;
+      } else if (newPaidAmount > 0) {
+        newStatus = SettlementStatus.PARTIAL;
+      }
+
+      await updateDoc(doc(db, 'transactions', transaction.id), {
+        payments: updatedPayments,
+        paidAmount: newPaidAmount,
+        balance: newBalance,
+        status: newStatus,
+        updatedAt: Date.now()
+      });
+
+      alert('Payment record removed successfully');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to remove payment record');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const performUpdate = async (paymentsToProcess: Partial<TransactionPayment>[]) => {
     if (!guestName.trim()) {
       alert('GUEST IDENTITY REQUIRED: Full name must be provided for revenue record synchronization.');
@@ -695,17 +731,25 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                               <span className="text-[11px] text-green-400 font-black tracking-tighter">₦{p.amount.toLocaleString()}</span>
                             )}
                           </div>
-                          <div className="col-span-1 text-right">
+                          <div className="col-span-1 text-right flex flex-col gap-1 items-end">
                             {user.role === UserRole.ADMIN && !isEditing && (
-                              <button 
-                                onClick={() => {
-                                  setEditingPaymentIdx(actualIdx !== undefined ? actualIdx : null);
-                                  setEditedPaymentAmount(p.amount);
-                                }}
-                                className="text-[8px] font-black text-[#C8A862] uppercase hover:underline"
-                              >
-                                Edit
-                              </button>
+                              <>
+                                <button 
+                                  onClick={() => {
+                                    setEditingPaymentIdx(actualIdx !== undefined ? actualIdx : null);
+                                    setEditedPaymentAmount(p.amount);
+                                  }}
+                                  className="text-[8px] font-black text-[#C8A862] uppercase hover:underline"
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  onClick={() => handleDeletePayment(actualIdx!)}
+                                  className="text-[8px] font-black text-red-500 uppercase hover:underline flex items-center gap-0.5"
+                                >
+                                  <X className="w-2 h-2" /> Remove
+                                </button>
+                              </>
                             )}
                             {isEditing && (
                               <div className="flex flex-col gap-1">
