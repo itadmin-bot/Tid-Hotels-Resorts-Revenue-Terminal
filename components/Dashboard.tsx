@@ -21,12 +21,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showPOS, setShowPOS] = useState(false);
-  const [posEditingTransaction, setPosEditingTransaction] = useState<Transaction | null>(null);
+  const [posEditingId, setPosEditingId] = useState<string | null>(null);
   const [showFolio, setShowFolio] = useState(false);
   const [showProforma, setShowProforma] = useState(false);
-  const [proformaEditingTransaction, setProformaEditingTransaction] = useState<Transaction | null>(null);
-  const [managingTransaction, setManagingTransaction] = useState<Transaction | null>(null);
-  const [viewingReceipt, setViewingReceipt] = useState<Transaction | null>(null);
+  const [proformaEditingId, setProformaEditingId] = useState<string | null>(null);
+  const [managingId, setManagingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [unitFilter, setUnitFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -248,6 +248,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
     });
   };
 
+  const managingTransaction = transactions.find(t => t.id === managingId);
+  const posEditingTransaction = transactions.find(t => t.id === posEditingId);
+  const proformaEditingTransaction = transactions.find(t => t.id === proformaEditingId);
+  const viewingTransaction = transactions.find(t => t.id === viewingId);
+
   return (
     <div className="space-y-6">
       <div className="no-print space-y-6">
@@ -450,7 +455,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                   <td className="px-6 py-5 text-right space-x-2">
                     {t.status !== SettlementStatus.PAID && (
                       <button 
-                        onClick={() => setManagingTransaction(t)} 
+                        onClick={() => setManagingId(t.id)} 
                         className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all animate-pulse"
                       >
                         Settle
@@ -458,7 +463,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                     )}
                     {t.type === 'POS' && (
                       <button 
-                        onClick={() => { setPosEditingTransaction(t); setShowPOS(true); }} 
+                        onClick={() => { setPosEditingId(t.id); setShowPOS(true); }} 
                         className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all"
                       >
                         POS Add
@@ -466,19 +471,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                     )}
                     {t.type === 'PROFORMA' && (
                       <button 
-                        onClick={() => { setProformaEditingTransaction(t); setShowProforma(true); }} 
+                        onClick={() => { setProformaEditingId(t.id); setShowProforma(true); }} 
                         className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/20 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all"
                       >
                         Edit Proforma
                       </button>
                     )}
                     <button 
-                      onClick={() => setManagingTransaction(t)} 
+                      onClick={() => setManagingId(t.id)} 
                       className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
                     >
                       Manage
                     </button>
-                    <button onClick={() => setViewingReceipt(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">
+                    <button onClick={() => setViewingId(t.id)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">
                       {t.type === 'PROFORMA' ? 'Invoice' : 'Receipt'}
                     </button>
                     {user.role === UserRole.ADMIN && (
@@ -495,20 +500,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
         </div>
       </div>
 
-      {showPOS && <POSModal user={user} existingTransaction={posEditingTransaction || undefined} onClose={() => { setShowPOS(false); setPosEditingTransaction(null); }} />}
+      {showPOS && <POSModal user={user} existingTransaction={posEditingTransaction || undefined} onClose={() => { setShowPOS(false); setPosEditingId(null); }} />}
       {showFolio && <FolioModal user={user} onClose={() => setShowFolio(false)} />}
-      {showProforma && <ProformaModal user={user} existingTransaction={proformaEditingTransaction || undefined} onClose={() => { setShowProforma(false); setProformaEditingTransaction(null); }} />}
+      {showProforma && <ProformaModal user={user} existingTransaction={proformaEditingTransaction || undefined} onClose={() => { setShowProforma(false); setProformaEditingId(null); }} />}
       {managingTransaction && (
         <ManageTransactionModal 
+          user={user}
           transaction={managingTransaction} 
-          onClose={() => setManagingTransaction(null)} 
+          onClose={() => setManagingId(null)} 
         />
       )}
-      {viewingReceipt && (
-        viewingReceipt.type === 'PROFORMA' ? (
-          <ProformaPreview transaction={viewingReceipt} settings={settings} onClose={() => setViewingReceipt(null)} />
+      {viewingTransaction && (
+        viewingTransaction.type === 'PROFORMA' ? (
+          <ProformaPreview transaction={viewingTransaction} settings={settings} onClose={() => setViewingId(null)} />
         ) : (
-          <ReceiptPreview transaction={viewingReceipt} onClose={() => setViewingReceipt(null)} />
+          <ReceiptPreview transaction={viewingTransaction} onClose={() => setViewingId(null)} />
         )
       )}
     </div>

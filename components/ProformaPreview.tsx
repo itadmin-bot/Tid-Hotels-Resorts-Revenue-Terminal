@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Transaction, AppSettings, BankAccount } from '@/types';
 import { BRAND } from '@/constants';
 import { Printer, Download, X } from 'lucide-react';
@@ -13,21 +13,23 @@ interface ProformaPreviewProps {
 
 const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handlePrint = () => {
     printProformaInvoice(transaction, settings);
   };
 
   const handleDownload = async () => {
-    const element = document.getElementById('proforma-invoice');
+    const element = document.getElementById('proforma-invoice-print');
     if (!element) return;
 
+    setIsDownloading(true);
     // Use a try-catch and promise-based approach to prevent hanging
     try {
       const opt = {
-        margin: [10, 10],
+        margin: 10,
         filename: `PROFORMA_${transaction.reference}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { 
           scale: 2, 
           useCORS: true, 
@@ -35,13 +37,15 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
           letterRendering: true,
           allowTaint: true
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
       };
 
       await html2pdf().set(opt).from(element).save();
     } catch (error) {
       console.error('PDF Generation Error:', error);
       alert('Failed to generate PDF. Please try printing instead.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -57,8 +61,12 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             <button onClick={handlePrint} className="px-8 py-2.5 bg-[#C8A862] text-black font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2">
               <Printer className="w-4 h-4" /> Print A4
             </button>
-            <button onClick={handleDownload} className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2">
-              <Download className="w-4 h-4" /> Download PDF
+            <button 
+              disabled={isDownloading}
+              onClick={handleDownload} 
+              className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-lg shadow-xl transition-all hover:scale-105 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" /> {isDownloading ? 'Generating...' : 'Download PDF'}
             </button>
             <button onClick={onClose} className="px-8 py-2.5 border border-gray-600 text-white rounded-lg transition-colors hover:bg-gray-800 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
               <X className="w-4 h-4" /> Close
@@ -199,12 +207,24 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                 <span className="font-bold uppercase">SUB TOTAL</span>
                 <span className="font-black">₦{transaction.subtotal.toLocaleString()}</span>
               </div>
-              {settings?.taxes.filter(t => t.visibleOnReceipt).map(tax => (
-                <div key={tax.id} className="flex justify-between border-b border-black pb-1">
-                  <span className="font-bold uppercase">{tax.name}</span>
-                  <span className="font-black">₦{(transaction.subtotal * tax.rate).toLocaleString()}</span>
-                </div>
-              ))}
+              <div className="text-[7pt] text-gray-500 italic text-right mb-1">
+                {transaction.isTaxInclusive ? '* All prices are tax-inclusive' : '* Taxes are added to subtotal'}
+              </div>
+              {transaction.appliedTaxes ? (
+                transaction.appliedTaxes.filter(t => t.visibleOnReceipt).map((tax, idx) => (
+                  <div key={idx} className="flex justify-between border-b border-black pb-1">
+                    <span className="font-bold uppercase">{tax.name} ({tax.calculationType === 'FIXED' ? 'Fixed' : `${(tax.rate * 100).toFixed(1)}%`})</span>
+                    <span className="font-black">₦{(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
+                  </div>
+                ))
+              ) : (
+                settings?.taxes.filter(t => t.visibleOnReceipt).map(tax => (
+                  <div key={tax.id} className="flex justify-between border-b border-black pb-1">
+                    <span className="font-bold uppercase">{tax.name}</span>
+                    <span className="font-black">₦{(transaction.subtotal * tax.rate).toLocaleString()}</span>
+                  </div>
+                ))
+              )}
               <div className="flex justify-between bg-orange-500 text-white p-1 font-black">
                 <span className="uppercase">Grand Total</span>
                 <span>₦{transaction.totalAmount.toLocaleString()}</span>
@@ -262,7 +282,8 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
         </div>
       </div>
 
-      <div className="hidden" aria-hidden="true">
+      {/* HIDDEN PRINT ASSETS - Using absolute positioning instead of hidden to allow html2pdf to capture */}
+      <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none" aria-hidden="true">
         <div id="proforma-invoice-print">
           <div className="header">
             <div className="hotel-name"><span>TIDÉ</span> HOTELS & RESORTS</div>
@@ -344,12 +365,24 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
           <div className="totals-box">
             <div className="totals-table">
               <div className="total-row"><span>SUB TOTAL</span><span style={{fontWeight: '900'}}>₦{transaction.subtotal.toLocaleString()}</span></div>
-              {settings?.taxes.filter(t => t.visibleOnReceipt).map(tax => (
-                <div key={tax.id} className="total-row">
-                  <span>{tax.name}</span>
-                  <span style={{fontWeight: '900'}}>₦{(transaction.subtotal * tax.rate).toLocaleString()}</span>
-                </div>
-              ))}
+              <div style={{fontSize: '7pt', fontStyle: 'italic', textAlign: 'right', marginBottom: '1mm', color: '#666'}}>
+                {transaction.isTaxInclusive ? '* All prices are tax-inclusive' : '* Taxes are added to subtotal'}
+              </div>
+              {transaction.appliedTaxes ? (
+                transaction.appliedTaxes.filter(t => t.visibleOnReceipt).map((tax, idx) => (
+                  <div key={idx} className="total-row">
+                    <span>{tax.name} ({tax.calculationType === 'FIXED' ? 'Fixed' : `${(tax.rate * 100).toFixed(1)}%`})</span>
+                    <span style={{fontWeight: '900'}}>₦{(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
+                  </div>
+                ))
+              ) : (
+                settings?.taxes.filter(t => t.visibleOnReceipt).map(tax => (
+                  <div key={tax.id} className="total-row">
+                    <span>{tax.name}</span>
+                    <span style={{fontWeight: '900'}}>₦{(transaction.subtotal * tax.rate).toLocaleString()}</span>
+                  </div>
+                ))
+              )}
               <div className="total-row grand-total"><span>GRAND TOTAL</span><span>₦{transaction.totalAmount.toLocaleString()}</span></div>
             </div>
           </div>

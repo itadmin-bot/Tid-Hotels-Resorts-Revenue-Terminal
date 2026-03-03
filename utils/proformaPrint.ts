@@ -65,13 +65,20 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
 
   const bankItems = settings.proformaBanks?.map(bank => `
     <div class="bank-item">
-      <div><strong>BANK NAME:</strong> ${bank.bank}</div>
+      <div><strong>BANK NAME:</strong> ${bank.bank} (${bank.currency || 'NGN'})</div>
       <div><strong>ACCOUNT NAME:</strong> ${bank.accountName}</div>
       <div><strong>ACCOUNT NUMBER:</strong> ${bank.accountNumber}</div>
+      ${bank.sortCode ? `<div><strong>SORT CODE:</strong> ${bank.sortCode}</div>` : ''}
+      ${bank.swiftCode ? `<div><strong>SWIFT/BIC:</strong> ${bank.swiftCode}</div>` : ''}
     </div>
   `).join('') || '<div class="col-span-full py-4 text-center text-gray-400 italic">No bank accounts configured.</div>';
 
-  const taxRows = settings.taxes?.filter(t => t.visibleOnReceipt).map(tax => `
+  const taxRows = transaction.appliedTaxes ? transaction.appliedTaxes.filter(t => t.visibleOnReceipt).map(tax => `
+    <div class="total-row">
+      <span>${tax.name} (${tax.calculationType === 'FIXED' ? 'Fixed' : `${(tax.rate * 100).toFixed(1)}%`})</span>
+      <span style="font-weight: 900">₦${(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
+    </div>
+  `).join('') : settings.taxes?.filter(t => t.visibleOnReceipt).map(tax => `
     <div class="total-row">
       <span>${tax.name}</span>
       <span style="font-weight: 900">₦${(transaction.subtotal * tax.rate).toLocaleString()}</span>
@@ -136,6 +143,9 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
     <div class="totals-box">
       <div class="totals-table">
         <div class="total-row"><span>SUB TOTAL</span><span style="font-weight: 900">₦${transaction.subtotal.toLocaleString()}</span></div>
+        <div style="font-size: 7pt; font-style: italic; text-align: right; margin-bottom: 1mm; color: #666;">
+          ${transaction.isTaxInclusive ? '* All prices are tax-inclusive' : '* Taxes are added to subtotal'}
+        </div>
         ${taxRows}
         <div class="total-row grand-total"><span>GRAND TOTAL</span><span>₦${transaction.totalAmount.toLocaleString()}</span></div>
       </div>

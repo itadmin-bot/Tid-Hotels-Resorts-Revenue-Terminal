@@ -11,18 +11,21 @@ import {
   TransactionPayment, 
   TransactionItem, 
   MenuItem,
-  Room
+  Room,
+  UserProfile,
+  UserRole
 } from '@/types';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 import SettleBillModal from '@/components/SettleBillModal';
 import ReceiptPreview from '@/components/ReceiptPreview';
 
 interface ManageTransactionModalProps {
+  user: UserProfile;
   transaction: Transaction;
   onClose: () => void;
 }
 
-const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transaction, onClose }) => {
+const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, transaction, onClose }) => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [menuCatalog, setMenuCatalog] = useState<MenuItem[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -55,6 +58,8 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const [discount, setDiscount] = useState<number>(transaction.discountAmount || 0);
   const [selectedBank, setSelectedBank] = useState<BankAccount | undefined>(transaction.selectedBank);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingPaymentIdx, setEditingPaymentIdx] = useState<number | null>(null);
+  const [editedPaymentAmount, setEditedPaymentAmount] = useState<number>(0);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showSettleModal, setShowSettleModal] = useState(false);
 
@@ -251,6 +256,64 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
   const projectedBalance = Math.max(0, finalTotal - projectedPaidAmount);
 
   const handleUpdate = () => performUpdate(newPayments);
+
+  const handleEditPayment = async (idx: number) => {
+    if (user.role !== UserRole.ADMIN) return;
+    
+    const payment = transaction.payments?.[idx];
+    if (!payment) return;
+
+    if (editedPaymentAmount < 0) {
+      alert('Invalid amount');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updatedPayments = [...(transaction.payments || [])];
+      const originalAmount = updatedPayments[idx].amount;
+      
+      const editLog = {
+        originalAmount,
+        editedAmount: editedPaymentAmount,
+        editorId: user.uid,
+        editorName: user.displayName || user.email,
+        editedAt: Date.now()
+      };
+
+      updatedPayments[idx] = {
+        ...updatedPayments[idx],
+        amount: editedPaymentAmount,
+        editLogs: [...(updatedPayments[idx].editLogs || []), editLog]
+      };
+
+      const newPaidAmount = updatedPayments.reduce((acc, p) => acc + p.amount, 0);
+      const newBalance = Math.max(0, finalTotal - newPaidAmount);
+      
+      let newStatus = SettlementStatus.UNPAID;
+      if (newBalance === 0) {
+        newStatus = SettlementStatus.PAID;
+      } else if (newPaidAmount > 0) {
+        newStatus = SettlementStatus.PARTIAL;
+      }
+
+      await updateDoc(doc(db, 'transactions', transaction.id), {
+        payments: updatedPayments,
+        paidAmount: newPaidAmount,
+        balance: newBalance,
+        status: newStatus,
+        updatedAt: Date.now()
+      });
+
+      setEditingPaymentIdx(null);
+      alert('Payment updated successfully');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update payment');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const performUpdate = async (paymentsToProcess: Partial<TransactionPayment>[]) => {
     if (!guestName.trim()) {
@@ -601,24 +664,82 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ transac
                   <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{transaction.payments.length} Records Found</span>
                 </div>
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                  {[...transaction.payments].sort((a, b) => b.timestamp - a.timestamp).map((p, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 bg-black/20 p-3 rounded-xl border border-gray-800/50 hover:border-gray-700 transition-colors items-center">
-                      <div className="col-span-4 flex flex-col">
-                        <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Settlement Method</span>
-                        <span className="text-[10px] text-white font-black uppercase tracking-tight">{p.method}</span>
+                  {[...transaction.payments].sort((a, b) => b.timestamp - a.timestamp).map((p, i) => {
+                    const actualIdx = transaction.payments?.findIndex(origP => origP.timestamp === p.timestamp);
+                    const isEditing = editingPaymentIdx === actualIdx;
+
+                    return (
+                      <div key={i} className="bg-black/20 p-3 rounded-xl border border-gray-800/50 hover:border-gray-700 transition-colors space-y-2">
+                        <div className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-4 flex flex-col">
+                            <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Settlement Method</span>
+                            <span className="text-[10px] text-white font-black uppercase tracking-tight">{p.method}</span>
+                          </div>
+                          <div className="col-span-4 flex flex-col">
+                            <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Transaction Timestamp</span>
+                            <span className="text-[10px] text-gray-400 font-medium">
+                              {formatToLocalDate(p.timestamp)} {formatToLocalTime(p.timestamp)}
+                            </span>
+                          </div>
+                          <div className="col-span-3 flex flex-col text-right">
+                            <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Amount Paid</span>
+                            {isEditing ? (
+                              <input 
+                                type="number"
+                                className="bg-[#0B1C2D] border border-[#C8A862] rounded p-1 text-[11px] text-[#C8A862] font-black text-right w-full outline-none"
+                                value={editedPaymentAmount}
+                                onChange={(e) => setEditedPaymentAmount(parseFloat(e.target.value) || 0)}
+                                autoFocus
+                              />
+                            ) : (
+                              <span className="text-[11px] text-green-400 font-black tracking-tighter">₦{p.amount.toLocaleString()}</span>
+                            )}
+                          </div>
+                          <div className="col-span-1 text-right">
+                            {user.role === UserRole.ADMIN && !isEditing && (
+                              <button 
+                                onClick={() => {
+                                  setEditingPaymentIdx(actualIdx !== undefined ? actualIdx : null);
+                                  setEditedPaymentAmount(p.amount);
+                                }}
+                                className="text-[8px] font-black text-[#C8A862] uppercase hover:underline"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {isEditing && (
+                              <div className="flex flex-col gap-1">
+                                <button 
+                                  onClick={() => handleEditPayment(actualIdx!)}
+                                  className="text-[8px] font-black text-green-500 uppercase hover:underline"
+                                >
+                                  Save
+                                </button>
+                                <button 
+                                  onClick={() => setEditingPaymentIdx(null)}
+                                  className="text-[8px] font-black text-red-500 uppercase hover:underline"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Audit Trail Display */}
+                        {p.editLogs && p.editLogs.length > 0 && (
+                          <div className="pl-4 border-l border-gray-700 space-y-1">
+                            <span className="text-[7px] font-black text-gray-600 uppercase tracking-widest">Audit Trail:</span>
+                            {p.editLogs.map((log, lIdx) => (
+                              <div key={lIdx} className="text-[8px] text-gray-500 italic">
+                                Edited from ₦{log.originalAmount.toLocaleString()} to ₦{log.editedAmount.toLocaleString()} by {log.editorName} ({log.editorId}) on {formatToLocalDate(log.editedAt)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="col-span-5 flex flex-col">
-                        <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Transaction Timestamp</span>
-                        <span className="text-[10px] text-gray-400 font-medium">
-                          {formatToLocalDate(p.timestamp)} {formatToLocalTime(p.timestamp)}
-                        </span>
-                      </div>
-                      <div className="col-span-3 flex flex-col text-right">
-                        <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Amount Paid</span>
-                        <span className="text-[11px] text-green-400 font-black tracking-tighter">₦{p.amount.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

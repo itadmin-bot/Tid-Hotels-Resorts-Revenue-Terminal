@@ -6,7 +6,9 @@ import {
   updateDoc, 
   setDoc, 
   deleteDoc,
-  addDoc
+  addDoc,
+  query,
+  where
 } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
 import { db } from '../firebase';
@@ -119,7 +121,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
 
     const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
       if (!isSubscribed) return;
-      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
+      const healedData = snapshot.docs.map(doc => {
+        const t = { id: doc.id, ...doc.data() } as Transaction;
+        
+        // Filter deleted client-side to avoid index requirements
+        if (t.isDeleted === true) return null;
+        
+        // HEAL DATA: Re-derive totals from raw arrays to bypass string concatenation corruption
+        const paidAmount = (t.payments || []).reduce((acc: number, p: any) => acc + Number(p.amount || 0), 0);
+        
+        // Re-calculate totalAmount from components to ensure no concatenation occurred
+        const subtotal = Number(t.subtotal || 0);
+        const tax = Number(t.taxAmount || 0);
+        const sc = Number(t.serviceCharge || 0);
+        const disc = Number(t.discountAmount || 0);
+        
+        // If the stored total matches (subtotal + tax + sc - disc) or (subtotal - disc)
+        // we keep it, otherwise we use the calculated one.
+        const calcExclusive = subtotal + tax + sc - disc;
+        const calcInclusive = subtotal - disc;
+        const storedTotal = Number(t.totalAmount || 0);
+        
+        let totalAmount = storedTotal;
+        if (Math.abs(storedTotal - calcExclusive) > 1 && Math.abs(storedTotal - calcInclusive) > 1) {
+          // Data is corrupted, default to exclusive calculation as it's safer for revenue
+          totalAmount = calcExclusive;
+        }
+        
+        const balance = Math.max(0, totalAmount - paidAmount);
+        
+        return { ...t, totalAmount, paidAmount, balance };
+      }).filter(Boolean) as Transaction[];
+      setTransactions(healedData);
     }, (err) => {
       console.error("AdminPanel transactions listener error:", err);
     });
@@ -420,22 +453,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
             </div>
 
             {(() => {
-              const dailyTx = transactions.filter(t => formatToLocalDate(t.createdAt) === reportDate);
-              const gross = dailyTx.reduce((acc, t) => acc + t.totalAmount, 0);
-              const settled = dailyTx.reduce((acc, t) => acc + t.paidAmount, 0);
-              const tax = dailyTx.reduce((acc, t) => acc + (t.taxAmount || 0), 0);
-              const sc = dailyTx.reduce((acc, t) => acc + (t.serviceCharge || 0), 0);
+              const dailyTx = transactions.filter(t => formatToLocalDate(t.createdAt) === reportDate && t.type !== 'PROFORMA');
+              const gross = dailyTx.reduce((acc, t) => acc + Number(Math.max(t.totalAmount || 0, t.paidAmount || 0)), 0);
+              const outstanding = dailyTx.reduce((acc, t) => acc + Number(t.balance || 0), 0);
+              const settled = gross - outstanding;
+              const tax = dailyTx.reduce((acc, t) => acc + Number(t.taxAmount || 0), 0);
+              const sc = dailyTx.reduce((acc, t) => acc + Number(t.serviceCharge || 0), 0);
               const net = gross - tax - sc;
 
               const byMethod = dailyTx.reduce((acc, t) => {
                 const method = t.settlementMethod || 'UNSPECIFIED';
-                acc[method] = (acc[method] || 0) + t.paidAmount;
+                acc[method] = (acc[method] || 0) + Number(t.paidAmount || 0);
                 return acc;
               }, {} as Record<string, number>);
 
               const byUnit = dailyTx.reduce((acc, t) => {
                 const unit = t.unit || 'FOLIO';
-                acc[unit] = (acc[unit] || 0) + t.totalAmount;
+                acc[unit] = (acc[unit] || 0) + Number(Math.max(t.totalAmount || 0, t.paidAmount || 0));
                 return acc;
               }, {} as Record<string, number>);
 
@@ -449,22 +483,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-[#C8A862]/30 transition-all">
                       <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Gross Revenue</p>
-                      <h3 className="text-2xl font-black text-white">₦{gross.toLocaleString()}</h3>
+                      <h3 className="text-2xl font-black text-white">₦{gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                       <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Total Valuation for {reportDate}</div>
                     </div>
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-blue-500/30 transition-all">
                       <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Tax Liability (VAT)</p>
-                      <h3 className="text-2xl font-black text-blue-400">₦{tax.toLocaleString()}</h3>
+                      <h3 className="text-2xl font-black text-blue-400">₦{tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                       <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Calculated at {((settings?.vat || 0.075) * 100).toFixed(1)}%</div>
                     </div>
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-purple-500/30 transition-all">
                       <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Service Charge</p>
-                      <h3 className="text-2xl font-black text-purple-400">₦{sc.toLocaleString()}</h3>
+                      <h3 className="text-2xl font-black text-purple-400">₦{sc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                       <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Calculated at {((settings?.serviceCharge || 0.10) * 100).toFixed(1)}%</div>
                     </div>
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-green-500/30 transition-all">
                       <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Net Revenue</p>
-                      <h3 className="text-2xl font-black text-green-400">₦{net.toLocaleString()}</h3>
+                      <h3 className="text-2xl font-black text-green-400">₦{net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                       <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Gross minus Taxes & Charges</div>
                     </div>
                   </div>
@@ -531,7 +565,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                               <td className="py-3 text-gray-500">{formatToLocalTime(t.createdAt)}</td>
                               <td className="py-3 text-gray-500 uppercase font-bold">{t.type}</td>
                               <td className="py-3 text-gray-400 uppercase">{t.guestName}</td>
-                              <td className="py-3 text-right font-black">₦{t.totalAmount.toLocaleString()}</td>
+                              <td className="py-3 text-right font-black">₦{t.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td className="py-3 text-right">
                                 <span className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase ${
                                   t.status === 'PAID' || t.status === 'SETTLED' ? 'bg-green-500/10 text-green-400' : 
@@ -892,15 +926,43 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   {(settings[acc.type] || []).map((bank, i) => (
                     <div key={i} className="bg-[#0B1C2D] border border-gray-700/50 rounded-2xl p-6 space-y-4 relative group hover:border-[#C8A862]/30 transition-all">
                       <button onClick={() => handleRemoveBank(acc.type, i)} className="absolute top-4 right-4 text-red-500/50 hover:text-red-500 text-[9px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity">Delete</button>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-gray-600 uppercase">Institution</label>
-                        <input className="w-full bg-transparent text-lg font-black text-white outline-none focus:text-[#C8A862] transition-colors" value={bank.bank} onChange={(e) => handleUpdateBank(acc.type, i, 'bank', e.target.value)} />
-                        <div className="h-px bg-gray-800"></div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-gray-600 uppercase">Institution</label>
+                          <input className="w-full bg-transparent text-lg font-black text-white outline-none focus:text-[#C8A862] transition-colors" value={bank.bank} onChange={(e) => handleUpdateBank(acc.type, i, 'bank', e.target.value)} />
+                          <div className="h-px bg-gray-800"></div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-gray-600 uppercase">Currency</label>
+                          <select 
+                            className="w-full bg-transparent text-lg font-black text-[#C8A862] outline-none cursor-pointer" 
+                            value={bank.currency || 'NGN'} 
+                            onChange={(e) => handleUpdateBank(acc.type, i, 'currency', e.target.value)}
+                          >
+                            <option value="NGN">NGN (₦)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="EUR">EUR (€)</option>
+                          </select>
+                          <div className="h-px bg-gray-800"></div>
+                        </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-black text-gray-600 uppercase">Account String</label>
+                        <label className="text-[9px] font-black text-gray-600 uppercase">Account Number / IBAN</label>
                         <input className="w-full bg-transparent text-lg font-black text-[#C8A862] outline-none" value={bank.accountNumber} onChange={(e) => handleUpdateBank(acc.type, i, 'accountNumber', e.target.value)} />
                         <div className="h-px bg-gray-800"></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-gray-600 uppercase">Sort Code</label>
+                          <input className="w-full bg-transparent text-sm font-bold text-white outline-none focus:text-[#C8A862]" value={bank.sortCode || ''} placeholder="Optional" onChange={(e) => handleUpdateBank(acc.type, i, 'sortCode', e.target.value)} />
+                          <div className="h-px bg-gray-800"></div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-gray-600 uppercase">SWIFT / BIC</label>
+                          <input className="w-full bg-transparent text-sm font-bold text-white outline-none focus:text-[#C8A862]" value={bank.swiftCode || ''} placeholder="Optional" onChange={(e) => handleUpdateBank(acc.type, i, 'swiftCode', e.target.value)} />
+                          <div className="h-px bg-gray-800"></div>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[9px] font-black text-gray-600 uppercase">Legal Name</label>

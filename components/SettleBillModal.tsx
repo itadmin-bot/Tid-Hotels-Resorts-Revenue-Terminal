@@ -15,6 +15,11 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
   const [method, setMethod] = useState<SettlementMethod>(SettlementMethod.CARD);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Sync amount if balance changes externally
+  React.useEffect(() => {
+    setAmount(transaction.balance);
+  }, [transaction.balance]);
+
   const handleSettle = async () => {
     if (amount <= 0) {
       alert('INVALID AMOUNT: Payment amount must be greater than zero.');

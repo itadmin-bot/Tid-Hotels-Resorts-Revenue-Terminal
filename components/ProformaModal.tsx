@@ -18,7 +18,8 @@ import {
   UnitType,
   TransactionItem,
   MenuItem,
-  Room
+  Room,
+  TaxConfig
 } from '@/types';
 import ProformaPreview from '@/components/ProformaPreview';
 
@@ -39,9 +40,14 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
     event: existingTransaction?.event || '', 
     eventPeriod: existingTransaction?.eventPeriod || '',
     unit: existingTransaction?.unit || '' as UnitType | '',
-    preparedBy: existingTransaction?.preparedBy || ''
+    preparedBy: existingTransaction?.preparedBy || '',
+    generatorEmail: existingTransaction?.generatorEmail || user.email
   });
   
+  const [selectedTaxes, setSelectedTaxes] = useState<string[]>([]);
+  const [customTaxes, setCustomTaxes] = useState<TaxConfig[]>([]);
+  const [isTaxInclusive, setIsTaxInclusive] = useState<boolean>(existingTransaction?.isTaxInclusive ?? true);
+
   const [roomItems, setRoomItems] = useState<ProformaRoomItem[]>(existingTransaction?.proformaRooms || [{
     startDate: formatToLocalDate(Date.now()),
     endDate: formatToLocalDate(Date.now() + 86400000),
@@ -74,7 +80,17 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
 
   useEffect(() => {
     const unsubSettings = onSnapshot(doc(db, 'settings', 'master'), (snapshot) => {
-      if (snapshot.exists()) setSettings(snapshot.data() as AppSettings);
+      if (snapshot.exists()) {
+        const data = snapshot.data() as AppSettings;
+        setSettings(data);
+        if (!existingTransaction) {
+          setSelectedTaxes(data.taxes.filter(t => t.visibleOnReceipt).map(t => t.id));
+          setIsTaxInclusive(data.isTaxInclusive);
+        } else {
+          setSelectedTaxes(data.taxes.filter(t => t.visibleOnReceipt).map(t => t.id));
+          setIsTaxInclusive(existingTransaction.isTaxInclusive ?? data.isTaxInclusive);
+        }
+      }
     });
 
     const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
@@ -91,6 +107,34 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
       unsubRooms();
     };
   }, []);
+
+  // Sync with external changes
+  useEffect(() => {
+    if (existingTransaction && !isSubmitting) {
+      setCustomer({ 
+        name: existingTransaction.guestName || '', 
+        organisation: existingTransaction.organisation || '', 
+        address: existingTransaction.address || '', 
+        event: existingTransaction.event || '', 
+        eventPeriod: existingTransaction.eventPeriod || '',
+        unit: existingTransaction.unit || '' as UnitType | '',
+        preparedBy: existingTransaction.preparedBy || '',
+        generatorEmail: existingTransaction.generatorEmail || user.email
+      });
+      setRoomItems(existingTransaction.proformaRooms || []);
+      setFoodItems(existingTransaction.proformaFood || []);
+      setPayments([{ method: SettlementMethod.TRANSFER, amount: existingTransaction.paidAmount || 0 }]);
+      setIsTaxInclusive(existingTransaction.isTaxInclusive ?? true);
+      
+      // Load applied taxes if they exist
+      if (existingTransaction.appliedTaxes) {
+        const systemTaxes = existingTransaction.appliedTaxes.filter(t => !t.id.startsWith('custom-'));
+        const customOnes = existingTransaction.appliedTaxes.filter(t => t.id.startsWith('custom-'));
+        setSelectedTaxes(systemTaxes.map(t => t.id));
+        setCustomTaxes(customOnes);
+      }
+    }
+  }, [existingTransaction, isSubmitting, user.email]);
 
   const calculateNights = (startStr: string, endStr: string) => {
     if (!startStr || !endStr) return 1;
@@ -175,37 +219,63 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
     }
   };
 
+  const addCustomTax = () => {
+    const newTax: TaxConfig = {
+      id: `custom-${Math.random().toString(36).substring(2, 7)}`,
+      name: 'New Tax',
+      rate: 0,
+      type: 'OTHER',
+      visibleOnReceipt: true,
+      calculationType: 'PERCENTAGE'
+    };
+    setCustomTaxes([...customTaxes, newTax]);
+  };
+
+  const removeCustomTax = (id: string) => {
+    setCustomTaxes(customTaxes.filter(t => t.id !== id));
+  };
+
+  const updateCustomTax = (id: string, field: keyof TaxConfig, value: any) => {
+    setCustomTaxes(customTaxes.map(t => t.id === id ? { ...t, [field]: value } : t));
+  };
+
   const subtotal = roomItems.reduce((acc, item) => acc + item.total, 0) + foodItems.reduce((acc, item) => acc + item.total, 0);
   
   // DYNAMIC TAX CALCULATION (Matching Folio/POS logic)
-  const taxes = (settings?.taxes || []).filter(t => t.visibleOnReceipt);
-  const isInclusive = settings?.isTaxInclusive ?? true;
-  const sumTaxRates = taxes.reduce((acc, t) => acc + t.rate, 0);
+  const systemTaxes = (settings?.taxes || []).filter(t => selectedTaxes.includes(t.id));
+  const allAppliedTaxes = [...systemTaxes, ...customTaxes];
+  
+  // Calculate total percentage rate and total fixed amount
+  const totalPercentageRate = allAppliedTaxes.reduce((acc, t) => t.calculationType !== 'FIXED' ? acc + t.rate : acc, 0);
+  const totalFixedAmount = allAppliedTaxes.reduce((acc, t) => t.calculationType === 'FIXED' ? acc + t.rate : acc, 0);
 
   let grandTotal = 0;
   let baseVal = 0;
-  let vatSum = 0;
-  let scSum = 0;
 
-  if (isInclusive) {
+  if (isTaxInclusive) {
+    // If inclusive, fixed amounts are subtracted first? 
+    // Usually, inclusive means the price includes percentages. 
+    // Let's assume fixed taxes are added ON TOP or subtracted from base. 
+    // Standard approach: Base = (Total - Fixed) / (1 + SumRates)
     grandTotal = subtotal;
-    baseVal = grandTotal / (1 + sumTaxRates);
-    taxes.forEach(t => {
-      const amt = baseVal * t.rate;
-      if (t.type === 'VAT') vatSum += amt;
-      else if (t.type === 'SC') scSum += amt;
-      else vatSum += amt;
-    });
+    baseVal = (grandTotal - totalFixedAmount) / (1 + totalPercentageRate);
   } else {
     baseVal = subtotal;
-    taxes.forEach(t => {
-      const amt = baseVal * t.rate;
-      if (t.type === 'VAT') vatSum += amt;
-      else if (t.type === 'SC') scSum += amt;
-      else vatSum += amt;
-    });
-    grandTotal = baseVal + vatSum + scSum;
+    const taxFromPercentages = baseVal * totalPercentageRate;
+    grandTotal = baseVal + taxFromPercentages + totalFixedAmount;
   }
+
+  // Calculate individual tax sums for display and storage
+  const taxBreakdown = allAppliedTaxes.map(t => {
+    const amount = t.calculationType === 'FIXED' ? t.rate : baseVal * t.rate;
+    return { ...t, calculatedAmount: amount };
+  });
+
+  // Only show taxes that are marked as visible on receipt in the breakdown
+  const visibleTaxBreakdown = taxBreakdown.filter(t => t.visibleOnReceipt);
+
+  const vatSum = taxBreakdown.filter(t => t.type === 'VAT' || t.type === 'OTHER').reduce((acc, t) => acc + t.calculatedAmount, 0);
+  const scSum = taxBreakdown.filter(t => t.type === 'SC').reduce((acc, t) => acc + t.calculatedAmount, 0);
 
   const totalPaid = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
   const balance = grandTotal - totalPaid;
@@ -247,6 +317,9 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
         proformaFood: foodItems,
         items: transactionItems,
         preparedBy: customer.preparedBy,
+        generatorEmail: customer.generatorEmail,
+        appliedTaxes: allAppliedTaxes,
+        isTaxInclusive,
         subtotal: baseVal,
         taxAmount: vatSum,
         serviceCharge: scSum,
@@ -373,6 +446,17 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   onChange={(e) => setCustomer({...customer, preparedBy: e.target.value})} 
                 />
               </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-gray-500 uppercase">Generator Email (Mandatory)</label>
+                <input 
+                  type="email"
+                  placeholder="Enter your email address"
+                  className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" 
+                  value={customer.generatorEmail} 
+                  onChange={(e) => setCustomer({...customer, generatorEmail: e.target.value})} 
+                  required
+                />
+              </div>
             </div>
           </section>
 
@@ -470,7 +554,99 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
 
           {/* Settlement Section */}
           <section className="space-y-4">
-            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Settlement</h3>
+            <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
+              <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Settlement & Tax Control</h3>
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2 bg-[#0B1C2D] px-3 py-1.5 rounded-lg border border-gray-700">
+                  <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Tax Mode:</span>
+                  <button 
+                    onClick={() => setIsTaxInclusive(true)}
+                    className={`px-2 py-1 rounded text-[8px] font-black uppercase transition-all ${isTaxInclusive ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    Inclusive
+                  </button>
+                  <button 
+                    onClick={() => setIsTaxInclusive(false)}
+                    className={`px-2 py-1 rounded text-[8px] font-black uppercase transition-all ${!isTaxInclusive ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    Exclusive
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {settings?.taxes.map(tax => (
+                  <button
+                    key={tax.id}
+                    onClick={() => {
+                      if (selectedTaxes.includes(tax.id)) {
+                        setSelectedTaxes(selectedTaxes.filter(id => id !== tax.id));
+                      } else {
+                        setSelectedTaxes([...selectedTaxes, tax.id]);
+                      }
+                    }}
+                    className={`px-2 py-1 rounded text-[8px] font-black uppercase transition-all border ${
+                      selectedTaxes.includes(tax.id) 
+                        ? 'bg-[#C8A862] border-[#C8A862] text-black' 
+                        : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500'
+                    }`}
+                  >
+                    {tax.name} ({tax.calculationType === 'FIXED' ? `₦${tax.rate}` : `${tax.rate * 100}%`})
+                  </button>
+                ))}
+                <button 
+                  onClick={addCustomTax}
+                  className="px-2 py-1 rounded text-[8px] font-black uppercase bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all"
+                >
+                  + Add Custom Tax
+                </button>
+              </div>
+            </div>
+          </div>
+
+            {customTaxes.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-[#0B1C2D]/30 p-4 rounded-xl border border-gray-700/30">
+                {customTaxes.map((tax) => (
+                  <div key={tax.id} className="flex flex-col gap-2 bg-[#0B1C2D] p-3 rounded-lg border border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        className="bg-transparent text-[10px] font-black text-white outline-none flex-1" 
+                        value={tax.name} 
+                        onChange={(e) => updateCustomTax(tax.id, 'name', e.target.value)}
+                        placeholder="Tax Name"
+                      />
+                      <button onClick={() => removeCustomTax(tax.id)} className="text-red-500 text-lg hover:text-red-400 transition-colors">&times;</button>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 border-t border-gray-700/50 pt-2">
+                      <div className="flex items-center gap-2">
+                        <select 
+                          className="bg-transparent text-[10px] text-gray-400 outline-none font-bold"
+                          value={tax.calculationType || 'PERCENTAGE'}
+                          onChange={(e) => updateCustomTax(tax.id, 'calculationType', e.target.value)}
+                        >
+                          <option value="PERCENTAGE">%</option>
+                          <option value="FIXED">₦</option>
+                        </select>
+                        <input 
+                          type="number"
+                          className="bg-transparent text-[10px] font-black text-[#C8A862] outline-none w-16 text-right" 
+                          value={tax.calculationType === 'PERCENTAGE' ? tax.rate * 100 : tax.rate} 
+                          onChange={(e) => updateCustomTax(tax.id, 'rate', tax.calculationType === 'FIXED' ? parseFloat(e.target.value) || 0 : (parseFloat(e.target.value) || 0) / 100)}
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input 
+                          type="checkbox" 
+                          className="w-3 h-3 rounded border-gray-700 bg-transparent text-[#C8A862] focus:ring-0"
+                          checked={tax.visibleOnReceipt}
+                          onChange={(e) => updateCustomTax(tax.id, 'visibleOnReceipt', e.target.checked)}
+                        />
+                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest group-hover:text-gray-300 transition-colors">Show on Receipt</span>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="space-y-1">
@@ -491,10 +667,10 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   <span className="text-gray-500 uppercase font-bold">Sub Total:</span>
                   <span className="text-white font-black">₦{baseVal.toLocaleString()}</span>
                 </div>
-                {taxes.map(tax => (
+                {visibleTaxBreakdown.map(tax => (
                   <div key={tax.id} className="flex justify-between text-xs">
-                    <span className="text-gray-500 uppercase font-bold">{tax.name}:</span>
-                    <span className="text-white font-black">₦{(baseVal * tax.rate).toLocaleString()}</span>
+                    <span className="text-gray-500 uppercase font-bold">{tax.name} ({tax.calculationType === 'FIXED' ? 'Fixed' : `${(tax.rate * 100).toFixed(1)}%`}):</span>
+                    <span className="text-white font-black">₦{tax.calculatedAmount.toLocaleString()}</span>
                   </div>
                 ))}
                 <div className="flex justify-between text-lg border-t border-gray-700 pt-3">
@@ -512,7 +688,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
 
         <div className="p-6 bg-[#0B1C2D] border-t border-gray-700">
           <button 
-            disabled={isSubmitting || !customer.name || !customer.organisation} 
+            disabled={isSubmitting || !customer.name || !customer.organisation || !customer.generatorEmail} 
             onClick={handleSubmit} 
             className="w-full py-5 bg-[#C8A862] text-black font-black rounded-xl uppercase tracking-widest text-xs shadow-xl active:scale-[0.98] disabled:opacity-50 transition-all"
           >

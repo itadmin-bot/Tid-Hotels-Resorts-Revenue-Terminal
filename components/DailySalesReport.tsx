@@ -25,7 +25,35 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const txs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      const txs = snapshot.docs.map(doc => {
+        const t = { id: doc.id, ...doc.data() } as Transaction;
+        
+        // HEAL DATA: Re-derive totals from raw arrays to bypass string concatenation corruption
+        const paidAmount = (t.payments || []).reduce((acc: number, p: any) => acc + Number(p.amount || 0), 0);
+        
+        // Re-calculate totalAmount from components to ensure no concatenation occurred
+        const subtotal = Number(t.subtotal || 0);
+        const tax = Number(t.taxAmount || 0);
+        const sc = Number(t.serviceCharge || 0);
+        const disc = Number(t.discountAmount || 0);
+        
+        // If the stored total matches (subtotal + tax + sc - disc) or (subtotal - disc)
+        // we keep it, otherwise we use the calculated one.
+        const calcExclusive = subtotal + tax + sc - disc;
+        const calcInclusive = subtotal - disc;
+        const storedTotal = Number(t.totalAmount || 0);
+        
+        let totalAmount = storedTotal;
+        if (Math.abs(storedTotal - calcExclusive) > 1 && Math.abs(storedTotal - calcInclusive) > 1) {
+          // Data is corrupted, default to exclusive calculation as it's safer for revenue
+          totalAmount = calcExclusive;
+        }
+        
+        const balance = Math.max(0, totalAmount - paidAmount);
+        
+        return { ...t, totalAmount, paidAmount, balance };
+      }).filter(t => t.type !== 'PROFORMA' && t.isDeleted !== true);
+      
       setTransactions(txs.sort((a, b) => b.createdAt - a.createdAt));
       setLoading(false);
     });
@@ -33,32 +61,35 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
     return () => unsubscribe();
   }, [selectedDate]);
 
+  const grossVal = transactions.reduce((acc, t) => acc + Number(Math.max(t.totalAmount || 0, t.paidAmount || 0)), 0);
+  const outstandingVal = transactions.reduce((acc, t) => acc + Number(t.balance || 0), 0);
+
   const stats = {
-    gross: transactions.reduce((acc, t) => acc + t.totalAmount, 0),
-    settled: transactions.reduce((acc, t) => acc + t.paidAmount, 0),
-    outstanding: transactions.reduce((acc, t) => acc + t.balance, 0),
-    net: transactions.reduce((acc, t) => acc + t.subtotal, 0),
-    tax: transactions.reduce((acc, t) => acc + t.taxAmount, 0),
-    sc: transactions.reduce((acc, t) => acc + t.serviceCharge, 0),
-    discount: transactions.reduce((acc, t) => acc + t.discountAmount, 0),
+    gross: grossVal,
+    settled: grossVal - outstandingVal,
+    outstanding: outstandingVal,
+    net: transactions.reduce((acc, t) => acc + Number(t.subtotal || 0), 0),
+    tax: transactions.reduce((acc, t) => acc + Number(t.taxAmount || 0), 0),
+    sc: transactions.reduce((acc, t) => acc + Number(t.serviceCharge || 0), 0),
+    discount: transactions.reduce((acc, t) => acc + Number(t.discountAmount || 0), 0),
     byMethod: {
       [SettlementMethod.CARD]: transactions.reduce((acc, t) => {
-        const cardAmount = (t.payments || []).filter(p => p.method === SettlementMethod.CARD).reduce((sum, p) => sum + p.amount, 0);
+        const cardAmount = (t.payments || []).filter(p => p.method === SettlementMethod.CARD).reduce((sum, p) => sum + Number(p.amount || 0), 0);
         return acc + cardAmount;
       }, 0),
       [SettlementMethod.CASH]: transactions.reduce((acc, t) => {
-        const cashAmount = (t.payments || []).filter(p => p.method === SettlementMethod.CASH).reduce((sum, p) => sum + p.amount, 0);
+        const cashAmount = (t.payments || []).filter(p => p.method === SettlementMethod.CASH).reduce((sum, p) => sum + Number(p.amount || 0), 0);
         return acc + cashAmount;
       }, 0),
       [SettlementMethod.TRANSFER]: transactions.reduce((acc, t) => {
-        const transferAmount = (t.payments || []).filter(p => p.method === SettlementMethod.TRANSFER).reduce((sum, p) => sum + p.amount, 0);
+        const transferAmount = (t.payments || []).filter(p => p.method === SettlementMethod.TRANSFER).reduce((sum, p) => sum + Number(p.amount || 0), 0);
         return acc + transferAmount;
       }, 0),
     },
     byUnit: {
-      [UnitType.ZENZA]: transactions.filter(t => t.unit === UnitType.ZENZA).reduce((acc, t) => acc + t.totalAmount, 0),
-      [UnitType.WHISPERS]: transactions.filter(t => t.unit === UnitType.WHISPERS).reduce((acc, t) => acc + t.totalAmount, 0),
-      'FOLIO': transactions.filter(t => t.type === 'FOLIO').reduce((acc, t) => acc + t.totalAmount, 0),
+      [UnitType.ZENZA]: transactions.filter(t => t.unit === UnitType.ZENZA).reduce((acc, t) => acc + Number(t.totalAmount || 0), 0),
+      [UnitType.WHISPERS]: transactions.filter(t => t.unit === UnitType.WHISPERS).reduce((acc, t) => acc + Number(t.totalAmount || 0), 0),
+      'FOLIO': transactions.filter(t => t.type === 'FOLIO').reduce((acc, t) => acc + Number(t.totalAmount || 0), 0),
     }
   };
 
@@ -134,7 +165,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Settled Revenue</p>
                 <TrendingUp className="w-4 h-4 text-green-500" />
               </div>
-              <p className="text-3xl font-black text-green-400">₦{stats.settled.toLocaleString()}</p>
+              <p className="text-3xl font-black text-green-400">₦{stats.settled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
                 <div className="h-full bg-green-500 w-full"></div>
               </div>
@@ -145,7 +176,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Outstanding Balance</p>
                 <Landmark className="w-4 h-4 text-red-500" />
               </div>
-              <p className="text-3xl font-black text-red-500">₦{stats.outstanding.toLocaleString()}</p>
+              <p className="text-3xl font-black text-red-500">₦{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Unpaid Revenue Records</p>
             </div>
 
@@ -154,7 +185,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Tax Liability</p>
                 <Landmark className="w-4 h-4 text-blue-500" />
               </div>
-              <p className="text-3xl font-black text-white">₦{stats.tax.toLocaleString()}</p>
+              <p className="text-3xl font-black text-white">₦{stats.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">VAT + Other Property Taxes</p>
             </div>
 
@@ -163,7 +194,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Valuation</p>
                 <TrendingUp className="w-4 h-4 text-[#C8A862]" />
               </div>
-              <p className="text-3xl font-black text-[#C8A862]">₦{stats.gross.toLocaleString()}</p>
+              <p className="text-3xl font-black text-[#C8A862]">₦{stats.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Gross Revenue (Paid + Unpaid)</p>
             </div>
           </div>
@@ -214,7 +245,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                             {t.status}
                           </span>
                         </td>
-                        <td className="p-4 text-right font-black text-white text-[11px]">₦{t.totalAmount.toLocaleString()}</td>
+                        <td className="p-4 text-right font-black text-white text-[11px]">₦{t.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td className="p-4 text-right">
                           <button 
                             onClick={() => onManage?.(t)}

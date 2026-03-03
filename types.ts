@@ -24,6 +24,9 @@ export interface BankAccount {
   bank: string;
   accountNumber: string;
   accountName: string;
+  currency?: string;
+  sortCode?: string;
+  swiftCode?: string;
 }
 
 export interface Room {
@@ -67,6 +70,7 @@ export interface TaxConfig {
   rate: number;
   type: 'VAT' | 'SC' | 'OTHER';
   visibleOnReceipt: boolean;
+  calculationType?: 'PERCENTAGE' | 'FIXED';
 }
 
 export interface AppSettings {
@@ -83,10 +87,19 @@ export interface AppSettings {
   proformaBanks: BankAccount[];
 }
 
+export interface PaymentEditLog {
+  originalAmount: number;
+  editedAmount: number;
+  editorId: string;
+  editorName: string;
+  editedAt: number;
+}
+
 export interface TransactionPayment {
   method: SettlementMethod;
   amount: number;
   timestamp: number;
+  editLogs?: PaymentEditLog[];
 }
 
 export interface Transaction {
@@ -123,6 +136,10 @@ export interface Transaction {
   userId: string;
   cashierName: string;
   preparedBy?: string;
+  generatorEmail?: string;
+  isDeleted?: boolean;
+  appliedTaxes?: TaxConfig[];
+  isTaxInclusive?: boolean;
   createdAt: number;
   updatedAt: number;
   roomDetails?: {

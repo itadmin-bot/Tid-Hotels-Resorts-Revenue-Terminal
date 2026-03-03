@@ -122,7 +122,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
       const opt = {
         margin: 10,
         filename: `RECEIPT_${transaction.reference}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { 
           scale: 2, 
           useCORS: true, 
@@ -131,9 +131,9 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           allowTaint: true
         },
         jsPDF: { 
-          unit: 'mm', 
-          format: isPos ? [80, 200] as [number, number] : 'a4', 
-          orientation: 'portrait' 
+          unit: 'mm' as const, 
+          format: isPos ? [80, 200] as [number, number] : 'a4' as const, 
+          orientation: 'portrait' as const
         }
       };
 
@@ -364,8 +364,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         </div>
       </div>
 
-      {/* HIDDEN PRINT ASSETS */}
-      <div className="hidden" aria-hidden="true">
+      {/* HIDDEN PRINT ASSETS - Using absolute positioning instead of hidden to allow html2pdf to capture */}
+      <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none" aria-hidden="true">
         {/* Thermal POS Docket HTML */}
         <div id="thermal-pos-docket">
           <div className="center bold uppercase" style={{fontSize: '16px'}}>{settings.hotelName}</div>

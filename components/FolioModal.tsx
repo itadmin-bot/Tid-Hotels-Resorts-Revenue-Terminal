@@ -216,7 +216,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   // DYNAMIC TAX CALCULATION
   const taxes = settings?.taxes || [];
   const isInclusive = settings?.isTaxInclusive ?? true;
-  const sumTaxRates = taxes.reduce((acc, t) => acc + t.rate, 0);
+  const sumTaxRates = taxes.reduce((acc, t) => acc + Number(t.rate), 0);
 
   let finalTotal = 0;
   let baseVal = 0;
@@ -227,7 +227,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     finalTotal = netAfterDiscount;
     baseVal = finalTotal / (1 + sumTaxRates);
     taxes.forEach(t => {
-      const amt = baseVal * t.rate;
+      const amt = baseVal * Number(t.rate);
       if (t.type === 'VAT') vatSum += amt;
       else if (t.type === 'SC') scSum += amt;
       else vatSum += amt;
@@ -235,7 +235,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   } else {
     baseVal = netAfterDiscount;
     taxes.forEach(t => {
-      const amt = baseVal * t.rate;
+      const amt = baseVal * Number(t.rate);
       if (t.type === 'VAT') vatSum += amt;
       else if (t.type === 'SC') scSum += amt;
       else vatSum += amt;
@@ -243,7 +243,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     finalTotal = baseVal + vatSum + scSum;
   }
 
-  const totalPaid = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const totalPaid = payments.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
   const balance = finalTotal - totalPaid;
 
   const handleSubmit = async () => {
@@ -286,9 +286,9 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         };
       });
 
-      const finalPayments: TransactionPayment[] = payments.filter(p => (p.amount || 0) > 0).map(p => ({
+      const finalPayments: TransactionPayment[] = payments.filter(p => Number(p.amount || 0) > 0).map(p => ({
           method: p.method as SettlementMethod,
-          amount: p.amount as number,
+          amount: Number(p.amount),
           timestamp: Date.now()
       }));
 
@@ -341,6 +341,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         createdBy: user.uid,
         userId: user.uid,
         cashierName: user.displayName,
+        isDeleted: false,
         createdAt: Date.now(),
         updatedAt: Date.now()
       };

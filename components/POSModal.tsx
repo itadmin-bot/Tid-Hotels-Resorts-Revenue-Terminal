@@ -61,6 +61,18 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
     };
   }, []);
 
+  // Sync with external changes
+  useEffect(() => {
+    if (existingTransaction && !isSubmitting) {
+      setUnit(existingTransaction.unit || null);
+      setGuest({ name: existingTransaction.guestName || 'Walk-in Guest' });
+      setOrderReference(existingTransaction.orderReference || '');
+      setDiscount(existingTransaction.discountAmount || 0);
+      // Note: We don't sync the cart here because it's for NEW items
+      // but existingItems (derived from prop) will update automatically
+    }
+  }, [existingTransaction, isSubmitting]);
+
   const selectUnit = (u: UnitType) => {
     // Locked for security: Unit is chosen once and cannot be changed during the session
     setUnit(u);
