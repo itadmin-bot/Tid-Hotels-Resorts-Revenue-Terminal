@@ -443,6 +443,40 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             display: none !important;
           }
         }
+
+        #proforma-invoice-print {
+          width: 210mm;
+          min-height: 297mm;
+          padding: 15mm;
+          background: #ffffff;
+          color: #000;
+          font-family: 'Inter', sans-serif;
+        }
+        #proforma-invoice-print .header { text-align: center; margin-bottom: 8mm; }
+        #proforma-invoice-print .hotel-name { font-size: 28px; font-weight: 900; color: #0B1C2D; font-style: italic; margin-bottom: 1mm; }
+        #proforma-invoice-print .hotel-name span { color: #C8A862; }
+        #proforma-invoice-print .hotel-addr { font-size: 9px; font-weight: bold; letter-spacing: 0.3em; margin-bottom: 3mm; text-transform: uppercase; color: #666; }
+        #proforma-invoice-print .invoice-title-box { background: #eee; padding: 2mm 0; font-size: 14px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 6mm; }
+        #proforma-invoice-print .section-title { background: #f5f5f5; padding: 1mm 2mm; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; border-left: 4px solid #C8A862; margin-bottom: 3mm; }
+        #proforma-invoice-print .grid { display: grid; grid-template-columns: 120px 1fr; gap: 1mm; margin-bottom: 6mm; font-size: 11px; }
+        #proforma-invoice-print .grid div:nth-child(odd) { font-weight: bold; text-transform: uppercase; }
+        #proforma-invoice-print .grid div:nth-child(even) { text-transform: uppercase; }
+        #proforma-invoice-print .table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; table-layout: fixed; }
+        #proforma-invoice-print .table th { text-align: center; font-size: 8px; font-weight: 900; text-transform: uppercase; padding: 2mm; border: 1px solid #000; background: #f9f9f9; }
+        #proforma-invoice-print .table td { padding: 2mm; border: 1px solid #000; font-size: 10px; word-wrap: break-word; text-align: center; }
+        #proforma-invoice-print .table td.text-left { text-align: left; }
+        #proforma-invoice-print .table td.text-right { text-align: right; }
+        #proforma-invoice-print .totals-box { display: flex; justify-content: flex-end; margin-bottom: 6mm; }
+        #proforma-invoice-print .totals-table { width: 64mm; font-size: 11px; }
+        #proforma-invoice-print .total-row { display: flex; justify-content: space-between; padding: 1.5mm 0; border-bottom: 1px solid #000; }
+        #proforma-invoice-print .grand-total { background: #f97316; color: #fff; padding: 2mm; font-weight: 900; border-bottom: none; }
+        #proforma-invoice-print .notes { font-size: 8px; line-height: 1.4; margin-bottom: 6mm; }
+        #proforma-invoice-print .notes-title { color: #dc2626; font-weight: bold; margin-bottom: 1mm; }
+        #proforma-invoice-print .bank-section { border-top: 2px solid #000; padding-top: 4mm; margin-bottom: 6mm; }
+        #proforma-invoice-print .bank-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; font-size: 8px; }
+        #proforma-invoice-print .bank-item { border-left: 1px solid #eee; padding-left: 2mm; }
+        #proforma-invoice-print .footer-msg { font-size: 10px; font-style: italic; color: #666; margin-bottom: 8mm; }
+        #proforma-invoice-print .signature { font-size: 11px; font-weight: bold; }
       `}} />
     </div>
   );
