@@ -277,6 +277,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
           <div className="text-[9pt] font-bold">
             Best,<br /><br />
             {transaction.preparedBy || 'Lois'}<br />
+            {transaction.generatorEmail && <span className="text-[8pt] font-normal text-gray-500 lowercase">{transaction.generatorEmail}</span>}<br />
             For: Tidé Hotels
           </div>
         </div>
@@ -416,6 +417,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
           <div className="signature">
             Best,<br /><br />
             {transaction.preparedBy || 'Lois'}<br />
+            {transaction.generatorEmail && <div style={{fontSize: '8pt', fontWeight: 'normal', color: '#666', textTransform: 'lowercase'}}>{transaction.generatorEmail}</div>}
             For: Tidé Hotels
           </div>
           </div>

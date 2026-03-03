@@ -174,6 +174,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
     <div class="signature">
       Best,<br /><br />
       ${transaction.preparedBy || 'Lois'}<br />
+      ${transaction.generatorEmail ? `<div style="font-size: 8pt; font-weight: normal; color: #666; text-transform: lowercase;">${transaction.generatorEmail}</div>` : ''}
       For: Tidé Hotels
     </div>
   `;
