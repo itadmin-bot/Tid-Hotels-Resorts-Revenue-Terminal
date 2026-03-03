@@ -388,7 +388,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                         t.reference,
                         new Date(t.createdAt).toLocaleTimeString(),
                         t.type,
-                        t.unit || 'FOLIO',
+                        t.unit || t.preparedBy || t.cashierName || 'FOLIO',
                         t.guestName,
                         t.totalAmount,
                         t.paidAmount,
@@ -468,7 +468,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               }, {} as Record<string, number>);
 
               const byUnit = dailyTx.reduce((acc, t) => {
-                const unit = t.unit || 'FOLIO';
+                const unit = t.unit || t.preparedBy || t.cashierName || 'FOLIO';
                 acc[unit] = (acc[unit] || 0) + Number(Math.max(t.totalAmount || 0, t.paidAmount || 0));
                 return acc;
               }, {} as Record<string, number>);

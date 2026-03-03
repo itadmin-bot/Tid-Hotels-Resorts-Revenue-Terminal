@@ -663,7 +663,8 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   <label className="text-[9px] font-bold text-gray-500 uppercase">Payment Method</label>
                   <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={payments[0].method} onChange={(e) => setPayments([{ ...payments[0], method: e.target.value as SettlementMethod }])}>
                     <option value={SettlementMethod.TRANSFER}>Bank Transfer</option>
-                    <option value={SettlementMethod.CARD}>Card / POS</option>
+                    <option value={SettlementMethod.CARD}>Card</option>
+                    <option value={SettlementMethod.POS}>POS</option>
                     <option value={SettlementMethod.CASH}>Cash</option>
                   </select>
                 </div>

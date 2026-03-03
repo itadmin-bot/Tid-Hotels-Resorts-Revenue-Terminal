@@ -400,7 +400,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`w-2 h-2 rounded-full ${t.unit === 'Zenza' ? 'bg-purple-500' : t.unit === 'Whispers' ? 'bg-blue-400' : 'bg-[#C8A862]'}`}></span>
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{t.unit || 'FOLIO'}</span>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{t.unit || t.preparedBy || t.cashierName || 'FOLIO'}</span>
                     </div>
                     <div className="text-sm font-black text-white">{t.reference}</div>
                     <div className="text-[10px] text-gray-600 font-bold">{formatToLocalDate(t.createdAt)} {formatToLocalTime(t.createdAt)}</div>

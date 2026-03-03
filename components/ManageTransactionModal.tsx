@@ -475,7 +475,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
         <div className="sticky top-0 z-20 p-6 md:p-8 border-b border-gray-700 flex justify-between items-center bg-[#0B1C2D] shrink-0">
           <div>
             <h2 className="text-xl md:text-2xl font-black text-[#C8A862] uppercase tracking-tighter">MANAGE REVENUE RECORD</h2>
-            <p className="text-[10px] md:text-[11px] text-gray-500 font-bold tracking-[0.2em] uppercase">{transaction.reference} • LOCKED SOURCE: {transaction.unit || 'HOTEL FOLIO'}</p>
+            <p className="text-[10px] md:text-[11px] text-gray-500 font-bold tracking-[0.2em] uppercase">{transaction.reference} • LOCKED SOURCE: {transaction.unit || transaction.preparedBy || transaction.cashierName || 'HOTEL FOLIO'}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-3xl">&times;</button>
         </div>

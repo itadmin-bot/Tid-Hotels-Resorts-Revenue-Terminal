@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { Transaction, SettlementMethod, SettlementStatus } from '@/types';
-import { X, CreditCard, Banknote, Landmark } from 'lucide-react';
+import { X, CreditCard, Banknote, Landmark, Monitor } from 'lucide-react';
 
 interface SettleBillModalProps {
   transaction: Transaction;
@@ -113,7 +113,7 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
 
             <div>
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Payment Method</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button 
                   onClick={() => setMethod(SettlementMethod.CARD)}
                   className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${method === SettlementMethod.CARD ? 'bg-[#C8A862] border-[#C8A862] text-[#0B1C2D]' : 'bg-[#0B1C2D] border-gray-700 text-gray-400 hover:border-gray-500'}`}
@@ -134,6 +134,13 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
                 >
                   <Landmark className="w-5 h-5" />
                   <span className="text-[9px] font-black uppercase">Transfer</span>
+                </button>
+                <button 
+                  onClick={() => setMethod(SettlementMethod.POS)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${method === SettlementMethod.POS ? 'bg-[#C8A862] border-[#C8A862] text-[#0B1C2D]' : 'bg-[#0B1C2D] border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                >
+                  <Monitor className="w-5 h-5" />
+                  <span className="text-[9px] font-black uppercase">POS</span>
                 </button>
               </div>
             </div>

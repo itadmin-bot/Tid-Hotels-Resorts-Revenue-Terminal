@@ -12,7 +12,8 @@ export enum SettlementStatus {
 export enum SettlementMethod {
   CASH = 'CASH',
   CARD = 'CARD',
-  TRANSFER = 'TRANSFER'
+  TRANSFER = 'TRANSFER',
+  POS = 'POS'
 }
 
 export enum UserRole {

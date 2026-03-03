@@ -537,7 +537,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                 <div className="col-span-6">
                    <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={p.method} onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}>
                     <option value={SettlementMethod.TRANSFER}>Transfer</option>
-                    <option value={SettlementMethod.CARD}>Card / POS</option>
+                    <option value={SettlementMethod.CARD}>Card</option>
+                    <option value={SettlementMethod.POS}>POS</option>
                     <option value={SettlementMethod.CASH}>Cash</option>
                   </select>
                 </div>

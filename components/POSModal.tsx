@@ -426,7 +426,8 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                       <div key={idx} className="flex gap-3 items-center">
                         <div className="flex-1 bg-[#0B1C2D]/50 border border-white/10 rounded-2xl p-1 overflow-hidden relative">
                           <select className="w-full bg-transparent p-4 text-[11px] text-white font-black uppercase tracking-widest outline-none appearance-none cursor-pointer" value={p.method} onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}>
-                            <option value={SettlementMethod.CARD}>CARD / POS</option>
+                            <option value={SettlementMethod.CARD}>CARD</option>
+                            <option value={SettlementMethod.POS}>POS</option>
                             <option value={SettlementMethod.CASH}>CASH</option>
                             <option value={SettlementMethod.TRANSFER}>TRANSFER</option>
                           </select>
