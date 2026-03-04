@@ -98,7 +98,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
       <div>Organisation:</div><div>${transaction.organisation}</div>
       <div>Address:</div><div>${transaction.address}</div>
       <div>Event:</div><div>${transaction.event}</div>
-      <div>Event Period:</div><div>${transaction.eventPeriod}</div>
+      <div>Number of Days:</div><div>${transaction.eventPeriod}</div>
     </div>
 
     <div class="section-title">Room Booking and Meeting Spaces</div>

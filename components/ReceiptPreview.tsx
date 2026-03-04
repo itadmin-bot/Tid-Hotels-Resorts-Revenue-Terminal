@@ -120,7 +120,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
     try {
       const opt = {
-        margin: 10,
+        margin: 0,
         filename: `RECEIPT_${transaction.reference}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { 
@@ -128,11 +128,12 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           useCORS: true, 
           logging: false,
           letterRendering: true,
-          allowTaint: true
+          allowTaint: true,
+          width: isPos ? 302 : 794 // 80mm approx 302px, 210mm approx 794px
         },
         jsPDF: { 
           unit: 'mm' as const, 
-          format: isPos ? [80, 200] as [number, number] : 'a4' as const, 
+          format: isPos ? [80, 297] as [number, number] : 'a4' as const, 
           orientation: 'portrait' as const
         }
       };
@@ -365,9 +366,9 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
       </div>
 
       {/* HIDDEN PRINT ASSETS - Using absolute positioning instead of hidden to allow html2pdf to capture */}
-      <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none" aria-hidden="true">
+      <div className="absolute -left-[9999px] top-0 pointer-events-none" aria-hidden="true" style={{ visibility: 'hidden' }}>
         {/* Thermal POS Docket HTML */}
-        <div id="thermal-pos-docket">
+        <div id="thermal-pos-docket" style={{ visibility: 'visible', width: '80mm', background: 'white', padding: '6mm 4mm' }}>
           <div className="center bold uppercase" style={{fontSize: '16px'}}>{settings.hotelName}</div>
           <div className="center bold uppercase" style={{fontSize: '9px', marginTop: '1mm'}}>{settings.hotelAddress}</div>
           <div className="divider"></div>
@@ -423,7 +424,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
         </div>
 
         {/* Professional A4 Folio/Invoice HTML */}
-        <div id="a4-folio-invoice">
+        <div id="a4-folio-invoice" style={{ visibility: 'visible', width: '210mm', background: 'white', padding: '15mm' }}>
           <div className="header">
             <div className="hotel-info">
               <div className="hotel-name">{settings.hotelName}</div>

@@ -423,8 +423,13 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                 <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" value={customer.event} onChange={(e) => setCustomer({...customer, event: e.target.value})} />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-bold text-gray-500 uppercase">Event Period</label>
-                <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" value={customer.eventPeriod} onChange={(e) => setCustomer({...customer, eventPeriod: e.target.value})} />
+                <label className="text-[9px] font-bold text-gray-500 uppercase">Number of Days</label>
+                <input 
+                  type="number"
+                  className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white outline-none focus:border-[#C8A862]" 
+                  value={customer.eventPeriod} 
+                  onChange={(e) => setCustomer({...customer, eventPeriod: e.target.value})} 
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-gray-500 uppercase">Revenue Unit (Optional)</label>

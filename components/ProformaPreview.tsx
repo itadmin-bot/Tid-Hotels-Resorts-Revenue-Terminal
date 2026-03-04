@@ -27,7 +27,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
     // Use a try-catch and promise-based approach to prevent hanging
     try {
       const opt = {
-        margin: 10,
+        margin: 0,
         filename: `PROFORMA_${transaction.reference}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { 
@@ -35,7 +35,8 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
           useCORS: true, 
           logging: false,
           letterRendering: true,
-          allowTaint: true
+          allowTaint: true,
+          width: 794, // 210mm at 96 DPI is approx 794px
         },
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
       };
@@ -113,7 +114,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
               <div className="font-bold uppercase">EVENT:</div>
               <div className="uppercase">{transaction.event}</div>
               
-              <div className="font-bold uppercase">EVENT PERIOD:</div>
+              <div className="font-bold uppercase">NUMBER OF DAYS:</div>
               <div className="uppercase">{transaction.eventPeriod}</div>
             </div>
           </div>
@@ -298,7 +299,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             <div>Organisation:</div><div>{transaction.organisation}</div>
             <div>Address:</div><div>{transaction.address}</div>
             <div>Event:</div><div>{transaction.event}</div>
-            <div>Event Period:</div><div>{transaction.eventPeriod}</div>
+            <div>Number of Days:</div><div>{transaction.eventPeriod}</div>
           </div>
 
           <div className="section-title">Room Booking and Meeting Spaces</div>
