@@ -33,6 +33,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     let isSubscribed = true;
@@ -108,10 +109,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
       if (methodFilter !== 'ALL' && t.settlementMethod !== methodFilter) return false;
 
       // Date Range Filtering
-      if (!dateRange.start && !dateRange.end) return true;
-      const tDate = formatToLocalDate(t.createdAt);
-      if (dateRange.start && tDate < dateRange.start) return false;
-      if (dateRange.end && tDate > dateRange.end) return false;
+      if (dateRange.start || dateRange.end) {
+        const tDate = formatToLocalDate(t.createdAt);
+        if (dateRange.start && tDate < dateRange.start) return false;
+        if (dateRange.end && tDate > dateRange.end) return false;
+      }
+
+      // Search Query Filtering
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesGuest = t.guestName.toLowerCase().includes(query);
+        const matchesRef = t.reference.toLowerCase().includes(query);
+        const matchesItems = t.items.some(item => 
+          item.description.toLowerCase().includes(query)
+        );
+        
+        if (!matchesGuest && !matchesRef && !matchesItems) return false;
+      }
       
       return true;
     })
@@ -271,6 +285,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
         {/* Filter Bar */}
         <div className="bg-[#13263A] p-4 rounded-2xl border border-gray-700/30 flex flex-wrap items-end gap-4 shadow-xl">
           <div className="flex-1 min-w-[150px] space-y-1">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <Search className="w-4 h-4 text-[#EAD8B1]" />
+              Search Terminal
+            </label>
+            <div className="relative">
+              <input 
+                type="text"
+                placeholder="Guest, Ref, or Item..."
+                className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Search className="w-3 h-3 text-gray-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-[150px] space-y-1">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Revenue Unit</label>
             <select 
               className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
@@ -347,6 +377,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                 setUnitFilter('ALL'); 
                 setStatusFilter('ALL');
                 setMethodFilter('ALL');
+                setSearchQuery('');
               }}
               className="px-4 py-2 bg-gray-800 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
             >
