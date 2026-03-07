@@ -200,29 +200,19 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <div className="text-[10px] font-black uppercase mt-1">Guest: {transaction.guestName}</div>
                   <div className="text-[10px] font-bold uppercase">Operator: {transaction.cashierName}</div>
                   <div className="border-b border-black border-dashed my-3"></div>
-                  <div className="mb-4">
-                    <div className="flex justify-between text-[10px] font-black uppercase border-b border-black border-dashed pb-1 mb-2">
-                      <span className="w-[40%]">Item</span>
-                      <span className="w-[10%] text-center">Qty</span>
-                      <span className="w-[25%] text-right">Unit</span>
-                      <span className="w-[25%] text-right">Total</span>
-                    </div>
-                    <div className="space-y-2">
-                      {transaction.items.map((item, idx) => {
-                        const { name, notes } = formatItemDescription(item.description);
-                        return (
-                          <div key={idx} className="border-b border-gray-100 pb-1 last:border-0">
-                            <div className="flex justify-between text-[11px] font-bold uppercase">
-                              <span className="w-[40%] truncate pr-1">{name}</span>
-                              <span className="w-[10%] text-center">{item.quantity}</span>
-                              <span className="w-[25%] text-right">₦{item.price.toLocaleString()}</span>
-                              <span className="w-[25%] text-right">₦{item.total.toLocaleString()}</span>
-                            </div>
-                            {notes && <div className="text-[9px] text-gray-500 italic mt-0.5">* {notes}</div>}
+                  <div className="space-y-2 mb-4">
+                    {transaction.items.map((item, idx) => {
+                      const { name, notes } = formatItemDescription(item.description);
+                      return (
+                        <div key={idx}>
+                          <div className="flex justify-between text-[12px] font-bold uppercase">
+                            <span className="flex-1 pr-2">{name} (x{item.quantity})</span>
+                            <span>₦{item.total.toLocaleString()}</span>
                           </div>
-                        );
-                      })}
-                    </div>
+                          {notes && <div className="text-[9px] text-gray-500 italic">* {notes}</div>}
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="border-y border-black py-2 my-3 flex justify-between text-lg font-black uppercase">
                     <span>TOTAL:</span>
@@ -399,23 +389,15 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             <span>OP: {transaction.cashierName.toUpperCase()}</span>
           </div>
           <div className="divider"></div>
-          <div className="item-row uppercase bold" style={{fontSize: '10px', borderBottom: '1px dashed #000', paddingBottom: '1mm', marginBottom: '2mm'}}>
-            <span style={{width: '40%'}}>Item</span>
-            <span style={{width: '10%', textAlign: 'center'}}>Qty</span>
-            <span style={{width: '25%', textAlign: 'right'}}>Unit</span>
-            <span style={{width: '25%', textAlign: 'right'}}>Total</span>
-          </div>
           {transaction.items.map((item, idx) => {
             const { name, notes } = formatItemDescription(item.description);
             return (
-              <div key={idx} style={{marginBottom: '2mm', borderBottom: '1px solid #eee', paddingBottom: '1mm'}}>
-                <div className="item-row uppercase bold" style={{fontSize: '11px'}}>
-                  <span style={{width: '40%'}}>{name}</span>
-                  <span style={{width: '10%', textAlign: 'center'}}>{item.quantity}</span>
-                  <span style={{width: '25%', textAlign: 'right'}}>₦{item.price.toLocaleString()}</span>
-                  <span style={{width: '25%', textAlign: 'right'}}>₦{item.total.toLocaleString()}</span>
+              <div key={idx} style={{marginBottom: '2mm'}}>
+                <div className="item-row">
+                  <span className="item-name uppercase bold">{name} x{item.quantity}</span>
+                  <span className="item-total">₦{item.total.toLocaleString()}</span>
                 </div>
-                {notes && <div style={{fontSize: '9px', fontStyle: 'italic', paddingLeft: '2mm', marginTop: '1mm'}}>* {notes.toUpperCase()}</div>}
+                {notes && <div style={{fontSize: '9px', fontStyle: 'italic', paddingLeft: '2mm'}}>* {notes.toUpperCase()}</div>}
               </div>
             );
           })}

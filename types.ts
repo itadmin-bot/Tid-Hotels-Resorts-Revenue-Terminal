@@ -191,29 +191,9 @@ export interface UserProfile {
   email: string;
   displayName: string;
   role: UserRole;
-  isAdmin?: boolean;
   domainVerified: boolean;
   lastActive?: number;
   onlineSince?: number;
   isOnline?: boolean;
   assignedUnit?: UnitType | 'ALL';
-}
-
-export enum LedgerType {
-  INCOME = 'INCOME',
-  EXPENSE = 'EXPENSE'
-}
-
-export interface LedgerEntry {
-  id: string;
-  type: LedgerType;
-  category: string;
-  amount: number;
-  description: string;
-  date: number;
-  recordedBy: string;
-  recordedById: string;
-  reference?: string;
-  createdAt: number;
-  updatedAt: number;
 }

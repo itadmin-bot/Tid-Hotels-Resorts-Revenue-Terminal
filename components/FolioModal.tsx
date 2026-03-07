@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, doc, writeBatch, increment, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, doc, writeBatch, increment } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
-import { BRAND } from '@/constants';
 import { formatToLocalDate } from '@/utils/dateUtils';
 import { 
   UserProfile, 
@@ -67,13 +66,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       console.error("FolioModal menu listener error:", err);
     });
 
-    const isAdminUser = user.isAdmin === true;
-    const transactionsRef = collection(db, 'transactions');
-    const qTransactions = isAdminUser 
-      ? query(transactionsRef, orderBy('createdAt', 'desc'))
-      : query(transactionsRef, where('userId', '==', user.uid));
-
-    const unsubTransactions = onSnapshot(qTransactions, (snapshot) => {
+    const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
       if (!isSubscribed) return;
       setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
     }, (err) => {

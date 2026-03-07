@@ -128,10 +128,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           const codeDoc = await getDoc(doc(db, 'accessCodes', 'master'));
           const masterCode = codeDoc.exists() ? codeDoc.data().code : DEFAULT_ADMIN_KEY;
           if (accessCode === masterCode) {
-            await updateDoc(doc(db, 'users', user.uid), { 
-              role: UserRole.ADMIN,
-              isAdmin: true 
-            });
+            await updateDoc(doc(db, 'users', user.uid), { role: UserRole.ADMIN });
           } else {
             setError('Invalid Admin Access Key.');
             setLoading(false);
@@ -162,7 +159,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           uid: userCredential.user.uid,
           email: userCredential.user.email,
           role: role,
-          isAdmin: role === UserRole.ADMIN,
           displayName: email.split('@')[0],
           createdAt: Date.now(),
           lastActive: Date.now(),
