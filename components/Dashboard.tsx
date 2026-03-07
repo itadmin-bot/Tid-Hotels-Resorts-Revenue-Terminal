@@ -37,20 +37,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
 
   useEffect(() => {
     let isSubscribed = true;
-    const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
+    const isAdminUser = user.isAdmin === true;
     const transactionsRef = collection(db, 'transactions');
     
     let q;
     if (isAdminUser) {
       q = query(transactionsRef, orderBy('createdAt', 'desc'));
     } else {
-      // Non-admin users see transactions for their assigned unit
-      if (user.assignedUnit && user.assignedUnit !== 'ALL') {
-        q = query(transactionsRef, where('unit', '==', user.assignedUnit));
-      } else {
-        // Fallback to transactions they created if no unit assigned
-        q = query(transactionsRef, where('createdBy', '==', user.uid));
-      }
+      // Non-admin users see their own transactions to comply with security rules
+      q = query(transactionsRef, where('userId', '==', user.uid));
     }
 
     const unsubscribe = onSnapshot(q as any, (snapshot: any) => {
@@ -272,7 +267,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
       <div className="no-print space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-white uppercase tracking-tight">LEDGER DASHBOARD</h1>
+            <h1 className="text-2xl font-black text-white uppercase tracking-tight">REVENUE TERMINAL</h1>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Revenue Authority Terminal • Online</p>
           </div>
           <div className="flex gap-2">
