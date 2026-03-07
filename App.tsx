@@ -6,6 +6,7 @@ import AuthScreen from '@/components/AuthScreen';
 import Dashboard from '@/components/Dashboard';
 import Sidebar from '@/components/Sidebar';
 import AdminPanel from '@/components/AdminPanel';
+import Ledger from '@/components/Ledger';
 import { UserProfile, UserRole, AppSettings, TaxConfig } from '@/types';
 import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '@/constants';
 
@@ -14,7 +15,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [activeView, setActiveView] = useState<'LEDGER' | 'ADMIN'>('LEDGER');
+  const [activeView, setActiveView] = useState<'TERMINAL' | 'LEDGER' | 'ADMIN'>('TERMINAL');
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
@@ -192,6 +193,7 @@ const App: React.FC = () => {
                   email: currentUser.email || '',
                   displayName: data.displayName || 'Operator',
                   role: (data.role as UserRole) || UserRole.STAFF,
+                  isAdmin: data.isAdmin ?? false,
                   domainVerified: currentUser.email?.endsWith(BRAND.domain) || false,
                   isOnline: data.isOnline ?? false,
                   lastActive: data.lastActive || Date.now(),
@@ -281,7 +283,9 @@ const App: React.FC = () => {
     <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white">
       <Sidebar user={userProfile!} settings={settings} activeView={activeView} onViewChange={setActiveView} />
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        {activeView === 'LEDGER' ? <Dashboard user={userProfile!} settings={settings} /> : <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
+        {activeView === 'TERMINAL' && <Dashboard user={userProfile!} settings={settings} />}
+        {activeView === 'LEDGER' && <Ledger user={userProfile!} settings={settings} />}
+        {activeView === 'ADMIN' && userProfile?.isAdmin && <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
       </main>
     </div>
   );

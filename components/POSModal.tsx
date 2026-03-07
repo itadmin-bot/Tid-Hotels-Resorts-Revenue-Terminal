@@ -451,7 +451,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                 {/* Financial Totals Block (Design Match) */}
                 <div className="pt-6 space-y-6 px-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest">GROSS LEDGER VAL</span>
+                    <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest">GROSS VALUATION</span>
                     <span className="text-sm font-black text-gray-400 tracking-tighter uppercase">₦{subtotalItems.toLocaleString()}</span>
                   </div>
                   

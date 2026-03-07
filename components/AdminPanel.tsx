@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
 import { db } from '../firebase';
+import { BRAND } from '../constants';
 import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction } from '../types';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 
@@ -119,7 +120,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       console.error("AdminPanel access code listener error:", err);
     });
 
-    const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
+    const isAdminUser = user.isAdmin === true;
+    const unsubTransactions = isAdminUser ? onSnapshot(collection(db, 'transactions'), (snapshot) => {
       if (!isSubscribed) return;
       const healedData = snapshot.docs.map(doc => {
         const t = { id: doc.id, ...doc.data() } as Transaction;
@@ -155,7 +157,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       setTransactions(healedData);
     }, (err) => {
       console.error("AdminPanel transactions listener error:", err);
-    });
+    }) : () => {};
 
     return () => { 
       isSubscribed = false;

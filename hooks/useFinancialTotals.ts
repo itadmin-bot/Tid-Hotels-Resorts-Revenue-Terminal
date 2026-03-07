@@ -13,7 +13,7 @@ export default function useFinancialTotals(user: UserProfile) {
   useEffect(() => {
     if (!user) return;
 
-    const isAdminUser = user.role === UserRole.ADMIN && user.email.endsWith(BRAND.domain);
+    const isAdminUser = user.isAdmin === true;
     const transactionsRef = collection(db, "transactions");
 
     // Base query: all transactions (filter deleted client-side to avoid index requirements)
@@ -21,11 +21,8 @@ export default function useFinancialTotals(user: UserProfile) {
     if (isAdminUser) {
       q = query(transactionsRef);
     } else {
-      if (user.assignedUnit && user.assignedUnit !== 'ALL') {
-        q = query(transactionsRef, where("unit", "==", user.assignedUnit));
-      } else {
-        q = query(transactionsRef, where("createdBy", "==", user.uid));
-      }
+      // Non-admin users see their own transactions to comply with security rules
+      q = query(transactionsRef, where("userId", "==", user.uid));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
