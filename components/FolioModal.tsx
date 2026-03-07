@@ -214,7 +214,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const netAfterDiscount = Math.max(0, subtotalItems - discount);
   
   // DYNAMIC TAX CALCULATION
-  const taxes = settings?.taxes || [];
+  const taxes = (settings?.taxes || []).filter(t => t.isActive !== false);
   const isInclusive = settings?.isTaxInclusive ?? true;
   const sumTaxRates = taxes.reduce((acc, t) => acc + Number(t.rate), 0);
 
@@ -341,6 +341,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         createdBy: user.uid,
         userId: user.uid,
         cashierName: user.displayName,
+        appliedTaxes: taxes,
+        isTaxInclusive: isInclusive,
         isDeleted: false,
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -564,7 +566,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                   <div className="text-sm font-black">₦{subtotalItems.toLocaleString()}</div>
                 </div>
                 <div className="w-1/2">
-                   <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Adjustment/Discount</div>
+                   <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Discount</div>
                    <input className="w-full bg-[#13263A] border border-gray-700 rounded p-2 text-xs font-black text-[#C8A862] outline-none" value={discount || ''} onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} />
                 </div>
               </div>

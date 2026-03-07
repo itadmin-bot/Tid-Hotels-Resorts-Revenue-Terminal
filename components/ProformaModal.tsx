@@ -90,7 +90,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
           if (existingTransaction.appliedTaxes) {
             setAppliedTaxes(existingTransaction.appliedTaxes);
           } else {
-            setAppliedTaxes(data.taxes.filter(t => t.visibleOnReceipt).map(t => ({ ...t })));
+            setAppliedTaxes(data.taxes.filter(t => t.isActive !== false).map(t => ({ ...t })));
           }
         }
       }
@@ -579,7 +579,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {settings?.taxes.map(tax => {
+                  {settings?.taxes.filter(t => t.isActive !== false).map(tax => {
                     const applied = appliedTaxes.find(t => t.id === tax.id);
                     return (
                       <div key={tax.id} className="flex flex-col gap-1">

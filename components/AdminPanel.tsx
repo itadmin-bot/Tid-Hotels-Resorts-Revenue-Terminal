@@ -187,7 +187,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       name: 'New Tax',
       rate: 0.01,
       type: 'OTHER',
-      visibleOnReceipt: true
+      visibleOnReceipt: true,
+      isActive: true
     };
     await handleUpdateSettings('taxes', [...settings.taxes, newTax]);
   };
@@ -1043,6 +1044,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                             <option value="SC">Service Charge</option>
                             <option value="OTHER">Other</option>
                           </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-gray-600 uppercase">Active</span>
+                          <button 
+                            onClick={() => handleUpdateTax(i, 'isActive', !tax.isActive)}
+                            className={`w-8 h-4 rounded-full relative transition-all ${tax.isActive !== false ? 'bg-[#C8A862]' : 'bg-gray-800'}`}
+                          >
+                            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${tax.isActive !== false ? 'left-4.5' : 'left-0.5'}`}></div>
+                          </button>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] font-black text-gray-600 uppercase">Show on Receipt</span>

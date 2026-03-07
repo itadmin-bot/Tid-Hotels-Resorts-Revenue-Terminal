@@ -71,6 +71,7 @@ export interface TaxConfig {
   rate: number;
   type: 'VAT' | 'SC' | 'OTHER';
   visibleOnReceipt: boolean;
+  isActive?: boolean;
   calculationType?: 'PERCENTAGE' | 'FIXED';
 }
 

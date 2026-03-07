@@ -120,7 +120,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
   const subtotalItems = cart.reduce((acc, c) => acc + (c.item.price * c.quantity), 0) + existingItems.reduce((acc, i) => acc + i.total, 0);
   const netAfterDiscount = Math.max(0, subtotalItems - discount);
   
-  const taxes = (settings?.taxes || []).filter(t => t.visibleOnReceipt);
+  const taxes = (settings?.taxes || []).filter(t => t.isActive !== false);
   const isInclusive = settings?.isTaxInclusive ?? true;
   const sumTaxRates = taxes.reduce((acc, t) => acc + t.rate, 0);
 
@@ -227,6 +227,8 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
         createdBy: existingTransaction?.createdBy || user.uid,
         userId: existingTransaction?.userId || user.uid,
         cashierName: user.displayName,
+        appliedTaxes: taxes,
+        isTaxInclusive: isInclusive,
         createdAt: existingTransaction?.createdAt || Date.now(),
         updatedAt: Date.now()
       };

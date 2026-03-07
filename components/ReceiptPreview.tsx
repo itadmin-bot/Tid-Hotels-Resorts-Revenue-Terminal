@@ -159,7 +159,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
     return { name: parts[0], notes: parts[1].replace(')', '') };
   };
 
-  const taxesToDisplay = settings.taxes.filter(t => t.visibleOnReceipt);
+  const taxesToDisplay = (transaction.appliedTaxes || settings.taxes).filter(t => t.visibleOnReceipt);
   const subtotalForReceipt = transaction.subtotal;
 
   return (
@@ -321,7 +321,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                     ))}
                     {transaction.discountAmount > 0 && (
                       <div className="flex justify-between text-xs font-bold uppercase text-red-500">
-                        <span>Adjustment:</span>
+                        <span>Discount:</span>
                         <span>-₦{transaction.discountAmount.toLocaleString()}</span>
                       </div>
                     )}
@@ -488,7 +488,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <div key={tax.id} className="total-row uppercase"><span>{tax.name}:</span> <span className="bold">₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span></div>
             ))}
             {transaction.discountAmount > 0 && (
-              <div className="total-row uppercase" style={{color: 'red'}}><span>Adjustment:</span> <span className="bold">-₦{transaction.discountAmount.toLocaleString()}</span></div>
+              <div className="total-row uppercase" style={{color: 'red'}}><span>Discount:</span> <span className="bold">-₦{transaction.discountAmount.toLocaleString()}</span></div>
             )}
             <div className="total-row grand-total uppercase"><span>Total Amount:</span> <span>₦{transaction.totalAmount.toLocaleString()}</span></div>
             <div className="total-row uppercase" style={{fontSize: '14px', color: '#008000'}}><span>Amount Paid:</span> <span className="bold">₦{transaction.paidAmount.toLocaleString()}</span></div>
