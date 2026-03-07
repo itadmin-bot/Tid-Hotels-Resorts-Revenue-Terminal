@@ -8,8 +8,8 @@ import { BRAND } from '@/constants';
 interface SidebarProps {
   user: UserProfile;
   settings: AppSettings | null;
-  activeView: 'LEDGER' | 'ADMIN';
-  onViewChange: (view: 'LEDGER' | 'ADMIN') => void;
+  activeView: 'DASHBOARD' | 'ADMIN';
+  onViewChange: (view: 'DASHBOARD' | 'ADMIN') => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewChange }) => {
@@ -43,13 +43,13 @@ const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewCha
 
       <nav className="flex-1 space-y-2">
         <button 
-          onClick={() => onViewChange('LEDGER')}
+          onClick={() => onViewChange('DASHBOARD')}
           className={`w-full flex items-center gap-3 px-4 py-3 font-bold rounded-lg transition-all ${
-            activeView === 'LEDGER' ? 'bg-[#C8A862] text-[#0B1C2D]' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+            activeView === 'DASHBOARD' ? 'bg-[#C8A862] text-[#0B1C2D]' : 'text-gray-400 hover:bg-white/5 hover:text-white'
           }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-          Ledger
+          Dashboard
         </button>
 
         {user.role === UserRole.ADMIN && (

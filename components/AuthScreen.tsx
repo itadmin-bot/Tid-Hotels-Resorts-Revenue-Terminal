@@ -257,7 +257,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           {error && <p className="text-red-400 text-[11px] font-bold bg-red-900/10 py-2 rounded border border-red-500/20">{error}</p>}
           {info && <p className="text-[#C8A862] text-[11px] font-bold bg-[#C8A862]/10 py-2 rounded border border-[#C8A862]/20">{info}</p>}
         </div>
-        <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Revenue Terminal v2.9.1</p>
+        <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Management System v2.9.1</p>
       </div>
     );
   }
@@ -268,11 +268,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
         <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-red-500/20 shadow-2xl backdrop-blur-md space-y-6 mb-8">
           <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Domain Access Denied</h2>
           <p className="text-gray-400 text-xs leading-relaxed">
-            The TIDÈ Revenue Terminal is strictly for internal staff. Please sign in with an official <span className="text-[#C8A862]">{BRAND.domain}</span> account.
+            The TIDÈ Management System is strictly for internal staff. Please sign in with an official <span className="text-[#C8A862]">{BRAND.domain}</span> account.
           </p>
           <button onClick={() => signOut(auth)} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg uppercase text-xs tracking-widest">Return to Gateway</button>
         </div>
-        <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Revenue Terminal v2.9.1</p>
+        <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Management System v2.9.1</p>
       </div>
     );
   }
@@ -363,7 +363,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
           {info && <p className="text-[#C8A862] text-[11px] text-center font-bold bg-[#C8A862]/10 py-2 rounded border border-[#C8A862]/20">{info}</p>}
 
           <button type="submit" disabled={loading} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all uppercase tracking-[0.2em] shadow-xl text-xs active:scale-[0.98]">
-            {loading ? 'Processing...' : (view === 'SIGN_IN' ? 'Sign In to Terminal' : view === 'SIGN_UP' ? 'Register Operator' : 'Send Reset Link')}
+            {loading ? 'Processing...' : (view === 'SIGN_IN' ? 'Sign In' : view === 'SIGN_UP' ? 'Register Operator' : 'Send Reset Link')}
           </button>
 
           {view === 'FORGOT_PASSWORD' && (
@@ -386,14 +386,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
 
               <div className="text-center pt-4">
                 <button type="button" onClick={() => setView(view === 'SIGN_IN' ? 'SIGN_UP' : 'SIGN_IN')} className="text-gray-400 text-xs font-semibold hover:text-[#C8A862] transition-colors tracking-tight">
-                  {view === 'SIGN_IN' ? "New terminal operator? Create account" : "Existing operator? Sign in"}
+                  {view === 'SIGN_IN' ? "New operator? Create account" : "Existing operator? Sign in"}
                 </button>
               </div>
             </>
           )}
         </form>
       </div>
-      <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Revenue Terminal v2.9.1</p>
+      <p className="text-[10px] text-gray-600 uppercase tracking-[0.6em] font-bold pb-8">Management System v2.9.1</p>
     </div>
   );
 };

@@ -281,7 +281,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
               <span className="text-lg font-black uppercase tracking-widest group-hover:scale-110 block transition-transform">WHISPERS UNIT</span>
             </button>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xs font-black uppercase tracking-widest">Close Terminal</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-xs font-black uppercase tracking-widest">Close</button>
         </div>
       </div>
     );
@@ -303,7 +303,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-black text-white uppercase tracking-tighter">WALK-IN POS DISPATCH</h2>
-                <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mt-1">Terminal Session: <span className="text-[#C8A862]">{unit} Unit</span> (LOCKED)</p>
+                <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mt-1">Session: <span className="text-[#C8A862]">{unit} Unit</span> (LOCKED)</p>
               </div>
               <div className="flex bg-[#13263A] p-1 rounded-xl border border-white/5">
                 <button onClick={() => setMenuFilter('ALL')} className={`px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${menuFilter === 'ALL' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-white'}`}>Global Menu</button>

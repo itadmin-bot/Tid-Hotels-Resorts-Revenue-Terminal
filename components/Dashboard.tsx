@@ -273,7 +273,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-white uppercase tracking-tight">LEDGER DASHBOARD</h1>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Revenue Authority Terminal • Online</p>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Management System • Online</p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => setShowPOS(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Walk-In POS</button>
@@ -287,7 +287,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
           <div className="flex-1 min-w-[150px] space-y-1">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
               <Search className="w-4 h-4 text-[#EAD8B1]" />
-              Search Terminal
+              Search Records
             </label>
             <div className="relative">
               <input 
@@ -422,7 +422,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                 <th className="px-6 py-5">Items Sold</th>
                 <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('totalAmount')}>Financial Summary</th>
                 <th className="px-6 py-5 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>Status</th>
-                <th className="px-6 py-5 text-right">Terminal Actions</th>
+                <th className="px-6 py-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/30">

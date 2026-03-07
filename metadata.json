@@ -1,5 +1,5 @@
 {
-  "name": "Tidé Hotels & Resorts Revenue Terminal",
-  "description": "Production-grade Revenue Authority Terminal for Ledger, POS, and Folio management with Firebase integration.",
+  "name": "Tidé Hotels & Resorts Management",
+  "description": "Production-grade Management System for POS and Folio management with Firebase integration.",
   "requestFramePermissions": []
 }

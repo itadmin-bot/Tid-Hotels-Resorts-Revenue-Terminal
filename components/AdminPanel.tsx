@@ -407,7 +407,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     }}
                     className="px-6 py-2 bg-blue-600/10 border border-blue-600/30 text-blue-400 rounded-lg text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all h-[38px]"
                   >
-                    Export Ledger
+                    Export Data
                   </button>
                   <button 
                     onClick={() => {
@@ -1146,7 +1146,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 </tbody>
               </table>
               {users.length === 0 && (
-                <div className="py-20 text-center text-gray-600 font-black uppercase tracking-[0.5em] italic">No Terminal Operators Registered</div>
+                <div className="py-20 text-center text-gray-600 font-black uppercase tracking-[0.5em] italic">No Operators Registered</div>
               )}
             </div>
           </div>

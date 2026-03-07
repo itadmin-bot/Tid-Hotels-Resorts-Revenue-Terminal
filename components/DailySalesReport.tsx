@@ -155,7 +155,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
       {loading ? (
         <div className="py-20 text-center">
           <div className="animate-spin w-10 h-10 border-4 border-[#C8A862] border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-500 font-black uppercase tracking-[0.2em] text-xs">Compiling Ledger Data...</p>
+          <p className="text-gray-500 font-black uppercase tracking-[0.2em] text-xs">Compiling Data...</p>
         </div>
       ) : (
         <>
@@ -218,7 +218,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                       <th className="p-4">Method</th>
                       <th className="p-4">Status</th>
                       <th className="p-4 text-right">Amount (₦)</th>
-                      <th className="p-4 text-right">Terminal Actions</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-700/20">

@@ -14,7 +14,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [activeView, setActiveView] = useState<'LEDGER' | 'ADMIN'>('LEDGER');
+  const [activeView, setActiveView] = useState<'DASHBOARD' | 'ADMIN'>('DASHBOARD');
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
@@ -86,7 +86,7 @@ const App: React.FC = () => {
           proformaBanks: data.proformaBanks || []
         };
         setSettings(updatedSettings);
-        document.title = `${updatedSettings.hotelName} - Revenue Terminal`;
+        document.title = `${updatedSettings.hotelName} - Management System`;
       }
     }, (err) => {
       console.error("Settings snapshot listener error:", err);
@@ -108,7 +108,7 @@ const App: React.FC = () => {
     const userRef = doc(db, 'users', user.uid);
     const now = Date.now();
 
-    // Ensure session start is captured immediately for the live terminal list
+    // Ensure session start is captured immediately for the live dashboard list
     const sessionData: any = { 
       isOnline: true, 
       lastActive: now
@@ -180,7 +180,7 @@ const App: React.FC = () => {
               } catch (err: any) {
                 console.error("Profile Creation Error:", err);
                 if (isMounted) {
-                  setSyncError("Terminal Access Denied");
+                  setSyncError("System Access Denied");
                   setLoading(false);
                 }
               }
@@ -206,7 +206,7 @@ const App: React.FC = () => {
             if (isMounted) {
               // If it's a transient error, we might not want to show a hard error screen immediately
               // but for profile, it's critical.
-              setSyncError("Terminal Connection Lost - Retrying...");
+              setSyncError("System Connection Lost - Retrying...");
               // Attempt to recover loading state if it was critical
               setLoading(false);
             }
@@ -214,7 +214,7 @@ const App: React.FC = () => {
         } catch (err) {
           console.error("Failed to setup profile listener:", err);
           if (isMounted) {
-            setSyncError("Failed to initialize terminal");
+            setSyncError("Failed to initialize system");
             setLoading(false);
           }
         }
@@ -253,7 +253,7 @@ const App: React.FC = () => {
             <div className="absolute top-0 left-0 h-full bg-[#C8A862] animate-progress w-2/3"></div>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-[#C8A862] uppercase tracking-[0.5em] font-bold">Initializing Revenue Module</p>
+            <p className="text-[10px] text-[#C8A862] uppercase tracking-[0.5em] font-bold">Initializing System Module</p>
           </div>
           <button onClick={handleForceReset} className="mt-8 text-[9px] text-gray-700 hover:text-white uppercase tracking-widest font-bold border-b border-gray-900 transition-all py-1">System Reset</button>
         </div>
@@ -267,7 +267,7 @@ const App: React.FC = () => {
       <div className="flex h-screen items-center justify-center bg-[#0B1C2D]">
         <div className="max-w-md w-full p-10 bg-[#13263A] rounded-3xl border border-red-500/20 text-center space-y-6">
           <h2 className="text-xl font-bold text-white uppercase">Sync Failure</h2>
-          <p className="text-gray-400 text-xs">{syncError || "Terminal disconnected"}</p>
+          <p className="text-gray-400 text-xs">{syncError || "System disconnected"}</p>
           <button onClick={() => window.location.reload()} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-bold rounded-xl uppercase text-xs tracking-widest">Retry Connection</button>
         </div>
       </div>
@@ -281,7 +281,7 @@ const App: React.FC = () => {
     <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white">
       <Sidebar user={userProfile!} settings={settings} activeView={activeView} onViewChange={setActiveView} />
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        {activeView === 'LEDGER' ? <Dashboard user={userProfile!} settings={settings} /> : <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
+        {activeView === 'DASHBOARD' ? <Dashboard user={userProfile!} settings={settings} /> : <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
       </main>
     </div>
   );
