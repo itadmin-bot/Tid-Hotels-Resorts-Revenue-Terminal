@@ -63,8 +63,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
       .bold { font-weight: 900 !important; }
       .uppercase { text-transform: uppercase !important; }
       .divider { border-top: 1px dashed #000; margin: 3mm 0; width: 100%; }
-      .item-row { display: grid; grid-template-columns: 2fr 0.5fr 1.2fr 1.2fr; gap: 1mm; align-items: flex-start; margin-bottom: 1.5mm; }
-      .item-name { text-align: left; }
+      .item-row { display: grid; grid-template-columns: 2fr 0.5fr 1.2fr 1.2fr; gap: 1mm; align-items: flex-start; margin-bottom: 1.5mm; word-wrap: break-word; }
+      .item-name { text-align: left; word-wrap: break-word; overflow-wrap: break-word; }
       .item-qty { text-align: center; }
       .item-price { text-align: right; }
       .item-total { text-align: right; font-weight: bold; }
@@ -201,6 +201,9 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   </div>
                   <div className="text-[10px] font-black uppercase mt-1">Guest: {transaction.guestName}</div>
                   <div className="text-[10px] font-bold uppercase">Operator: {transaction.cashierName}</div>
+                  {transaction.settlementMethod && (
+                    <div className="text-[10px] font-bold uppercase">Payment: {transaction.settlementMethod}</div>
+                  )}
                   <div className="border-b border-black border-dashed my-3"></div>
                   <div className="space-y-2 mb-4">
                     <div className="grid grid-cols-[2fr_0.5fr_1.2fr_1.2fr] gap-1 text-[10px] font-black uppercase border-b border-black border-dashed pb-1 mb-2">
@@ -214,7 +217,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       return (
                         <div key={idx}>
                           <div className="grid grid-cols-[2fr_0.5fr_1.2fr_1.2fr] gap-1 text-[11px] font-bold uppercase">
-                            <span className="truncate">{name}</span>
+                            <span className="break-words">{name}</span>
                             <span className="text-center">{item.quantity}</span>
                             <span className="text-right">₦{item.price.toLocaleString()}</span>
                             <span className="text-right">₦{item.total.toLocaleString()}</span>
@@ -258,6 +261,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                         <p><span className="text-gray-400">Reference:</span> {transaction.reference}</p>
                         {transaction.orderReference && <p><span className="text-gray-400">Order Ref:</span> {transaction.orderReference}</p>}
                         <p><span className="text-gray-400">Date Issued:</span> {formatDate(transaction.createdAt)} {formatTime(transaction.createdAt)}</p>
+                        <p><span className="text-gray-400">Payment:</span> {transaction.settlementMethod || 'N/A'}</p>
                         <p><span className="text-gray-400">Served by:</span> {transaction.cashierName}</p>
                       </div>
                     </div>
@@ -398,6 +402,11 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             <span>UNIT: {transaction.unit?.toUpperCase() || 'GENERAL'}</span>
             <span>OP: {transaction.cashierName.toUpperCase()}</span>
           </div>
+          {transaction.settlementMethod && (
+            <div className="item-row uppercase bold" style={{fontSize: '10px'}}>
+              <span>PAYMENT: {transaction.settlementMethod.toUpperCase()}</span>
+            </div>
+          )}
           <div className="divider"></div>
           <div className="item-row uppercase bold" style={{fontSize: '10px', borderBottom: '1px dashed #000', paddingBottom: '1mm', marginBottom: '2mm'}}>
             <span className="item-name">ITEM</span>
@@ -454,6 +463,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <div className="meta-row uppercase">Ref: {transaction.reference}</div>
               {transaction.orderReference && <div className="meta-row uppercase">Order Ref: {transaction.orderReference}</div>}
               <div className="meta-row uppercase">Date: {formatDate(transaction.createdAt)} {formatTime(transaction.createdAt)}</div>
+              <div className="meta-row uppercase">Payment: {transaction.settlementMethod || 'N/A'}</div>
               <div className="meta-row uppercase">Served by: {transaction.cashierName}</div>
             </div>
           </div>
@@ -491,7 +501,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
             <tbody>
               {transaction.items.map((item, idx) => (
                 <tr key={idx}>
-                  <td className="uppercase bold" style={{wordBreak: 'break-all'}}>{item.description}</td>
+                  <td className="uppercase bold" style={{overflowWrap: 'break-word', wordWrap: 'break-word'}}>{item.description}</td>
                   <td className="bold" style={{textAlign: 'center'}}>{item.quantity}</td>
                   <td className="bold" style={{textAlign: 'right'}}>{item.price.toLocaleString()}</td>
                   <td className="bold" style={{textAlign: 'right'}}>{item.total.toLocaleString()}</td>
