@@ -463,7 +463,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                     <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={booking.roomId} onChange={(e) => updateBooking(idx, 'roomId', e.target.value)}>
                       <option value="" disabled>Select Room Type</option>
                       {rooms.map(r => (
-                        <option key={r.id} value={r.id}>{r.name} ({r.type}) - {r.currency === Currency.USD ? '$' : '₦'}{r.price.toLocaleString()}/night</option>
+                        <option key={r.id} value={r.id}>{r.name} ({r.type}) - {currencySymbol}{r.price.toLocaleString()}/night</option>
                       ))}
                     </select>
                   </div>
@@ -512,7 +512,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                 >
                   <option value="" disabled>Add from Menu</option>
                   {menuItems.map(m => (
-                    <option key={m.id} value={m.id}>{m.name} ({m.currency === Currency.USD ? '$' : '₦'}{m.price.toLocaleString()})</option>
+                    <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()})</option>
                   ))}
                 </select>
                 <button onClick={() => addCharge()} className="px-3 py-1.5 border border-[#C8A862] bg-[#C8A862]/10 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/20 transition-all">+ Add Flexible Charge</button>

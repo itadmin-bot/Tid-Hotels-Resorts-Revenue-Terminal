@@ -40,7 +40,6 @@ export interface Room {
   name: string;
   type: string;
   price: number;
-  currency: Currency;
   description?: string;
   totalInventory: number;
   bookedCount: number;
@@ -51,7 +50,6 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
-  currency: Currency;
   category: string;
   unit: UnitType | 'ALL';
   imageUrl?: string;

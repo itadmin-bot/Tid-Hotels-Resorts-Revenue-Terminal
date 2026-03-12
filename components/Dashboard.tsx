@@ -31,7 +31,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   const [unitFilter, setUnitFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
-  const [currencyFilter, setCurrencyFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,9 +108,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
       // Method Filtering
       if (methodFilter !== 'ALL' && t.settlementMethod !== methodFilter) return false;
 
-      // Currency Filtering
-      if (currencyFilter !== 'ALL' && (t.currency || Currency.NGN) !== currencyFilter) return false;
-
       // Date Range Filtering
       if (dateRange.start || dateRange.end) {
         const tDate = formatToLocalDate(t.createdAt);
@@ -146,7 +142,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
 
   const downloadReport = () => {
     // Adding 'Payment Method' and explicit 'Transaction Date' for enhanced compliance
-    const headers = ['Reference', 'Transaction Date', 'Time', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Currency', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
+    const headers = ['Reference', 'Transaction Date', 'Time', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
     const rows = filteredTransactions.map(t => {
       return [
         `"${t.reference}"`,
@@ -157,7 +153,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
         t.source || 'App',
         `"${t.guestName}"`,
         `"${t.items.map(i => `${i.description} (x${i.quantity})`).join('; ')}"`,
-        t.currency || Currency.NGN,
         t.totalAmount,
         t.paidAmount,
         t.balance,
@@ -179,7 +174,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   };
 
   const downloadInventoryReport = () => {
-    const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Par Stock', 'Min Order (Par)', 'Min Order (Total)', 'Audit Status', 'Currency', 'Price', 'Total Item Revenue'];
+    const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Par Stock', 'Min Order (Par)', 'Min Order (Total)', 'Audit Status', 'Price (N)', 'Total Item Revenue (N)'];
     
     // Filter items based on the active unit filter
     const itemsToExport = menuItems.filter(m => {
@@ -207,7 +202,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
         m.minOrderLevelPar || 0,
         m.minOrderLevelTotal || 0,
         auditStatus,
-        m.currency || Currency.NGN,
         m.price,
         sold * m.price
       ];
@@ -357,18 +351,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
             </select>
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Currency</label>
-            <select 
-              className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
-              value={currencyFilter}
-              onChange={(e) => setCurrencyFilter(e.target.value)}
-            >
-              <option value="ALL">All Currencies</option>
-              <option value={Currency.NGN}>Naira (₦)</option>
-              <option value={Currency.USD}>Dollar ($)</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-[150px] space-y-1">
             <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
               <Calendar className="w-5 h-5 text-[#EAD8B1]" />
               Start Date
@@ -406,7 +388,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                 setUnitFilter('ALL'); 
                 setStatusFilter('ALL');
                 setMethodFilter('ALL');
-                setCurrencyFilter('ALL');
                 setSearchQuery('');
               }}
               className="px-4 py-2 bg-gray-800 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-gray-700 transition-all border border-gray-700"

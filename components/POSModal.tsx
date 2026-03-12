@@ -364,7 +364,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                     {item.description && <div className="text-[10px] text-gray-600 font-medium italic line-clamp-2 leading-relaxed">{item.description}</div>}
                   </div>
                   <div className="mt-6 flex items-end justify-between">
-                    <div className="text-lg font-black text-white">{item.currency === Currency.USD ? '$' : '₦'}{item.price.toLocaleString()}</div>
+                    <div className="text-lg font-black text-white">{currencySymbol}{item.price.toLocaleString()}</div>
                     {!isOut && <div className="w-10 h-10 rounded-2xl bg-[#C8A862]/10 border border-[#C8A862]/20 flex items-center justify-center text-[#C8A862] group-hover:bg-[#C8A862] group-hover:text-[#0B1C2D] transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4"></path></svg></div>}
                   </div>
                 </button>
@@ -411,10 +411,10 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
               
               {cart.map(c => (
                 <div key={c.item.id} className="flex items-center gap-4 bg-white/[0.03] p-4 rounded-2xl border border-white/5 relative group transition-all hover:bg-white/[0.05]">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-black text-white uppercase truncate">{c.item.name}</div>
-                        <div className="text-[10px] text-gray-500 font-bold mt-0.5">{c.item.currency === Currency.USD ? '$' : '₦'}{c.item.price.toLocaleString()}</div>
-                      </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-black text-white uppercase truncate">{c.item.name}</div>
+                    <div className="text-[10px] text-gray-500 font-bold mt-0.5">{currencySymbol}{c.item.price.toLocaleString()}</div>
+                  </div>
                   <div className="flex items-center gap-2 bg-[#0B1C2D] rounded-xl p-1 border border-white/5">
                     <button onClick={() => updateQuantity(c.item.id, c.quantity - 1)} className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-gray-400 transition-colors">-</button>
                     <span className="text-[11px] font-black w-6 text-center text-white">{c.quantity}</span>
