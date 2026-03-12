@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/firebase';
-import { Transaction, UnitType, AppSettings, BankAccount, TaxConfig } from '@/types';
+import { Transaction, UnitType, AppSettings, BankAccount, TaxConfig, Currency } from '@/types';
 import { BRAND, ZENZA_BANK, WHISPERS_BANK, INVOICE_BANKS } from '@/constants';
 import { formatDate, formatTime } from '@/utils/dateUtils';
 import { Printer, Download, X } from 'lucide-react';
@@ -163,6 +163,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
 
   const taxesToDisplay = (transaction.appliedTaxes || settings.taxes).filter(t => t.visibleOnReceipt);
   const subtotalForReceipt = transaction.subtotal;
+  const currencySymbol = transaction.currency === Currency.USD ? '$' : '₦';
 
   return (
     <>
@@ -219,8 +220,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                           <div className="grid grid-cols-[2fr_0.5fr_1.2fr_1.2fr] gap-1 text-[11px] font-bold uppercase">
                             <span className="break-words">{name}</span>
                             <span className="text-center">{item.quantity}</span>
-                            <span className="text-right">₦{item.price.toLocaleString()}</span>
-                            <span className="text-right">₦{item.total.toLocaleString()}</span>
+                            <span className="text-right">{currencySymbol}{item.price.toLocaleString()}</span>
+                            <span className="text-right">{currencySymbol}{item.total.toLocaleString()}</span>
                           </div>
                           {notes && <div className="text-[9px] text-gray-500 italic">* {notes}</div>}
                         </div>
@@ -229,13 +230,13 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   </div>
                   <div className="border-y border-black py-2 my-3 flex justify-between text-lg font-black uppercase">
                     <span>TOTAL:</span>
-                    <span>₦{transaction.totalAmount.toLocaleString()}</span>
+                    <span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span>
                   </div>
                   <div className="space-y-1 mb-4">
                     {taxesToDisplay.map(tax => (
                       <div key={tax.id} className="flex justify-between text-[10px] font-bold uppercase">
                         <span>{tax.name}:</span>
-                        <span>₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
+                        <span>{currencySymbol}{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -306,8 +307,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <tr className="bg-gray-50">
                         <th className="text-left py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Description of Service</th>
                         <th className="text-center py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Qty</th>
-                        <th className="text-right py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Rate (₦)</th>
-                        <th className="text-right py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Amount (₦)</th>
+                        <th className="text-right py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Rate ({currencySymbol})</th>
+                        <th className="text-right py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Amount ({currencySymbol})</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -325,31 +326,31 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                   <div className="ml-auto w-72 space-y-2 border-t-2 border-black pt-4">
                     <div className="flex justify-between text-xs font-bold uppercase">
                       <span className="text-gray-400">Subtotal:</span>
-                      <span>₦{subtotalForReceipt.toLocaleString()}</span>
+                      <span>{currencySymbol}{subtotalForReceipt.toLocaleString()}</span>
                     </div>
                     {taxesToDisplay.map(tax => (
                       <div key={tax.id} className="flex justify-between text-xs font-bold uppercase">
                         <span className="text-gray-400">{tax.name}:</span>
-                        <span>₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
+                        <span>{currencySymbol}{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
                       </div>
                     ))}
                     {transaction.discountAmount > 0 && (
                       <div className="flex justify-between text-xs font-bold uppercase text-red-500">
                         <span>Discount:</span>
-                        <span>-₦{transaction.discountAmount.toLocaleString()}</span>
+                        <span>-{currencySymbol}{transaction.discountAmount.toLocaleString()}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-xl font-black uppercase pt-4 border-t border-gray-100">
                       <span>Total:</span>
-                      <span>₦{transaction.totalAmount.toLocaleString()}</span>
+                      <span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm font-black uppercase text-green-600 pt-1">
                       <span>Paid:</span>
-                      <span>₦{transaction.paidAmount.toLocaleString()}</span>
+                      <span>{currencySymbol}{transaction.paidAmount.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-lg font-black uppercase text-red-600 pt-2 border-t border-gray-100">
                       <span>Balance:</span>
-                      <span>₦{transaction.balance.toLocaleString()}</span>
+                      <span>{currencySymbol}{transaction.balance.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -411,8 +412,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           <div className="item-row uppercase bold" style={{fontSize: '10px', borderBottom: '1px dashed #000', paddingBottom: '1mm', marginBottom: '2mm'}}>
             <span className="item-name">ITEM</span>
             <span className="item-qty" style={{textAlign: 'center'}}>QTY</span>
-            <span className="item-price" style={{textAlign: 'right'}}>UNIT</span>
-            <span className="item-total">TOTAL</span>
+            <span className="item-price" style={{textAlign: 'right'}}>UNIT ({currencySymbol})</span>
+            <span className="item-total">TOTAL ({currencySymbol})</span>
           </div>
           {transaction.items.map((item, idx) => {
             const { name, notes } = formatItemDescription(item.description);
@@ -421,8 +422,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                 <div className="item-row">
                   <span className="item-name uppercase bold">{name}</span>
                   <span className="item-qty" style={{textAlign: 'center'}}>{item.quantity}</span>
-                  <span className="item-price" style={{textAlign: 'right'}}>₦{item.price.toLocaleString()}</span>
-                  <span className="item-total">₦{item.total.toLocaleString()}</span>
+                  <span className="item-price" style={{textAlign: 'right'}}>{currencySymbol}{item.price.toLocaleString()}</span>
+                  <span className="item-total">{currencySymbol}{item.total.toLocaleString()}</span>
                 </div>
                 {notes && <div style={{fontSize: '9px', fontStyle: 'italic', paddingLeft: '2mm'}}>* {notes.toUpperCase()}</div>}
               </div>
@@ -431,13 +432,13 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           <div className="divider" style={{borderStyle: 'dotted'}}></div>
           <div className="total-box uppercase">
             <span>TOTAL:</span>
-            <span>₦{transaction.totalAmount.toLocaleString()}</span>
+            <span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span>
           </div>
           <div style={{marginBottom: '3mm'}}>
             {taxesToDisplay.map(tax => (
               <div key={tax.id} className="item-row uppercase bold" style={{fontSize: '10px'}}>
                 <span>{tax.name}:</span>
-                <span>₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
+                <span>{currencySymbol}{(subtotalForReceipt * tax.rate).toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -494,8 +495,8 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <tr>
                 <th style={{width: '50%'}}>Service Description</th>
                 <th style={{textAlign: 'center', width: '10%'}}>Qty</th>
-                <th style={{textAlign: 'right', width: '20%'}}>Rate (₦)</th>
-                <th style={{textAlign: 'right', width: '20%'}}>Amount (₦)</th>
+                <th style={{textAlign: 'right', width: '20%'}}>Rate ({currencySymbol})</th>
+                <th style={{textAlign: 'right', width: '20%'}}>Amount ({currencySymbol})</th>
               </tr>
             </thead>
             <tbody>
@@ -511,16 +512,16 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
           </table>
 
           <div className="totals">
-            <div className="total-row uppercase"><span>Subtotal:</span> <span className="bold">₦{subtotalForReceipt.toLocaleString()}</span></div>
+            <div className="total-row uppercase"><span>Subtotal:</span> <span className="bold">{currencySymbol}{subtotalForReceipt.toLocaleString()}</span></div>
             {taxesToDisplay.map(tax => (
-              <div key={tax.id} className="total-row uppercase"><span>{tax.name}:</span> <span className="bold">₦{(subtotalForReceipt * tax.rate).toLocaleString()}</span></div>
+              <div key={tax.id} className="total-row uppercase"><span>{tax.name}:</span> <span className="bold">{currencySymbol}{(subtotalForReceipt * tax.rate).toLocaleString()}</span></div>
             ))}
             {transaction.discountAmount > 0 && (
-              <div className="total-row uppercase" style={{color: 'red'}}><span>Discount:</span> <span className="bold">-₦{transaction.discountAmount.toLocaleString()}</span></div>
+              <div className="total-row uppercase" style={{color: 'red'}}><span>Discount:</span> <span className="bold">-{currencySymbol}{transaction.discountAmount.toLocaleString()}</span></div>
             )}
-            <div className="total-row grand-total uppercase"><span>Total Amount:</span> <span>₦{transaction.totalAmount.toLocaleString()}</span></div>
-            <div className="total-row uppercase" style={{fontSize: '14px', color: '#008000'}}><span>Amount Paid:</span> <span className="bold">₦{transaction.paidAmount.toLocaleString()}</span></div>
-            <div className="total-row uppercase" style={{fontSize: '16px', color: 'red', borderTop: '1px solid #eee', marginTop: '2mm', paddingTop: '2mm'}}><span>Outstanding:</span> <span>₦{transaction.balance.toLocaleString()}</span></div>
+            <div className="total-row grand-total uppercase"><span>Total Amount:</span> <span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span></div>
+            <div className="total-row uppercase" style={{fontSize: '14px', color: '#008000'}}><span>Amount Paid:</span> <span className="bold">{currencySymbol}{transaction.paidAmount.toLocaleString()}</span></div>
+            <div className="total-row uppercase" style={{fontSize: '16px', color: 'red', borderTop: '1px solid #eee', marginTop: '2mm', paddingTop: '2mm'}}><span>Outstanding:</span> <span>{currencySymbol}{transaction.balance.toLocaleString()}</span></div>
           </div>
 
           <div className="footer">

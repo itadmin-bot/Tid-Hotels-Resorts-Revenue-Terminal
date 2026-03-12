@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Transaction, AppSettings, BankAccount } from '@/types';
+import { Transaction, AppSettings, BankAccount, Currency } from '@/types';
 import { BRAND } from '@/constants';
 import { Printer, Download, X } from 'lucide-react';
 import { printProformaInvoice } from '@/utils/proformaPrint';
@@ -14,6 +14,7 @@ interface ProformaPreviewProps {
 const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const currencySymbol = transaction.currency === Currency.USD ? '$' : '₦';
 
   const handlePrint = () => {
     printProformaInvoice(transaction, settings);
@@ -150,9 +151,9 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                     <td className="border border-black p-1 text-left">{item.description}</td>
                     <td className="border border-black p-1">{item.qty}</td>
                     <td className="border border-black p-1">{item.noOfDays}</td>
-                    <td className="border border-black p-1 text-right">₦{item.unitRate.toLocaleString()}</td>
-                    <td className="border border-black p-1 text-right">₦{item.discountedRate.toLocaleString()}</td>
-                    <td className="border border-black p-1 text-right font-bold">₦{item.total.toLocaleString()}</td>
+                    <td className="border border-black p-1 text-right">{currencySymbol}{item.unitRate.toLocaleString()}</td>
+                    <td className="border border-black p-1 text-right">{currencySymbol}{item.discountedRate.toLocaleString()}</td>
+                    <td className="border border-black p-1 text-right font-bold">{currencySymbol}{item.total.toLocaleString()}</td>
                     <td className="border border-black p-1 text-left text-[7pt]">{item.comments}</td>
                   </tr>
                 ))}
@@ -191,9 +192,9 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                     <td className="border border-black p-1 text-left">{item.description}</td>
                     <td className="border border-black p-1">{item.qty}</td>
                     <td className="border border-black p-1">{item.duration}</td>
-                    <td className="border border-black p-1 text-right">₦{item.unitRate.toLocaleString()}</td>
-                    <td className="border border-black p-1 text-right">₦{item.discountedRate.toLocaleString()}</td>
-                    <td className="border border-black p-1 text-right font-bold">₦{item.total.toLocaleString()}</td>
+                    <td className="border border-black p-1 text-right">{currencySymbol}{item.unitRate.toLocaleString()}</td>
+                    <td className="border border-black p-1 text-right">{currencySymbol}{item.discountedRate.toLocaleString()}</td>
+                    <td className="border border-black p-1 text-right font-bold">{currencySymbol}{item.total.toLocaleString()}</td>
                     <td className="border border-black p-1 text-left text-[7pt]">{item.comment}</td>
                   </tr>
                 ))}
@@ -206,7 +207,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             <div className="w-64 space-y-1 text-[9pt]">
               <div className="flex justify-between border-b border-black pb-1">
                 <span className="font-bold uppercase">SUB TOTAL</span>
-                <span className="font-black">₦{transaction.subtotal.toLocaleString()}</span>
+                <span className="font-black">{currencySymbol}{transaction.subtotal.toLocaleString()}</span>
               </div>
               <div className="text-[7pt] text-gray-500 italic text-right mb-1">
                 {transaction.isTaxInclusive ? '* All prices are tax-inclusive' : '* Taxes are added to subtotal'}
@@ -215,20 +216,20 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                 transaction.appliedTaxes.filter(t => t.visibleOnReceipt).map((tax, idx) => (
                   <div key={idx} className="flex justify-between border-b border-black pb-1">
                     <span className="font-bold uppercase">{tax.name} ({tax.calculationType === 'FIXED' ? 'Fixed' : `${(tax.rate * 100).toFixed(1)}%`})</span>
-                    <span className="font-black">₦{(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
+                    <span className="font-black">{currencySymbol}{(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
                   </div>
                 ))
               ) : (
                 settings?.taxes.filter(t => t.visibleOnReceipt).map(tax => (
                   <div key={tax.id} className="flex justify-between border-b border-black pb-1">
                     <span className="font-bold uppercase">{tax.name}</span>
-                    <span className="font-black">₦{(transaction.subtotal * tax.rate).toLocaleString()}</span>
+                    <span className="font-black">{currencySymbol}{(transaction.subtotal * tax.rate).toLocaleString()}</span>
                   </div>
                 ))
               )}
               <div className="flex justify-between bg-orange-500 text-white p-1 font-black">
                 <span className="uppercase">Grand Total</span>
-                <span>₦{transaction.totalAmount.toLocaleString()}</span>
+                <span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -312,9 +313,9 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                 <th>DAYS</th>
                 <th style={{width: '30%'}}>DESCRIPTION</th>
                 <th>QTY</th>
-                <th>RATE</th>
-                <th>DISC. RATE</th>
-                <th>TOTAL</th>
+                <th>RATE ({currencySymbol})</th>
+                <th>DISC. RATE ({currencySymbol})</th>
+                <th>TOTAL ({currencySymbol})</th>
               </tr>
             </thead>
             <tbody>
@@ -326,9 +327,9 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                   <td>{item.noOfDays}</td>
                   <td className="text-left">{item.description}</td>
                   <td>{item.qty}</td>
-                  <td className="text-right">₦{item.unitRate.toLocaleString()}</td>
-                  <td className="text-right">₦{item.discountedRate.toLocaleString()}</td>
-                  <td className="text-right" style={{fontWeight: 'bold'}}>₦{item.total.toLocaleString()}</td>
+                  <td className="text-right">{currencySymbol}{item.unitRate.toLocaleString()}</td>
+                  <td className="text-right">{currencySymbol}{item.discountedRate.toLocaleString()}</td>
+                  <td className="text-right" style={{fontWeight: 'bold'}}>{currencySymbol}{item.total.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -343,9 +344,9 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                 <th style={{width: '40%'}}>DESCRIPTION</th>
                 <th>QTY</th>
                 <th>DURATION</th>
-                <th>RATE</th>
-                <th>DISC. RATE</th>
-                <th>TOTAL</th>
+                <th>RATE ({currencySymbol})</th>
+                <th>DISC. RATE ({currencySymbol})</th>
+                <th>TOTAL ({currencySymbol})</th>
               </tr>
             </thead>
             <tbody>
@@ -356,9 +357,9 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                   <td className="text-left">{item.description}</td>
                   <td>{item.qty}</td>
                   <td>{item.duration}</td>
-                  <td className="text-right">₦{item.unitRate.toLocaleString()}</td>
-                  <td className="text-right">₦{item.discountedRate.toLocaleString()}</td>
-                  <td className="text-right" style={{fontWeight: 'bold'}}>₦{item.total.toLocaleString()}</td>
+                  <td className="text-right">{currencySymbol}{item.unitRate.toLocaleString()}</td>
+                  <td className="text-right">{currencySymbol}{item.discountedRate.toLocaleString()}</td>
+                  <td className="text-right" style={{fontWeight: 'bold'}}>{currencySymbol}{item.total.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -366,7 +367,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
 
           <div className="totals-box">
             <div className="totals-table">
-              <div className="total-row"><span>SUB TOTAL</span><span style={{fontWeight: '900'}}>₦{transaction.subtotal.toLocaleString()}</span></div>
+              <div className="total-row"><span>SUB TOTAL</span><span style={{fontWeight: '900'}}>{currencySymbol}{transaction.subtotal.toLocaleString()}</span></div>
               <div style={{fontSize: '7pt', fontStyle: 'italic', textAlign: 'right', marginBottom: '1mm', color: '#666'}}>
                 {transaction.isTaxInclusive ? '* All prices are tax-inclusive' : '* Taxes are added to subtotal'}
               </div>
@@ -374,18 +375,18 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                 transaction.appliedTaxes.filter(t => t.visibleOnReceipt).map((tax, idx) => (
                   <div key={idx} className="total-row">
                     <span>{tax.name} ({tax.calculationType === 'FIXED' ? 'Fixed' : `${(tax.rate * 100).toFixed(1)}%`})</span>
-                    <span style={{fontWeight: '900'}}>₦{(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
+                    <span style={{fontWeight: '900'}}>{currencySymbol}{(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
                   </div>
                 ))
               ) : (
                 settings?.taxes.filter(t => t.visibleOnReceipt).map(tax => (
                   <div key={tax.id} className="total-row">
                     <span>{tax.name}</span>
-                    <span style={{fontWeight: '900'}}>₦{(transaction.subtotal * tax.rate).toLocaleString()}</span>
+                    <span style={{fontWeight: '900'}}>{currencySymbol}{(transaction.subtotal * tax.rate).toLocaleString()}</span>
                   </div>
                 ))
               )}
-              <div className="total-row grand-total"><span>GRAND TOTAL</span><span>₦{transaction.totalAmount.toLocaleString()}</span></div>
+              <div className="total-row grand-total"><span>GRAND TOTAL</span><span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span></div>
             </div>
           </div>
 

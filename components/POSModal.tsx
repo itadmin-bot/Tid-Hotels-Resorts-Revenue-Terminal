@@ -10,7 +10,8 @@ import {
   AppSettings, 
   Transaction, 
   TransactionItem,
-  TransactionPayment
+  TransactionPayment,
+  Currency
 } from '@/types';
 import ReceiptPreview from '@/components/ReceiptPreview';
 
@@ -29,6 +30,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
   const [guest, setGuest] = useState({ name: existingTransaction?.guestName || 'Walk-in Guest' });
   const [orderReference, setOrderReference] = useState(existingTransaction?.orderReference || '');
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.CARD, amount: 0 }]);
+  const [currency, setCurrency] = useState<Currency>(Currency.NGN);
   const [discount, setDiscount] = useState(existingTransaction?.discountAmount || 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
@@ -36,6 +38,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
 
   const existingItems = existingTransaction?.items || [];
   const previousPaidAmount = existingTransaction?.paidAmount || 0;
+  const currencySymbol = currency === Currency.USD ? '$' : '₦';
 
   useEffect(() => {
     let isSubscribed = true;
@@ -193,6 +196,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
         .map(p => ({
           method: p.method as SettlementMethod,
           amount: p.amount as number,
+          currency: currency,
           timestamp: Date.now()
         }));
 
@@ -212,6 +216,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
         source: 'App',
         guestName: guest.name,
         orderReference,
+        currency,
         items: allItems,
         subtotal: baseVal,
         taxAmount: vatSum,
@@ -305,10 +310,26 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                 <h2 className="text-2xl font-black text-white uppercase tracking-tighter">WALK-IN POS DISPATCH</h2>
                 <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mt-1">Session: <span className="text-[#C8A862]">{unit} Unit</span> (LOCKED)</p>
               </div>
-              <div className="flex bg-[#13263A] p-1 rounded-xl border border-white/5">
-                <button onClick={() => setMenuFilter('ALL')} className={`px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${menuFilter === 'ALL' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-white'}`}>Global Menu</button>
-                <button onClick={() => setMenuFilter(UnitType.ZENZA)} className={`px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${menuFilter === UnitType.ZENZA ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Zenza</button>
-                <button onClick={() => setMenuFilter(UnitType.WHISPERS)} className={`px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${menuFilter === UnitType.WHISPERS ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Whispers</button>
+              <div className="flex gap-4 items-center">
+                <div className="flex bg-[#13263A] p-1 rounded-xl border border-white/5">
+                  <button 
+                    onClick={() => setCurrency(Currency.NGN)} 
+                    className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.NGN ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    NGN (₦)
+                  </button>
+                  <button 
+                    onClick={() => setCurrency(Currency.USD)} 
+                    className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.USD ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    USD ($)
+                  </button>
+                </div>
+                <div className="flex bg-[#13263A] p-1 rounded-xl border border-white/5">
+                  <button onClick={() => setMenuFilter('ALL')} className={`px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${menuFilter === 'ALL' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-white'}`}>Global Menu</button>
+                  <button onClick={() => setMenuFilter(UnitType.ZENZA)} className={`px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${menuFilter === UnitType.ZENZA ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Zenza</button>
+                  <button onClick={() => setMenuFilter(UnitType.WHISPERS)} className={`px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${menuFilter === UnitType.WHISPERS ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Whispers</button>
+                </div>
               </div>
             </div>
 
@@ -343,7 +364,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                     {item.description && <div className="text-[10px] text-gray-600 font-medium italic line-clamp-2 leading-relaxed">{item.description}</div>}
                   </div>
                   <div className="mt-6 flex items-end justify-between">
-                    <div className="text-lg font-black text-white">₦{item.price.toLocaleString()}</div>
+                    <div className="text-lg font-black text-white">{currencySymbol}{item.price.toLocaleString()}</div>
                     {!isOut && <div className="w-10 h-10 rounded-2xl bg-[#C8A862]/10 border border-[#C8A862]/20 flex items-center justify-center text-[#C8A862] group-hover:bg-[#C8A862] group-hover:text-[#0B1C2D] transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4"></path></svg></div>}
                   </div>
                 </button>
@@ -378,9 +399,9 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                     <div key={idx} className="flex items-center gap-4 bg-white/[0.01] p-3 rounded-xl border border-white/5 opacity-60">
                       <div className="flex-1 min-w-0">
                         <div className="text-[10px] font-black text-white uppercase truncate">{item.description}</div>
-                        <div className="text-[9px] text-gray-500 font-bold mt-0.5">₦{item.price.toLocaleString()} x {item.quantity}</div>
+                        <div className="text-[9px] text-gray-500 font-bold mt-0.5">{currencySymbol}{item.price.toLocaleString()} x {item.quantity}</div>
                       </div>
-                      <div className="text-[10px] font-black text-white">₦{item.total.toLocaleString()}</div>
+                      <div className="text-[10px] font-black text-white">{currencySymbol}{item.total.toLocaleString()}</div>
                     </div>
                   ))}
                 </div>
@@ -392,7 +413,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                 <div key={c.item.id} className="flex items-center gap-4 bg-white/[0.03] p-4 rounded-2xl border border-white/5 relative group transition-all hover:bg-white/[0.05]">
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-black text-white uppercase truncate">{c.item.name}</div>
-                    <div className="text-[10px] text-gray-500 font-bold mt-0.5">₦{c.item.price.toLocaleString()}</div>
+                    <div className="text-[10px] text-gray-500 font-bold mt-0.5">{currencySymbol}{c.item.price.toLocaleString()}</div>
                   </div>
                   <div className="flex items-center gap-2 bg-[#0B1C2D] rounded-xl p-1 border border-white/5">
                     <button onClick={() => updateQuantity(c.item.id, c.quantity - 1)} className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-gray-400 transition-colors">-</button>
@@ -411,7 +432,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
               <div className="space-y-8">
                 {/* Apply Discount Block (Design Match) */}
                 <div className="bg-[#0B1C2D]/40 border border-white/10 rounded-2xl p-6 space-y-4">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">APPLY DISCOUNT (₦)</label>
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">APPLY DISCOUNT ({currencySymbol})</label>
                   <div className="border border-white/10 rounded-xl p-1 bg-[#0B1C2D]/80">
                     <input type="number" className="w-full bg-transparent p-4 text-3xl font-black text-white outline-none" value={discount || ''} placeholder="0.00" onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} />
                   </div>
@@ -452,19 +473,19 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                 <div className="pt-6 space-y-6 px-1">
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest">GROSS LEDGER VAL</span>
-                    <span className="text-sm font-black text-gray-400 tracking-tighter uppercase">₦{subtotalItems.toLocaleString()}</span>
+                    <span className="text-sm font-black text-gray-400 tracking-tighter uppercase">{currencySymbol}{subtotalItems.toLocaleString()}</span>
                   </div>
                   
                   <div className="flex justify-between items-end border-b border-white/10 pb-6">
                     <span className="text-3xl font-black text-white uppercase tracking-tighter">NET VALUATION</span>
-                    <span className="text-3xl font-black text-white tracking-tighter uppercase">₦{finalTotal.toLocaleString()}</span>
+                    <span className="text-3xl font-black text-white tracking-tighter uppercase">{currencySymbol}{finalTotal.toLocaleString()}</span>
                   </div>
 
                   <div className="space-y-2">
                     {taxes.map(tax => (
                       <div key={tax.id} className="flex justify-between items-center text-[10px] font-bold uppercase text-gray-500">
                         <span>{tax.name}:</span>
-                        <span>₦{(baseVal * tax.rate).toLocaleString()}</span>
+                        <span>{currencySymbol}{(baseVal * tax.rate).toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -472,11 +493,11 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                   <div className="space-y-4 pt-2">
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-black text-green-500 uppercase tracking-widest">SETTLED AMOUNT</span>
-                      <span className="text-sm font-black text-green-500 tracking-tighter uppercase">₦{totalPaid.toLocaleString()}</span>
+                      <span className="text-sm font-black text-green-500 tracking-tighter uppercase">{currencySymbol}{totalPaid.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-black text-red-500 uppercase tracking-widest">OUTSTANDING</span>
-                      <span className="text-sm font-black text-red-500 tracking-tighter uppercase">₦{balance.toLocaleString()}</span>
+                      <span className="text-sm font-black text-red-500 tracking-tighter uppercase">{currencySymbol}{balance.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

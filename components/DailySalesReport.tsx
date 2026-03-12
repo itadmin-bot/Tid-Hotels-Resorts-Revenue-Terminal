@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { Transaction, SettlementMethod, UnitType } from '@/types';
+import { Transaction, SettlementMethod, UnitType, Currency } from '@/types';
 import { Calendar, Download, TrendingUp, CreditCard, Banknote, Landmark, FileText } from 'lucide-react';
 import { formatToLocalDate, formatToLocalTime, getDayRange } from '@/utils/dateUtils';
 
@@ -61,37 +61,35 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
     return () => unsubscribe();
   }, [selectedDate]);
 
-  const grossVal = transactions.reduce((acc, t) => acc + Number(Math.max(t.totalAmount || 0, t.paidAmount || 0)), 0);
-  const outstandingVal = transactions.reduce((acc, t) => acc + Number(t.balance || 0), 0);
+  const totalsByCurrency = transactions.reduce((acc, t) => {
+    const curr = t.currency || Currency.NGN;
+    if (!acc[curr]) acc[curr] = { gross: 0, settled: 0, outstanding: 0, tax: 0, sc: 0, discount: 0, byMethod: { [SettlementMethod.CARD]: 0, [SettlementMethod.CASH]: 0, [SettlementMethod.TRANSFER]: 0 }, byUnit: { [UnitType.ZENZA]: 0, [UnitType.WHISPERS]: 0, 'FOLIO': 0 } };
+    
+    const gross = Number(Math.max(t.totalAmount || 0, t.paidAmount || 0));
+    const outstanding = Number(t.balance || 0);
+    
+    acc[curr].gross += gross;
+    acc[curr].settled += (gross - outstanding);
+    acc[curr].outstanding += outstanding;
+    acc[curr].tax += Number(t.taxAmount || 0);
+    acc[curr].sc += Number(t.serviceCharge || 0);
+    acc[curr].discount += Number(t.discountAmount || 0);
 
-  const stats = {
-    gross: grossVal,
-    settled: grossVal - outstandingVal,
-    outstanding: outstandingVal,
-    net: transactions.reduce((acc, t) => acc + Number(t.subtotal || 0), 0),
-    tax: transactions.reduce((acc, t) => acc + Number(t.taxAmount || 0), 0),
-    sc: transactions.reduce((acc, t) => acc + Number(t.serviceCharge || 0), 0),
-    discount: transactions.reduce((acc, t) => acc + Number(t.discountAmount || 0), 0),
-    byMethod: {
-      [SettlementMethod.CARD]: transactions.reduce((acc, t) => {
-        const cardAmount = (t.payments || []).filter(p => p.method === SettlementMethod.CARD).reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        return acc + cardAmount;
-      }, 0),
-      [SettlementMethod.CASH]: transactions.reduce((acc, t) => {
-        const cashAmount = (t.payments || []).filter(p => p.method === SettlementMethod.CASH).reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        return acc + cashAmount;
-      }, 0),
-      [SettlementMethod.TRANSFER]: transactions.reduce((acc, t) => {
-        const transferAmount = (t.payments || []).filter(p => p.method === SettlementMethod.TRANSFER).reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        return acc + transferAmount;
-      }, 0),
-    },
-    byUnit: {
-      [UnitType.ZENZA]: transactions.filter(t => t.unit === UnitType.ZENZA).reduce((acc, t) => acc + Number(t.totalAmount || 0), 0),
-      [UnitType.WHISPERS]: transactions.filter(t => t.unit === UnitType.WHISPERS).reduce((acc, t) => acc + Number(t.totalAmount || 0), 0),
-      'FOLIO': transactions.filter(t => t.type === 'FOLIO').reduce((acc, t) => acc + Number(t.totalAmount || 0), 0),
-    }
-  };
+    (t.payments || []).forEach(p => {
+      const method = p.method as SettlementMethod;
+      if (acc[curr].byMethod[method] !== undefined) {
+        acc[curr].byMethod[method] += Number(p.amount || 0);
+      }
+    });
+
+    if (t.unit === UnitType.ZENZA) acc[curr].byUnit[UnitType.ZENZA] += Number(t.totalAmount || 0);
+    else if (t.unit === UnitType.WHISPERS) acc[curr].byUnit[UnitType.WHISPERS] += Number(t.totalAmount || 0);
+    else if (t.type === 'FOLIO') acc[curr].byUnit['FOLIO'] += Number(t.totalAmount || 0);
+
+    return acc;
+  }, {} as Record<string, any>);
+
+  const currencies = Object.keys(totalsByCurrency) as Currency[];
 
   const handleExport = () => {
     const headers = ['Reference', 'Time', 'Guest', 'Type', 'Unit', 'Method', 'Total'];
@@ -165,7 +163,13 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Settled Revenue</p>
                 <TrendingUp className="w-4 h-4 text-green-500" />
               </div>
-              <p className="text-3xl font-black text-green-400">₦{stats.settled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <div className="space-y-1">
+                {currencies.length > 0 ? currencies.map(curr => (
+                  <p key={curr} className="text-2xl font-black text-green-400">
+                    {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].settled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                )) : <p className="text-2xl font-black text-green-400">₦0.00</p>}
+              </div>
               <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
                 <div className="h-full bg-green-500 w-full"></div>
               </div>
@@ -176,7 +180,13 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Outstanding Balance</p>
                 <Landmark className="w-4 h-4 text-red-500" />
               </div>
-              <p className="text-3xl font-black text-red-500">₦{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <div className="space-y-1">
+                {currencies.length > 0 ? currencies.map(curr => (
+                  <p key={curr} className="text-2xl font-black text-red-500">
+                    {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                )) : <p className="text-2xl font-black text-red-500">₦0.00</p>}
+              </div>
               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Unpaid Revenue Records</p>
             </div>
 
@@ -185,7 +195,13 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Tax Liability</p>
                 <Landmark className="w-4 h-4 text-blue-500" />
               </div>
-              <p className="text-3xl font-black text-white">₦{stats.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <div className="space-y-1">
+                {currencies.length > 0 ? currencies.map(curr => (
+                  <p key={curr} className="text-2xl font-black text-white">
+                    {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                )) : <p className="text-2xl font-black text-white">₦0.00</p>}
+              </div>
               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">VAT + Other Property Taxes</p>
             </div>
 
@@ -194,7 +210,13 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Valuation</p>
                 <TrendingUp className="w-4 h-4 text-[#C8A862]" />
               </div>
-              <p className="text-3xl font-black text-[#C8A862]">₦{stats.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <div className="space-y-1">
+                {currencies.length > 0 ? currencies.map(curr => (
+                  <p key={curr} className="text-2xl font-black text-[#C8A862]">
+                    {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                )) : <p className="text-2xl font-black text-[#C8A862]">₦0.00</p>}
+              </div>
               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Gross Revenue (Paid + Unpaid)</p>
             </div>
           </div>
@@ -245,7 +267,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                             {t.status}
                           </span>
                         </td>
-                        <td className="p-4 text-right font-black text-white text-[11px]">₦{t.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right font-black text-white text-[11px]">{t.currency === Currency.USD ? '$' : '₦'}{t.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td className="p-4 text-right">
                           <button 
                             onClick={() => onManage?.(t)}
@@ -273,17 +295,22 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                   Settlement Breakdown
                 </h3>
                 <div className="space-y-4">
-                  {[
-                    { label: 'Bank Transfer', value: stats.byMethod[SettlementMethod.TRANSFER], icon: Landmark, color: 'text-purple-400' },
-                    { label: 'Card / POS', value: stats.byMethod[SettlementMethod.CARD], icon: CreditCard, color: 'text-blue-400' },
-                    { label: 'Cash Payment', value: stats.byMethod[SettlementMethod.CASH], icon: Banknote, color: 'text-green-400' },
-                  ].map((m, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-[#13263A] rounded-xl border border-gray-700/50">
-                      <div className="flex items-center gap-3">
-                        <m.icon className={`w-4 h-4 ${m.color}`} />
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{m.label}</span>
-                      </div>
-                      <span className="text-xs font-black text-white">₦{m.value.toLocaleString()}</span>
+                  {currencies.map(curr => (
+                    <div key={curr} className="space-y-2">
+                      <p className="text-[9px] font-black text-[#C8A862] uppercase tracking-widest border-b border-[#C8A862]/20 pb-1">{curr === Currency.USD ? 'USD' : 'NGN'} SETTLEMENTS</p>
+                      {[
+                        { label: 'Bank Transfer', value: totalsByCurrency[curr].byMethod[SettlementMethod.TRANSFER], icon: Landmark, color: 'text-purple-400' },
+                        { label: 'Card / POS', value: totalsByCurrency[curr].byMethod[SettlementMethod.CARD], icon: CreditCard, color: 'text-blue-400' },
+                        { label: 'Cash Payment', value: totalsByCurrency[curr].byMethod[SettlementMethod.CASH], icon: Banknote, color: 'text-green-400' },
+                      ].map((m, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-[#13263A] rounded-xl border border-gray-700/50">
+                          <div className="flex items-center gap-3">
+                            <m.icon className={`w-4 h-4 ${m.color}`} />
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{m.label}</span>
+                          </div>
+                          <span className="text-xs font-black text-white">{curr === Currency.USD ? '$' : '₦'}{m.value.toLocaleString()}</span>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
@@ -295,22 +322,27 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                   Unit Performance
                 </h3>
                 <div className="space-y-4">
-                  {[
-                    { label: 'Zenza POS', value: stats.byUnit[UnitType.ZENZA] },
-                    { label: 'Whispers POS', value: stats.byUnit[UnitType.WHISPERS] },
-                    { label: 'Room Folios', value: stats.byUnit['FOLIO'] },
-                  ].map((u, i) => (
-                    <div key={i} className="space-y-2">
-                      <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                        <span className="text-gray-500">{u.label}</span>
-                        <span className="text-white">₦{u.value.toLocaleString()}</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-[#C8A862]" 
-                          style={{ width: `${stats.gross > 0 ? (u.value / stats.gross) * 100 : 0}%` }}
-                        ></div>
-                      </div>
+                  {currencies.map(curr => (
+                    <div key={curr} className="space-y-4">
+                      <p className="text-[9px] font-black text-[#C8A862] uppercase tracking-widest border-b border-[#C8A862]/20 pb-1">{curr === Currency.USD ? 'USD' : 'NGN'} BY UNIT</p>
+                      {[
+                        { label: 'Zenza POS', value: totalsByCurrency[curr].byUnit[UnitType.ZENZA] },
+                        { label: 'Whispers POS', value: totalsByCurrency[curr].byUnit[UnitType.WHISPERS] },
+                        { label: 'Room Folios', value: totalsByCurrency[curr].byUnit['FOLIO'] },
+                      ].map((u, i) => (
+                        <div key={i} className="space-y-2">
+                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
+                            <span className="text-gray-500">{u.label}</span>
+                            <span className="text-white">{curr === Currency.USD ? '$' : '₦'}{u.value.toLocaleString()}</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-[#C8A862]" 
+                              style={{ width: `${totalsByCurrency[curr].gross > 0 ? (u.value / totalsByCurrency[curr].gross) * 100 : 0}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>

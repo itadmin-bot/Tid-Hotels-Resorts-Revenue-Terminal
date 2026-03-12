@@ -13,7 +13,8 @@ import {
   MenuItem,
   Room,
   UserProfile,
-  UserRole
+  UserRole,
+  Currency
 } from '@/types';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 import SettleBillModal from '@/components/SettleBillModal';
@@ -56,6 +57,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
   const [newPayments, setNewPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.CARD, amount: 0 }]);
   
   const [discount, setDiscount] = useState<number>(transaction.discountAmount || 0);
+  const [currency, setCurrency] = useState<Currency>(transaction.currency || Currency.NGN);
   const [selectedBank, setSelectedBank] = useState<BankAccount | undefined>(transaction.selectedBank);
   const [isSaving, setIsSaving] = useState(false);
   const [editingPaymentIdx, setEditingPaymentIdx] = useState<number | null>(null);
@@ -78,6 +80,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
           setIdNumber(data.idNumber || '');
           setItems(data.items || []);
           setDiscount(data.discountAmount || 0);
+          setCurrency(data.currency || Currency.NGN);
           setSelectedBank(data.selectedBank);
           setStayPeriod({
             checkIn: data.roomDetails?.checkIn || '',
@@ -254,6 +257,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
   const totalNewPayment = newPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
   const projectedPaidAmount = currentPaid + totalNewPayment;
   const projectedBalance = Math.max(0, finalTotal - projectedPaidAmount);
+  const currencySymbol = currency === Currency.USD ? '$' : '₦';
 
   const handleUpdate = () => performUpdate(newPayments);
 
@@ -374,6 +378,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
           updatedPayments.push({
             method: p.method || SettlementMethod.CARD,
             amount: p.amount,
+            currency: currency,
             timestamp: Date.now()
           });
         }
@@ -411,6 +416,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
       const updates: any = {
         guestName,
         orderReference,
+        currency,
         email,
         phone,
         identityType: idType,
@@ -475,7 +481,23 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
         <div className="sticky top-0 z-20 p-6 md:p-8 border-b border-gray-700 flex justify-between items-center bg-[#0B1C2D] shrink-0">
           <div>
             <h2 className="text-xl md:text-2xl font-black text-[#C8A862] uppercase tracking-tighter">MANAGE REVENUE RECORD</h2>
-            <p className="text-[10px] md:text-[11px] text-gray-500 font-bold tracking-[0.2em] uppercase">{transaction.reference} • LOCKED SOURCE: {transaction.unit || transaction.preparedBy || transaction.cashierName || 'HOTEL FOLIO'}</p>
+            <div className="flex items-center gap-4 mt-1">
+              <p className="text-[10px] md:text-[11px] text-gray-500 font-bold tracking-[0.2em] uppercase">{transaction.reference} • LOCKED SOURCE: {transaction.unit || transaction.preparedBy || transaction.cashierName || 'HOTEL FOLIO'}</p>
+              <div className="flex bg-[#13263A] p-0.5 rounded-lg border border-gray-700">
+                <button 
+                  onClick={() => setCurrency(Currency.NGN)} 
+                  className={`px-2 py-0.5 text-[8px] font-black uppercase rounded transition-all ${currency === Currency.NGN ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                >
+                  NGN
+                </button>
+                <button 
+                  onClick={() => setCurrency(Currency.USD)} 
+                  className={`px-2 py-0.5 text-[8px] font-black uppercase rounded transition-all ${currency === Currency.USD ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
+                >
+                  USD
+                </button>
+              </div>
+            </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-3xl">&times;</button>
         </div>
@@ -541,7 +563,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                     >
                       <option value="" disabled>+ Add Room</option>
                       {availableRooms.map(r => (
-                        <option key={r.id} value={r.id}>{r.name} (₦{r.price.toLocaleString()})</option>
+                        <option key={r.id} value={r.id}>{r.name} ({currencySymbol}{r.price.toLocaleString()})</option>
                       ))}
                     </select>
                   </div>
@@ -564,7 +586,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                     >
                       <option value="" disabled>-- Select Stocked Menu Item --</option>
                       {availableStockCatalog.map(m => (
-                        <option key={m.id} value={m.id}>{m.name} (₦{m.price.toLocaleString()}) - {m.initialStock - (m.soldCount || 0)} left</option>
+                        <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()}) - {m.initialStock - (m.soldCount || 0)} left</option>
                       ))}
                     </select>
                     {items.length > 1 && (
@@ -597,13 +619,13 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
           </section>
 
           <section className="space-y-4 bg-[#0B1C2D]/30 p-6 rounded-2xl border border-gray-700/30">
-            <div className="flex justify-between items-center border-b border-gray-700/50 pb-3">
+              <div className="flex justify-between items-center border-b border-gray-700/50 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#C8A862]" />
                 <h3 className="text-[11px] font-black text-[#C8A862] uppercase tracking-[0.2em]">New Settlement Protocol</h3>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-green-400 tracking-tighter uppercase">Paid History: ₦{currentPaid.toLocaleString()}</span>
+                <span className="text-[10px] font-black text-green-400 tracking-tighter uppercase">Paid History: {currencySymbol}{currentPaid.toLocaleString()}</span>
                 <button 
                   onClick={addPaymentLine} 
                   className="text-[10px] font-black text-[#C8A862] bg-[#C8A862]/10 px-3 py-1 rounded border border-[#C8A862]/20 uppercase tracking-widest hover:bg-[#C8A862]/20 flex items-center gap-1"
@@ -627,7 +649,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                     </select>
                   </div>
                   <div className="col-span-5">
-                    <label className="text-[8px] font-black text-gray-600 uppercase mb-1 block">Amount to Record (₦)</label>
+                    <label className="text-[8px] font-black text-gray-600 uppercase mb-1 block">Amount to Record ({currencySymbol})</label>
                     <input 
                       type="number" 
                       placeholder="0.00" 
@@ -655,7 +677,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                   {taxes.map(tax => (
                     <div key={tax.id} className="flex justify-between text-[10px] font-bold uppercase text-gray-500 px-1">
                       <span>{tax.name}:</span>
-                      <span>₦{(baseValue * tax.rate).toLocaleString()}</span>
+                      <span>{currencySymbol}{(baseValue * tax.rate).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -663,7 +685,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
             <div className={`p-6 rounded-2xl border-2 flex flex-col md:flex-row justify-between items-center gap-4 transition-all ${projectedBalance > 0 ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.1)]' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}>
                 <div className="text-center md:text-left">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 block opacity-70">Current Outstanding Balance</span>
-                  <span className="text-3xl font-black tabular-nums">₦{projectedBalance.toLocaleString()}</span>
+                  <span className="text-3xl font-black tabular-nums">{currencySymbol}{projectedBalance.toLocaleString()}</span>
                   <div className="mt-2 flex gap-2">
                     <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-widest border ${
                       transaction.status === SettlementStatus.PAID ? 'border-green-500/30 text-green-400 bg-green-500/5' : 
@@ -728,7 +750,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                                 autoFocus
                               />
                             ) : (
-                              <span className="text-[11px] text-green-400 font-black tracking-tighter">₦{p.amount.toLocaleString()}</span>
+                              <span className="text-[11px] text-green-400 font-black tracking-tighter">{p.currency === Currency.USD ? '$' : '₦'}{p.amount.toLocaleString()}</span>
                             )}
                           </div>
                           <div className="col-span-1 text-right flex flex-col gap-1 items-end">
@@ -776,7 +798,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                             <span className="text-[7px] font-black text-gray-600 uppercase tracking-widest">Audit Trail:</span>
                             {p.editLogs.map((log, lIdx) => (
                               <div key={lIdx} className="text-[8px] text-gray-500 italic">
-                                Edited from ₦{log.originalAmount.toLocaleString()} to ₦{log.editedAmount.toLocaleString()} by {log.editorName} ({log.editorId}) on {formatToLocalDate(log.editedAt)}
+                                Edited from {p.currency === Currency.USD ? '$' : '₦'}{log.originalAmount.toLocaleString()} to {p.currency === Currency.USD ? '$' : '₦'}{log.editedAmount.toLocaleString()} by {log.editorName} ({log.editorId}) on {formatToLocalDate(log.editedAt)}
                               </div>
                             ))}
                           </div>

@@ -1182,8 +1182,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       </div>
 
       {showRoomModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 space-y-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+          <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 space-y-6 my-auto">
             <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tighter">{showRoomModal.id ? 'Modify' : 'Initialize'} Room Inventory</h2>
             <form onSubmit={saveRoom} className="space-y-4">
               <div className="space-y-1">
@@ -1224,8 +1224,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       )}
 
       {showMenuModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 space-y-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+          <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 space-y-6 my-auto">
             <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tighter">{showMenuModal.id ? 'Update' : 'Register'} Item</h2>
             <form onSubmit={saveMenuItem} className="space-y-4">
               <div className="space-y-1">

@@ -21,6 +21,11 @@ export enum UserRole {
   STAFF = 'STAFF'
 }
 
+export enum Currency {
+  NGN = 'NGN',
+  USD = 'USD'
+}
+
 export interface BankAccount {
   bank: string;
   accountNumber: string;
@@ -100,6 +105,7 @@ export interface PaymentEditLog {
 export interface TransactionPayment {
   method: SettlementMethod;
   amount: number;
+  currency: Currency;
   timestamp: number;
   editLogs?: PaymentEditLog[];
 }
@@ -129,6 +135,7 @@ export interface Transaction {
   totalAmount: number;
   paidAmount: number;
   payments?: TransactionPayment[];
+  currency: Currency;
   balance: number;
   status: SettlementStatus;
   settlementMethod?: SettlementMethod;
@@ -209,6 +216,7 @@ export interface LedgerEntry {
   type: LedgerType;
   category: string;
   amount: number;
+  currency: Currency;
   description: string;
   date: number;
   recordedBy: string;

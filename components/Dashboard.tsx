@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw } from 'lucide-react';
-import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem, AppSettings } from '../types';
+import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem, AppSettings, Currency } from '../types';
 import { BRAND } from '../constants';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 import POSModal from './POSModal';
@@ -267,6 +267,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   const proformaEditingTransaction = transactions.find(t => t.id === proformaEditingId);
   const viewingTransaction = transactions.find(t => t.id === viewingId);
 
+  const totalsByCurrency = filteredTransactions.reduce((acc, t) => {
+    const curr = t.currency || Currency.NGN;
+    if (!acc[curr]) acc[curr] = { total: 0, paid: 0, balance: 0 };
+    acc[curr].total += t.totalAmount;
+    acc[curr].paid += t.paidAmount;
+    acc[curr].balance += t.balance;
+    return acc;
+  }, {} as Record<string, { total: number, paid: number, balance: number }>);
+
+  const currencies = Object.keys(totalsByCurrency) as Currency[];
+
   return (
     <div className="space-y-6">
       <div className="no-print space-y-6">
@@ -401,15 +412,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30 shadow-xl">
             <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Total Valuation</p>
-            <h2 className="text-3xl font-black text-white tracking-tighter">₦{filteredTransactions.reduce((a, b) => a + b.totalAmount, 0).toLocaleString()}</h2>
+            <div className="space-y-1">
+              {currencies.length > 0 ? currencies.map(curr => (
+                <h2 key={curr} className="text-2xl font-black text-white tracking-tighter">
+                  {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].total.toLocaleString()}
+                </h2>
+              )) : <h2 className="text-2xl font-black text-white tracking-tighter">₦0</h2>}
+            </div>
           </div>
           <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30 shadow-xl">
             <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Settled Revenue</p>
-            <h2 className="text-3xl font-black text-green-400 tracking-tighter">₦{filteredTransactions.reduce((a, b) => a + b.paidAmount, 0).toLocaleString()}</h2>
+            <div className="space-y-1">
+              {currencies.length > 0 ? currencies.map(curr => (
+                <h2 key={curr} className="text-2xl font-black text-green-400 tracking-tighter">
+                  {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].paid.toLocaleString()}
+                </h2>
+              )) : <h2 className="text-2xl font-black text-green-400 tracking-tighter">₦0</h2>}
+            </div>
           </div>
           <div className="bg-[#13263A] p-6 rounded-2xl border border-gray-700/30 shadow-xl">
             <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Outstanding</p>
-            <h2 className="text-3xl font-black text-red-500 tracking-tighter">₦{filteredTransactions.reduce((a, b) => a + b.balance, 0).toLocaleString()}</h2>
+            <div className="space-y-1">
+              {currencies.length > 0 ? currencies.map(curr => (
+                <h2 key={curr} className="text-2xl font-black text-red-500 tracking-tighter">
+                  {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].balance.toLocaleString()}
+                </h2>
+              )) : <h2 className="text-2xl font-black text-red-500 tracking-tighter">₦0</h2>}
+            </div>
           </div>
         </div>
 
@@ -462,15 +491,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                     <div className="space-y-1">
                       <div className="flex justify-between text-[11px] font-bold">
                         <span className="text-gray-500 uppercase tracking-tighter">Total:</span>
-                        <span className="text-white">₦{t.totalAmount.toLocaleString()}</span>
+                        <span className="text-white">{t.currency === Currency.USD ? '$' : '₦'}{t.totalAmount.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-[10px] font-bold">
                         <span className="text-gray-500 uppercase tracking-tighter">Paid:</span>
-                        <span className="text-green-400">₦{t.paidAmount.toLocaleString()}</span>
+                        <span className="text-green-400">{t.currency === Currency.USD ? '$' : '₦'}{t.paidAmount.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-[10px] font-bold">
                         <span className="text-gray-500 uppercase tracking-tighter">Bal:</span>
-                        <span className={t.balance > 0 ? 'text-red-400' : 'text-gray-600'}>₦{t.balance.toLocaleString()}</span>
+                        <span className={t.balance > 0 ? 'text-red-400' : 'text-gray-600'}>{t.currency === Currency.USD ? '$' : '₦'}{t.balance.toLocaleString()}</span>
                       </div>
                     </div>
                   </td>

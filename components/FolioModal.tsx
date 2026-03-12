@@ -14,7 +14,8 @@ import {
   MenuItem,
   SettlementMethod,
   TransactionPayment,
-  BankAccount
+  BankAccount,
+  Currency
 } from '@/types';
 import ReceiptPreview from '@/components/ReceiptPreview';
 
@@ -45,6 +46,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   }]);
   const [additionalCharges, setAdditionalCharges] = useState<TransactionItem[]>([]);
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.TRANSFER, amount: 0 }]);
+  const [currency, setCurrency] = useState<Currency>(Currency.NGN);
   const [targetBank, setTargetBank] = useState<BankAccount | 'ALL' | null>(null);
   const [discount, setDiscount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -201,6 +203,8 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
     return (room.totalInventory - currentlyBooked) > 0;
   };
 
+  const currencySymbol = currency === Currency.USD ? '$' : '₦';
+
   const calculateNights = (startStr: string, endStr: string) => {
     if (!startStr || !endStr) return 1;
     const start = new Date(startStr);
@@ -296,6 +300,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       const finalPayments: TransactionPayment[] = payments.filter(p => Number(p.amount || 0) > 0).map(p => ({
           method: p.method as SettlementMethod,
           amount: Number(p.amount),
+          currency: currency,
           timestamp: Date.now()
       }));
 
@@ -327,6 +332,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         email: guest.email,
         phone: guest.phone,
         items: [...transactionItems, ...additionalCharges],
+        currency,
         selectedBank: selectedBankFinal,
         roomDetails: {
           roomName: bookings.length === 1 ? rooms.find(r => r.id === bookings[0].roomId)!.name : 'Multiple Rooms',
@@ -389,7 +395,23 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
         
         <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
           <section className="space-y-4">
-            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Guest Identity</h3>
+            <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
+              <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Guest Identity</h3>
+              <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700/50">
+                <button 
+                  onClick={() => setCurrency(Currency.NGN)} 
+                  className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.NGN ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                >
+                  NGN (₦)
+                </button>
+                <button 
+                  onClick={() => setCurrency(Currency.USD)} 
+                  className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.USD ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
+                >
+                  USD ($)
+                </button>
+              </div>
+            </div>
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-gray-500 uppercase">Guest Full Name <span className="text-red-500">*</span></label>
@@ -441,7 +463,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                     <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={booking.roomId} onChange={(e) => updateBooking(idx, 'roomId', e.target.value)}>
                       <option value="" disabled>Select Room Type</option>
                       {rooms.map(r => (
-                        <option key={r.id} value={r.id}>{r.name} ({r.type}) - ₦{r.price.toLocaleString()}/night</option>
+                        <option key={r.id} value={r.id}>{r.name} ({r.type}) - {currencySymbol}{r.price.toLocaleString()}/night</option>
                       ))}
                     </select>
                   </div>
@@ -490,7 +512,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                 >
                   <option value="" disabled>Add from Menu</option>
                   {menuItems.map(m => (
-                    <option key={m.id} value={m.id}>{m.name} (₦{m.price.toLocaleString()})</option>
+                    <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()})</option>
                   ))}
                 </select>
                 <button onClick={() => addCharge()} className="px-3 py-1.5 border border-[#C8A862] bg-[#C8A862]/10 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/20 transition-all">+ Add Flexible Charge</button>
@@ -507,7 +529,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                   <input type="number" min="1" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-center" value={charge.quantity} onChange={(e) => updateCharge(idx, 'quantity', parseInt(e.target.value) || 1)} />
                 </div>
                 <div className="col-span-3 space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">Price (₦)</label>
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Price ({currencySymbol})</label>
                   <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-right" value={charge.price} onChange={(e) => updateCharge(idx, 'price', parseFloat(e.target.value) || 0)} />
                 </div>
                 <div className="col-span-1 text-center">
@@ -570,7 +592,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               <div className="flex justify-between items-end">
                 <div>
                   <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Gross Val</div>
-                  <div className="text-sm font-black">₦{subtotalItems.toLocaleString()}</div>
+                  <div className="text-sm font-black">{currencySymbol}{subtotalItems.toLocaleString()}</div>
                 </div>
                 <div className="w-1/2">
                    <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Discount</div>
@@ -579,25 +601,25 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
               </div>
               <div>
                 <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Total Paid</div>
-                <div className={`text-xl font-black ${totalPaid > 0 ? 'text-green-500' : 'text-gray-500'}`}>{totalPaid > 0 ? `₦${totalPaid.toLocaleString()}` : 'NO PAYMENT'}</div>
+                <div className={`text-xl font-black ${totalPaid > 0 ? 'text-green-500' : 'text-gray-500'}`}>{totalPaid > 0 ? `${currencySymbol}${totalPaid.toLocaleString()}` : 'NO PAYMENT'}</div>
               </div>
             </div>
                   <div className="text-right space-y-4">
                     <div>
                       <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Net Valuation ({isInclusive ? 'Inc.' : 'Excl.'})</div>
-                      <div className="text-3xl font-black tracking-tighter text-[#C8A862]">₦{finalTotal.toLocaleString()}</div>
+                      <div className="text-3xl font-black tracking-tighter text-[#C8A862]">{currencySymbol}{finalTotal.toLocaleString()}</div>
                     </div>
                     <div className="space-y-1">
                       {taxes.filter(t => t.visibleOnReceipt).map(tax => (
                         <div key={tax.id} className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
                           <span>{tax.name}:</span>
-                          <span>₦{(baseVal * tax.rate).toLocaleString()}</span>
+                          <span>{currencySymbol}{(baseVal * tax.rate).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
                     <div>
                       <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Folio Outstanding</div>
-                      <div className={`text-xl font-black ${balance > 0 ? 'text-red-500' : 'text-gray-600'}`}>₦{Math.max(0, balance).toLocaleString()}</div>
+                      <div className={`text-xl font-black ${balance > 0 ? 'text-red-500' : 'text-gray-600'}`}>{currencySymbol}{Math.max(0, balance).toLocaleString()}</div>
                     </div>
                   </div>
           </div>

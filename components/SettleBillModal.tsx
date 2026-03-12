@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { Transaction, SettlementMethod, SettlementStatus } from '@/types';
+import { Transaction, SettlementMethod, SettlementStatus, Currency } from '@/types';
 import { X, CreditCard, Banknote, Landmark, Monitor } from 'lucide-react';
 
 interface SettleBillModalProps {
@@ -14,6 +14,7 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
   const [amount, setAmount] = useState<number>(transaction.balance);
   const [method, setMethod] = useState<SettlementMethod>(SettlementMethod.CARD);
   const [isProcessing, setIsProcessing] = useState(false);
+  const currencySymbol = transaction.currency === Currency.USD ? '$' : '₦';
 
   // Sync amount if balance changes externally
   React.useEffect(() => {
@@ -53,6 +54,7 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
         const newPayment = {
           amount,
           method,
+          currency: transaction.currency || Currency.NGN,
           timestamp: Date.now()
         };
 
@@ -93,14 +95,14 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
         <div className="p-6 space-y-6">
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
             <span className="text-[10px] font-black text-red-400 uppercase tracking-widest block mb-1">Outstanding Balance</span>
-            <span className="text-3xl font-black text-white">₦{transaction.balance.toLocaleString()}</span>
+            <span className="text-3xl font-black text-white">{currencySymbol}{transaction.balance.toLocaleString()}</span>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Settlement Amount</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-black">₦</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-black">{currencySymbol}</span>
                 <input 
                   type="number" 
                   className="w-full bg-[#0B1C2D] border border-gray-700 rounded-xl p-4 pl-8 text-xl font-black text-white outline-none focus:border-[#C8A862] transition-all"

@@ -278,7 +278,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ isRestricted, needsVerification
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0B1C2D] py-12 px-4 font-inter overflow-y-auto">
+    <div className="flex min-h-screen flex-col items-center justify-start md:justify-center bg-[#0B1C2D] py-8 md:py-12 px-4 font-inter overflow-y-auto">
       <div className="w-full max-w-[480px] p-10 rounded-2xl bg-[#13263A]/80 border border-gray-700/40 shadow-2xl backdrop-blur-md mb-8">
         <div className="text-center mb-10">
           <h1 className="text-5xl font-bold text-[#C8A862] italic tracking-tight mb-1">TIDÈ</h1>

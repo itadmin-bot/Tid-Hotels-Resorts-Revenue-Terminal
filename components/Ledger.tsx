@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, where } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { LedgerEntry, LedgerType, UserProfile, AppSettings } from '@/types';
+import { LedgerEntry, LedgerType, UserProfile, AppSettings, Currency } from '@/types';
 import { BRAND } from '@/constants';
 import { Plus, Minus, TrendingUp, TrendingDown, DollarSign, Tag, FileText, Trash2, PieChart, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart as RePieChart, Pie } from 'recharts';
@@ -20,7 +20,8 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
     category: '',
     amount: 0,
     description: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    currency: Currency.NGN
   });
 
   useEffect(() => {
@@ -56,6 +57,7 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
         amount: newEntry.amount,
         description: newEntry.description,
         date: new Date(newEntry.date).getTime(),
+        currency: newEntry.currency,
         recordedBy: user.displayName,
         recordedById: user.uid,
         createdAt: Date.now(),
@@ -69,7 +71,8 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
         category: '',
         amount: 0,
         description: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        currency: Currency.NGN
       });
     } catch (err) {
       console.error("Error adding ledger entry:", err);
@@ -85,12 +88,20 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
     }
   };
 
-  const totalIncome = entries.filter(e => e.type === LedgerType.INCOME).reduce((sum, e) => sum + e.amount, 0);
-  const totalExpense = entries.filter(e => e.type === LedgerType.EXPENSE).reduce((sum, e) => sum + e.amount, 0);
-  const netBalance = totalIncome - totalExpense;
+  const totalsByCurrency = entries.reduce((acc, e) => {
+    const curr = e.currency || Currency.NGN;
+    if (!acc[curr]) acc[curr] = { income: 0, expense: 0 };
+    if (e.type === LedgerType.INCOME) acc[curr].income += e.amount;
+    else acc[curr].expense += e.amount;
+    return acc;
+  }, {} as Record<string, { income: number, expense: number }>);
 
-  // Prepare chart data
-  const chartData = entries.reduce((acc: any[], entry) => {
+  const currencies = Object.keys(totalsByCurrency) as Currency[];
+
+  // Prepare chart data (defaulting to NGN for now to keep it simple, or we could filter)
+  const chartData = entries
+    .filter(e => (e.currency || Currency.NGN) === Currency.NGN)
+    .reduce((acc: any[], entry) => {
     const dateStr = new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const existing = acc.find(item => item.date === dateStr);
     if (existing) {
@@ -122,13 +133,14 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
   const COLORS = ['#C8A862', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6'];
 
   const downloadLedgerReport = () => {
-    const headers = ['Date', 'Type', 'Category', 'Description', 'Amount (N)', 'Recorded By'];
+    const headers = ['Date', 'Type', 'Category', 'Description', 'Amount', 'Currency', 'Recorded By'];
     const rows = entries.map(e => [
       new Date(e.date).toLocaleDateString(),
       e.type,
       `"${e.category}"`,
       `"${e.description || ''}"`,
       e.amount,
+      e.currency || Currency.NGN,
       `"${e.recordedBy}"`
     ]);
 
@@ -175,7 +187,13 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
             <TrendingUp className="w-16 h-16 text-green-500" />
           </div>
           <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Total Income</div>
-          <div className="text-3xl font-black text-green-500">₦{totalIncome.toLocaleString()}</div>
+          <div className="space-y-1">
+            {currencies.length > 0 ? currencies.map(curr => (
+              <div key={curr} className="text-2xl font-black text-green-500">
+                {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].income.toLocaleString()}
+              </div>
+            )) : <div className="text-2xl font-black text-green-500">₦0</div>}
+          </div>
           <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             Real-time Tracking
@@ -187,7 +205,13 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
             <TrendingDown className="w-16 h-16 text-red-500" />
           </div>
           <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Total Expenses</div>
-          <div className="text-3xl font-black text-red-500">₦{totalExpense.toLocaleString()}</div>
+          <div className="space-y-1">
+            {currencies.length > 0 ? currencies.map(curr => (
+              <div key={curr} className="text-2xl font-black text-red-500">
+                {curr === Currency.USD ? '$' : '₦'}{totalsByCurrency[curr].expense.toLocaleString()}
+              </div>
+            )) : <div className="text-2xl font-black text-red-500">₦0</div>}
+          </div>
           <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
             Operational Costs
@@ -199,8 +223,15 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
             <DollarSign className="w-16 h-16 text-[#C8A862]" />
           </div>
           <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Net Balance</div>
-          <div className={`text-3xl font-black ${netBalance >= 0 ? 'text-[#C8A862]' : 'text-red-500'}`}>
-            ₦{netBalance.toLocaleString()}
+          <div className="space-y-1">
+            {currencies.length > 0 ? currencies.map(curr => {
+              const bal = totalsByCurrency[curr].income - totalsByCurrency[curr].expense;
+              return (
+                <div key={curr} className={`text-2xl font-black ${bal >= 0 ? 'text-[#C8A862]' : 'text-red-500'}`}>
+                  {curr === Currency.USD ? '$' : '₦'}{bal.toLocaleString()}
+                </div>
+              );
+            }) : <div className="text-2xl font-black text-[#C8A862]">₦0</div>}
           </div>
           <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase">
             <div className="w-2 h-2 rounded-full bg-[#C8A862] animate-pulse"></div>
@@ -315,7 +346,7 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className={`text-sm font-black ${entry.type === LedgerType.INCOME ? 'text-green-500' : 'text-red-500'}`}>
-                      {entry.type === LedgerType.INCOME ? '+' : '-'}₦{entry.amount.toLocaleString()}
+                      {entry.type === LedgerType.INCOME ? '+' : '-'}{entry.currency === Currency.USD ? '$' : '₦'}{entry.amount.toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -392,7 +423,18 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Amount (₦)</label>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Currency</label>
+                    <select
+                      className="w-full bg-[#0B1C2D] border border-gray-700 rounded-xl p-4 text-sm text-white outline-none focus:border-[#C8A862] transition-all font-bold"
+                      value={newEntry.currency}
+                      onChange={(e) => setNewEntry({...newEntry, currency: e.target.value as Currency})}
+                    >
+                      <option value={Currency.NGN}>NGN (₦)</option>
+                      <option value={Currency.USD}>USD ($)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Amount</label>
                     <input 
                       required
                       type="number"
@@ -402,18 +444,18 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
                       onChange={(e) => setNewEntry({...newEntry, amount: parseFloat(e.target.value) || 0})}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Date</label>
-                    <input 
-                      required
-                      type="date"
-                      className="w-full bg-[#0B1C2D] border border-gray-700 rounded-xl p-4 text-sm text-white outline-none focus:border-[#C8A862] transition-all"
-                      value={newEntry.date}
-                      onChange={(e) => setNewEntry({...newEntry, date: e.target.value})}
-                    />
-                  </div>
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Date</label>
+                  <input 
+                    required
+                    type="date"
+                    className="w-full bg-[#0B1C2D] border border-gray-700 rounded-xl p-4 text-sm text-white outline-none focus:border-[#C8A862] transition-all"
+                    value={newEntry.date}
+                    onChange={(e) => setNewEntry({...newEntry, date: e.target.value})}
+                  />
+                </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Description (Optional)</label>
                   <textarea 

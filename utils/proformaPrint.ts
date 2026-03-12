@@ -1,8 +1,10 @@
-import { Transaction, AppSettings } from '@/types';
+import { Transaction, AppSettings, Currency } from '@/types';
 
 export const printProformaInvoice = (transaction: Transaction, settings: AppSettings | null) => {
   const printWindow = window.open('', '_blank', 'width=1000,height=900');
   if (!printWindow || !settings) return;
+
+  const currencySymbol = transaction.currency === Currency.USD ? '$' : '₦';
 
   const style = `
     @page { size: 210mm 297mm; margin: 0 !important; }
@@ -46,7 +48,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
       <td>${item.qty}</td>
       <td>${item.unitRate.toLocaleString()}</td>
       <td>${item.discountedRate.toLocaleString()}</td>
-      <td class="text-right" style="font-weight: bold">₦${item.total.toLocaleString()}</td>
+      <td class="text-right" style="font-weight: bold">${currencySymbol}${item.total.toLocaleString()}</td>
     </tr>
   `).join('') || '';
 
@@ -59,7 +61,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
       <td>${item.duration || ''}</td>
       <td>${item.unitRate.toLocaleString()}</td>
       <td>${item.discountedRate.toLocaleString()}</td>
-      <td class="text-right" style="font-weight: bold">₦${item.total.toLocaleString()}</td>
+      <td class="text-right" style="font-weight: bold">${currencySymbol}${item.total.toLocaleString()}</td>
     </tr>
   `).join('') || '';
 
@@ -76,12 +78,12 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
   const taxRows = transaction.appliedTaxes ? transaction.appliedTaxes.filter(t => t.visibleOnReceipt).map(tax => `
     <div class="total-row">
       <span>${tax.name} (${tax.calculationType === 'FIXED' ? 'Fixed' : `${(tax.rate * 100).toFixed(1)}%`})</span>
-      <span style="font-weight: 900">₦${(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
+      <span style="font-weight: 900">${currencySymbol}${(tax.calculationType === 'FIXED' ? tax.rate : transaction.subtotal * tax.rate).toLocaleString()}</span>
     </div>
   `).join('') : settings.taxes?.filter(t => t.visibleOnReceipt).map(tax => `
     <div class="total-row">
       <span>${tax.name}</span>
-      <span style="font-weight: 900">₦${(transaction.subtotal * tax.rate).toLocaleString()}</span>
+      <span style="font-weight: 900">${currencySymbol}${(transaction.subtotal * tax.rate).toLocaleString()}</span>
     </div>
   `).join('') || '';
 
@@ -111,9 +113,9 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
           <th>DAYS</th>
           <th style="width: 30%">DESCRIPTION</th>
           <th>QTY</th>
-          <th>RATE</th>
-          <th>DISC. RATE</th>
-          <th>TOTAL</th>
+          <th>RATE (${currencySymbol})</th>
+          <th>DISC. RATE (${currencySymbol})</th>
+          <th>TOTAL ({currencySymbol})</th>
         </tr>
       </thead>
       <tbody>
@@ -130,9 +132,9 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
           <th style="width: 40%">DESCRIPTION</th>
           <th>QTY</th>
           <th>DURATION</th>
-          <th>RATE</th>
-          <th>DISC. RATE</th>
-          <th>TOTAL</th>
+          <th>RATE (${currencySymbol})</th>
+          <th>DISC. RATE (${currencySymbol})</th>
+          <th>TOTAL (${currencySymbol})</th>
         </tr>
       </thead>
       <tbody>
@@ -142,12 +144,12 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
 
     <div class="totals-box">
       <div class="totals-table">
-        <div class="total-row"><span>SUB TOTAL</span><span style="font-weight: 900">₦${transaction.subtotal.toLocaleString()}</span></div>
+        <div class="total-row"><span>SUB TOTAL</span><span style="font-weight: 900">${currencySymbol}${transaction.subtotal.toLocaleString()}</span></div>
         <div style="font-size: 7pt; font-style: italic; text-align: right; margin-bottom: 1mm; color: #666;">
           ${transaction.isTaxInclusive ? '* All prices are tax-inclusive' : '* Taxes are added to subtotal'}
         </div>
         ${taxRows}
-        <div class="total-row grand-total"><span>GRAND TOTAL</span><span>₦${transaction.totalAmount.toLocaleString()}</span></div>
+        <div class="total-row grand-total"><span>GRAND TOTAL</span><span>${currencySymbol}${transaction.totalAmount.toLocaleString()}</span></div>
       </div>
     </div>
 

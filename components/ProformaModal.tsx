@@ -19,7 +19,8 @@ import {
   TransactionItem,
   MenuItem,
   Room,
-  TaxConfig
+  TaxConfig,
+  Currency
 } from '@/types';
 import ProformaPreview from '@/components/ProformaPreview';
 
@@ -73,6 +74,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
   }]);
 
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.TRANSFER, amount: existingTransaction?.paidAmount || 0 }]);
+  const [currency, setCurrency] = useState<Currency>(existingTransaction?.currency || Currency.NGN);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -280,6 +282,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
 
   const totalPaid = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
   const balance = grandTotal - totalPaid;
+  const currencySymbol = currency === Currency.USD ? '$' : '₦';
 
   const handleSubmit = async () => {
     if (!customer.name || !customer.organisation) {
@@ -314,6 +317,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
         address: customer.address,
         event: customer.event,
         eventPeriod: customer.eventPeriod,
+        currency,
         proformaRooms: roomItems,
         proformaFood: foodItems,
         items: transactionItems,
@@ -330,7 +334,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
         balance: Math.max(0, balance),
         status: balance <= 0 ? SettlementStatus.PAID : totalPaid > 0 ? SettlementStatus.PARTIAL : SettlementStatus.UNPAID,
         settlementMethod: payments[0]?.method || SettlementMethod.TRANSFER,
-        payments: payments.filter(p => (p.amount || 0) > 0).map(p => ({ ...p, timestamp: Date.now() })),
+        payments: payments.filter(p => (p.amount || 0) > 0).map(p => ({ ...p, currency, timestamp: Date.now() })),
         createdBy: user.uid,
         userId: user.uid,
         cashierName: user.displayName,
@@ -397,7 +401,23 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-[#13263A] w-full max-w-6xl h-[90vh] rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col">
         <div className="p-6 border-b border-gray-700/50 flex justify-between items-center bg-[#13263A]">
-          <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tighter">PROFORMA INVOICE GENERATOR</h2>
+          <div className="flex items-center gap-6">
+            <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tighter">PROFORMA INVOICE GENERATOR</h2>
+            <div className="flex bg-[#0B1C2D] p-1 rounded-xl border border-gray-700">
+              <button 
+                onClick={() => setCurrency(Currency.NGN)} 
+                className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.NGN ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+              >
+                NGN (₦)
+              </button>
+              <button 
+                onClick={() => setCurrency(Currency.USD)} 
+                className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.USD ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
+              >
+                USD ($)
+              </button>
+            </div>
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-2xl">&times;</button>
         </div>
 
@@ -497,14 +517,14 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                       <td className="p-1">
                         <select className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full text-[10px]" onChange={(e) => handleRoomSelect(idx, e.target.value)}>
                           <option value="">-- Select --</option>
-                          {rooms.map(r => <option key={r.id} value={r.id}>{r.name} (₦{r.price.toLocaleString()})</option>)}
+                          {rooms.map(r => <option key={r.id} value={r.id}>{r.name} ({currencySymbol}{r.price.toLocaleString()})</option>)}
                         </select>
                       </td>
                       <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full" value={item.description} onChange={(e) => updateRoomItem(idx, 'description', e.target.value)} /></td>
                       <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-12 text-center" value={item.qty} onChange={(e) => updateRoomItem(idx, 'qty', parseInt(e.target.value) || 0)} /></td>
                       <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.unitRate} onChange={(e) => updateRoomItem(idx, 'unitRate', parseFloat(e.target.value) || 0)} /></td>
                       <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.discountedRate} onChange={(e) => updateRoomItem(idx, 'discountedRate', parseFloat(e.target.value) || 0)} /></td>
-                      <td className="p-1 text-right font-black">₦{item.total.toLocaleString()}</td>
+                      <td className="p-1 text-right font-black">{currencySymbol}{item.total.toLocaleString()}</td>
                       <td className="p-1 text-center"><button onClick={() => removeRoomRow(idx)} className="text-red-500">&times;</button></td>
                     </tr>
                   ))}
@@ -541,7 +561,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                       <td className="p-1">
                         <select className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full text-[10px]" onChange={(e) => handleMenuSelect(idx, e.target.value)}>
                           <option value="">-- Select --</option>
-                          {menuCatalog.map(m => <option key={m.id} value={m.id}>{m.name} (₦{m.price.toLocaleString()})</option>)}
+                          {menuCatalog.map(m => <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()})</option>)}
                         </select>
                       </td>
                       <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full" value={item.description} onChange={(e) => updateFoodItem(idx, 'description', e.target.value)} /></td>
@@ -549,7 +569,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                       <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20" value={item.duration || ''} onChange={(e) => updateFoodItem(idx, 'duration', e.target.value)} /></td>
                       <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.unitRate} onChange={(e) => updateFoodItem(idx, 'unitRate', parseFloat(e.target.value) || 0)} /></td>
                       <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.discountedRate} onChange={(e) => updateFoodItem(idx, 'discountedRate', parseFloat(e.target.value) || 0)} /></td>
-                      <td className="p-1 text-right font-black">₦{item.total.toLocaleString()}</td>
+                      <td className="p-1 text-right font-black">{currencySymbol}{item.total.toLocaleString()}</td>
                       <td className="p-1 text-center"><button onClick={() => removeFoodRow(idx)} className="text-red-500">&times;</button></td>
                     </tr>
                   ))}
@@ -591,7 +611,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                               : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500'
                           }`}
                         >
-                          {tax.name} ({tax.calculationType === 'FIXED' ? `₦${tax.rate}` : `${tax.rate * 100}%`})
+                          {tax.name} ({tax.calculationType === 'FIXED' ? `${currencySymbol}${tax.rate}` : `${tax.rate * 100}%`})
                         </button>
                         {applied && (
                           <label className="flex items-center gap-1 cursor-pointer justify-center">
@@ -638,7 +658,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                           onChange={(e) => updateTax(tax.id, 'calculationType', e.target.value)}
                         >
                           <option value="PERCENTAGE">%</option>
-                          <option value="FIXED">₦</option>
+                          <option value="FIXED">{currencySymbol}</option>
                         </select>
                         <input 
                           type="number"
@@ -674,28 +694,28 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">Amount Paid (₦)</label>
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">Amount Paid ({currencySymbol})</label>
                   <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-bold" value={payments[0].amount || ''} onChange={(e) => setPayments([{ ...payments[0], amount: parseFloat(e.target.value) || 0 }])} placeholder="0.00" />
                 </div>
               </div>
               <div className="bg-[#0B1C2D]/50 p-6 rounded-2xl border border-gray-700/50 space-y-3">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500 uppercase font-bold">Sub Total:</span>
-                  <span className="text-white font-black">₦{baseVal.toLocaleString()}</span>
+                  <span className="text-white font-black">{currencySymbol}{baseVal.toLocaleString()}</span>
                 </div>
                 {visibleTaxBreakdown.map(tax => (
                   <div key={tax.id} className="flex justify-between text-xs">
                     <span className="text-gray-500 uppercase font-bold">{tax.name} ({tax.calculationType === 'FIXED' ? 'Fixed' : `${(tax.rate * 100).toFixed(1)}%`}):</span>
-                    <span className="text-white font-black">₦{tax.calculatedAmount.toLocaleString()}</span>
+                    <span className="text-white font-black">{currencySymbol}{tax.calculatedAmount.toLocaleString()}</span>
                   </div>
                 ))}
                 <div className="flex justify-between text-lg border-t border-gray-700 pt-3">
                   <span className="text-[#C8A862] uppercase font-black">Grand Total:</span>
-                  <span className="text-[#C8A862] font-black">₦{grandTotal.toLocaleString()}</span>
+                  <span className="text-[#C8A862] font-black">{currencySymbol}{grandTotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs pt-2">
                   <span className="text-red-500 uppercase font-bold">Balance Due:</span>
-                  <span className="text-red-500 font-black">₦{balance.toLocaleString()}</span>
+                  <span className="text-red-500 font-black">{currencySymbol}{balance.toLocaleString()}</span>
                 </div>
               </div>
             </div>

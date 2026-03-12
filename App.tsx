@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const handleForceReset = useCallback(async () => {
     try {
@@ -278,8 +279,36 @@ const App: React.FC = () => {
   if (user && !isVerified) return <AuthScreen needsVerification={true} />;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white">
-      <Sidebar user={userProfile!} settings={settings} activeView={activeView} onViewChange={setActiveView} />
+    <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white flex-col lg:flex-row">
+      {/* Mobile Header */}
+      <header className="lg:hidden flex items-center justify-between p-4 bg-[#13263A] border-b border-gray-700/50 no-print">
+        <div className="flex items-center gap-2">
+          <div className="text-[#C8A862] text-xl font-black italic tracking-tighter uppercase truncate max-w-[150px]">
+            {settings?.hotelName || BRAND.name}
+          </div>
+        </div>
+        <button 
+          onClick={() => setIsSidebarOpen(true)}
+          className="p-2 text-gray-400 hover:text-white transition-colors"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
+          </svg>
+        </button>
+      </header>
+
+      <Sidebar 
+        user={userProfile!} 
+        settings={settings} 
+        activeView={activeView} 
+        onViewChange={(view) => {
+          setActiveView(view);
+          setIsSidebarOpen(false);
+        }} 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+      
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         {activeView === 'DASHBOARD' ? <Dashboard user={userProfile!} settings={settings} /> : <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
       </main>

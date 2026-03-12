@@ -10,9 +10,11 @@ interface SidebarProps {
   settings: AppSettings | null;
   activeView: 'DASHBOARD' | 'ADMIN';
   onViewChange: (view: 'DASHBOARD' | 'ADMIN') => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewChange, isOpen, onClose }) => {
   const handleSignOut = async () => {
     try {
       // Explicitly mark operator as offline before session termination
@@ -31,15 +33,36 @@ const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewCha
   };
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-[#13263A] border-r border-gray-700/50 p-6 no-print">
-      <div className="mb-10">
-        <h1 className="text-2xl font-bold text-[#C8A862] italic tracking-tighter uppercase truncate">
-          {settings?.hotelName || BRAND.name}
-        </h1>
-        <p className="text-[10px] text-gray-500 uppercase tracking-widest">
-          {settings?.hotelSubName || 'Hotels & Resorts'}
-        </p>
-      </div>
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 lg:static lg:flex flex-col w-64 bg-[#13263A] border-r border-gray-700/50 p-6 no-print transition-transform duration-300 overflow-y-auto ${
+        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-2xl font-bold text-[#C8A862] italic tracking-tighter uppercase truncate max-w-[180px]">
+              {settings?.hotelName || BRAND.name}
+            </h1>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest">
+              {settings?.hotelSubName || 'Hotels & Resorts'}
+            </p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="lg:hidden p-2 text-gray-400 hover:text-white"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
       <nav className="flex-1 space-y-2">
         <button 
@@ -91,6 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewCha
         </button>
       </div>
     </aside>
+    </>
   );
 };
 
