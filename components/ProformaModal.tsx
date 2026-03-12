@@ -517,7 +517,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                       <td className="p-1">
                         <select className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full text-[10px]" onChange={(e) => handleRoomSelect(idx, e.target.value)}>
                           <option value="">-- Select --</option>
-                          {rooms.map(r => <option key={r.id} value={r.id}>{r.name} ({currencySymbol}{r.price.toLocaleString()})</option>)}
+                          {rooms.map(r => <option key={r.id} value={r.id}>{r.name} ({r.currency === Currency.USD ? '$' : '₦'}{r.price.toLocaleString()})</option>)}
                         </select>
                       </td>
                       <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full" value={item.description} onChange={(e) => updateRoomItem(idx, 'description', e.target.value)} /></td>
@@ -561,7 +561,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                       <td className="p-1">
                         <select className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full text-[10px]" onChange={(e) => handleMenuSelect(idx, e.target.value)}>
                           <option value="">-- Select --</option>
-                          {menuCatalog.map(m => <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()})</option>)}
+                          {menuCatalog.map(m => <option key={m.id} value={m.id}>{m.name} ({m.currency === Currency.USD ? '$' : '₦'}{m.price.toLocaleString()})</option>)}
                         </select>
                       </td>
                       <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full" value={item.description} onChange={(e) => updateFoodItem(idx, 'description', e.target.value)} /></td>
