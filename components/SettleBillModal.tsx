@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { Transaction, SettlementMethod, SettlementStatus, Currency } from '@/types';
-import { X, CreditCard, Banknote, Landmark, Monitor } from 'lucide-react';
+import { X, CreditCard, Banknote, Landmark, Monitor, CheckCircle2 } from 'lucide-react';
 
 interface SettleBillModalProps {
   transaction: Transaction;
@@ -153,9 +153,14 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
           <button 
             disabled={isProcessing || amount <= 0}
             onClick={handleSettle}
-            className="w-full py-4 bg-green-600 text-white font-black rounded-xl uppercase tracking-[0.2em] text-xs hover:bg-green-700 transition-all shadow-xl disabled:opacity-50"
+            className="w-full py-4 bg-green-600 text-white font-black rounded-xl uppercase tracking-[0.2em] text-xs hover:bg-green-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isProcessing ? 'PROCESSING SETTLEMENT...' : 'AUTHORIZE PAYMENT'}
+            {isProcessing ? 'PROCESSING SETTLEMENT...' : (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                AUTHORIZE PAYMENT
+              </>
+            )}
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw } from 'lucide-react';
+import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw, Eye, Settings, CheckCircle2 } from 'lucide-react';
 import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem, AppSettings, Currency } from '../types';
 import { BRAND } from '../constants';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
@@ -15,10 +15,9 @@ import ManageTransactionModal from './ManageTransactionModal';
 interface DashboardProps {
   user: UserProfile;
   settings: AppSettings | null;
-  initialFilter?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showPOS, setShowPOS] = useState(false);
@@ -29,18 +28,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) 
   const [managingId, setManagingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [unitFilter, setUnitFilter] = useState<string>(initialFilter || 'ALL');
+  const [unitFilter, setUnitFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    if (initialFilter) {
-      setUnitFilter(initialFilter);
-    }
-  }, [initialFilter]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -287,16 +280,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) 
   const currencies = Object.keys(totalsByCurrency) as Currency[];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-12">
       <div className="no-print space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-white uppercase tracking-tight">LEDGER DASHBOARD</h1>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Management System • Online</p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => setShowPOS(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Walk-In POS</button>
-            <button onClick={() => setShowFolio(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Reservation Entry</button>
+          <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
+            <button onClick={() => setShowPOS(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
+              <Plus className="w-5 h-5" />
+              Walk-In POS
+            </button>
+            <button onClick={() => setShowFolio(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
+              <Calendar className="w-5 h-5" />
+              Reservation Entry
+            </button>
+            <button onClick={() => setShowProforma(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
+              <Receipt className="w-5 h-5" />
+              Proforma Invoice
+            </button>
           </div>
         </div>
 
@@ -319,7 +322,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) 
             </div>
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Revenue Unit</label>
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <Filter className="w-4 h-4 text-[#EAD8B1]" />
+              Revenue Unit
+            </label>
             <select 
               className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
               value={unitFilter}
@@ -333,7 +339,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) 
             </select>
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">
-            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Status</label>
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-[#EAD8B1]" />
+              Status
+            </label>
             <select 
               className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-2 text-xs text-white outline-none focus:border-[#C8A862] transition-colors"
               value={statusFilter}
@@ -398,20 +407,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) 
                 setMethodFilter('ALL');
                 setSearchQuery('');
               }}
-              className="px-4 py-2 bg-gray-800 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
             >
+              <RefreshCw className="w-3 h-3" />
               Reset All
             </button>
             <button 
               onClick={downloadReport} 
-              className="px-4 py-2 bg-blue-600/10 text-blue-400 text-[10px] font-black uppercase rounded-lg border border-blue-600/20 hover:bg-blue-600 hover:text-white transition-all shadow-lg"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600/10 text-blue-400 text-[10px] font-black uppercase rounded-lg border border-blue-600/20 hover:bg-blue-600 hover:text-white transition-all shadow-lg"
             >
+              <Download className="w-3 h-3" />
               Export Transactions
             </button>
             <button 
               onClick={downloadInventoryReport} 
-              className="px-4 py-2 bg-green-600/10 text-green-500 text-[10px] font-black uppercase rounded-lg border border-green-600/20 hover:bg-green-600 hover:text-white transition-all shadow-lg"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600/10 text-green-500 text-[10px] font-black uppercase rounded-lg border border-green-600/20 hover:bg-green-600 hover:text-white transition-all shadow-lg"
             >
+              <Download className="w-3 h-3" />
               Export Inventory
             </button>
           </div>
@@ -454,11 +466,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) 
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-gray-700/50 bg-[#0B1C2D]/50 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('reference')}>Origin/Ref</th>
-                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('guestName')}>Guest & Operator</th>
+                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('reference')}>
+                  <div className="flex items-center gap-2">
+                    Origin/Ref
+                    {sortField === 'reference' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
+                  </div>
+                </th>
+                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('guestName')}>
+                  <div className="flex items-center gap-2">
+                    Guest & Operator
+                    {sortField === 'guestName' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
+                  </div>
+                </th>
                 <th className="px-6 py-5">Items Sold</th>
-                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('totalAmount')}>Financial Summary</th>
-                <th className="px-6 py-5 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>Status</th>
+                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('totalAmount')}>
+                  <div className="flex items-center gap-2">
+                    Financial Summary
+                    {sortField === 'totalAmount' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
+                  </div>
+                </th>
+                <th className="px-6 py-5 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>
+                  <div className="flex items-center gap-2 justify-center">
+                    Status
+                    {sortField === 'status' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
+                  </div>
+                </th>
                 <th className="px-6 py-5 text-right">Actions</th>
               </tr>
             </thead>
@@ -521,42 +553,52 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) 
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right space-x-2">
-                    {t.status !== SettlementStatus.PAID && (
+                    <div className="flex items-center justify-end gap-2">
+                      {t.status !== SettlementStatus.PAID && (
+                        <button 
+                          onClick={() => setManagingId(t.id)} 
+                          className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all animate-pulse"
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                          Settle
+                        </button>
+                      )}
+                      {t.type === 'POS' && (
+                        <button 
+                          onClick={() => { setPosEditingId(t.id); setShowPOS(true); }} 
+                          className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all"
+                        >
+                          <Plus className="w-3 h-3" />
+                          POS Add
+                        </button>
+                      )}
+                      {t.type === 'PROFORMA' && (
+                        <button 
+                          onClick={() => { setProformaEditingId(t.id); setShowProforma(true); }} 
+                          className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/20 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all"
+                        >
+                          <Settings className="w-3 h-3" />
+                          Edit
+                        </button>
+                      )}
                       <button 
                         onClick={() => setManagingId(t.id)} 
-                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all animate-pulse"
+                        className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
                       >
-                        Settle
+                        <Settings className="w-3 h-3" />
+                        Manage
                       </button>
-                    )}
-                    {t.type === 'POS' && (
-                      <button 
-                        onClick={() => { setPosEditingId(t.id); setShowPOS(true); }} 
-                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all"
-                      >
-                        POS Add
+                      <button onClick={() => setViewingId(t.id)} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">
+                        <Eye className="w-3 h-3" />
+                        {t.type === 'PROFORMA' ? 'Invoice' : 'Receipt'}
                       </button>
-                    )}
-                    {t.type === 'PROFORMA' && (
-                      <button 
-                        onClick={() => { setProformaEditingId(t.id); setShowProforma(true); }} 
-                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/20 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all"
-                      >
-                        Edit Proforma
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => setManagingId(t.id)} 
-                      className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
-                    >
-                      Manage
-                    </button>
-                    <button onClick={() => setViewingId(t.id)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">
-                      {t.type === 'PROFORMA' ? 'Invoice' : 'Receipt'}
-                    </button>
-                    {user.role === UserRole.ADMIN && (
-                      <button onClick={() => handleDelete(t)} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-red-900/20 text-red-400 border border-red-500/20 hover:bg-red-900/40 rounded transition-all">Delete</button>
-                    )}
+                      {user.role === UserRole.ADMIN && (
+                        <button onClick={() => handleDelete(t)} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-red-900/20 text-red-400 border border-red-500/20 hover:bg-red-900/40 rounded transition-all">
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

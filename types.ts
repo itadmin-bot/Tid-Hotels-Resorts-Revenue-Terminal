@@ -40,6 +40,7 @@ export interface Room {
   name: string;
   type: string;
   price: number;
+  currency?: Currency;
   description?: string;
   totalInventory: number;
   bookedCount: number;

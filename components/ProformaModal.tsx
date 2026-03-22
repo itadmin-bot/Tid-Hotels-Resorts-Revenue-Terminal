@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { Calendar, Plus, Trash2, Save, X, Download, Printer, FileText } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, X, Download, Printer, FileText, CheckCircle2, ChevronDown } from 'lucide-react';
 import { printProformaInvoice } from '@/utils/proformaPrint';
 import { BRAND } from '@/constants';
 import { formatToLocalDate } from '@/utils/dateUtils';
@@ -367,7 +367,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
         <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 text-center space-y-6 relative">
           <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
-            <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+            <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">PROFORMA SAVED</h2>
           <div className="flex flex-col gap-3">
@@ -421,7 +421,9 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
               </button>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-2xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-thin scrollbar-thumb-gray-700">
@@ -493,7 +495,10 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
           <section className="space-y-4">
             <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
               <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Room Booking and Meeting Spaces</h3>
-              <button onClick={addRoomRow} className="px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10">+ Add Room Row</button>
+              <button onClick={addRoomRow} className="flex items-center gap-2 px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">
+                <Plus className="w-3 h-3" />
+                Add Room Row
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -528,7 +533,11 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                       <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.unitRate} onChange={(e) => updateRoomItem(idx, 'unitRate', parseFloat(e.target.value) || 0)} /></td>
                       <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.discountedRate} onChange={(e) => updateRoomItem(idx, 'discountedRate', parseFloat(e.target.value) || 0)} /></td>
                       <td className="p-1 text-right font-black">{currencySymbol}{item.total.toLocaleString()}</td>
-                      <td className="p-1 text-center"><button onClick={() => removeRoomRow(idx)} className="text-red-500">&times;</button></td>
+                      <td className="p-1 text-center">
+                        <button onClick={() => removeRoomRow(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-1">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -541,7 +550,10 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
             <section className="space-y-4">
               <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Food & Beverage Requirement</h3>
-                <button onClick={addFoodRow} className="px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10">+ Add Food Row</button>
+                <button onClick={addFoodRow} className="flex items-center gap-2 px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">
+                  <Plus className="w-3 h-3" />
+                  Add Food Row
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -574,7 +586,11 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                         <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.unitRate} onChange={(e) => updateFoodItem(idx, 'unitRate', parseFloat(e.target.value) || 0)} /></td>
                         <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.discountedRate} onChange={(e) => updateFoodItem(idx, 'discountedRate', parseFloat(e.target.value) || 0)} /></td>
                         <td className="p-1 text-right font-black">{currencySymbol}{item.total.toLocaleString()}</td>
-                        <td className="p-1 text-center"><button onClick={() => removeFoodRow(idx)} className="text-red-500">&times;</button></td>
+                        <td className="p-1 text-center">
+                          <button onClick={() => removeFoodRow(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-1">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -649,9 +665,10 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   })}
                   <button 
                     onClick={addCustomTax}
-                    className="px-2 py-1 h-fit rounded text-[8px] font-black uppercase bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all"
+                    className="flex items-center gap-1 px-2 py-1 h-fit rounded text-[8px] font-black uppercase bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all"
                   >
-                    + Add Custom Tax
+                    <Plus className="w-2 h-2" />
+                    Add Custom Tax
                   </button>
                 </div>
               </div>
@@ -668,7 +685,9 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                         onChange={(e) => updateTax(tax.id, 'name', e.target.value)}
                         placeholder="Tax Name"
                       />
-                      <button onClick={() => removeTax(tax.id)} className="text-red-500 text-lg hover:text-red-400 transition-colors">&times;</button>
+                      <button onClick={() => removeTax(tax.id)} className="text-red-500/50 hover:text-red-500 transition-colors p-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                     <div className="flex items-center justify-between gap-2 border-t border-gray-700/50 pt-2">
                       <div className="flex items-center gap-2">

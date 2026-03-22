@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
+import { Calendar, Plus, Trash2, Receipt, Save, X, CheckCircle2, ChevronDown, User, Mail, Phone, CreditCard } from 'lucide-react';
 import { BRAND } from '@/constants';
 import { formatToLocalDate } from '@/utils/dateUtils';
 import { 
@@ -375,7 +375,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
         <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 text-center space-y-6">
           <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
-            <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+            <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">FOLIO CONFIRMED</h2>
           <button onClick={onClose} className="w-full py-4 bg-[#C8A862] text-black font-bold rounded-xl uppercase text-xs tracking-widest">Done</button>
@@ -390,7 +390,9 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       <div className="bg-[#13263A] w-full max-w-4xl rounded-2xl border border-gray-700 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-gray-700/50 flex justify-between items-center bg-[#13263A]">
           <h2 className="text-xl font-black text-[#C8A862] uppercase tracking-tighter">FOLIO CONTROL HUB</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-2xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X className="w-6 h-6" />
+          </button>
         </div>
         
         <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
@@ -453,7 +455,10 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
           <section className="space-y-4">
             <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
               <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Room Inventory</h3>
-              <button onClick={addRoomRow} className="px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">+ Add Room</button>
+              <button onClick={addRoomRow} className="flex items-center gap-2 px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">
+                <Plus className="w-3 h-3" />
+                Add Room
+              </button>
             </div>
             {bookings.map((booking, idx) => (
               <div key={idx} className="space-y-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 relative group">
@@ -473,7 +478,9 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                   </div>
                   <div className="col-span-1 text-center">
                     {bookings.length > 1 && (
-                      <button onClick={() => removeRoomRow(idx)} className="text-red-500 text-2xl leading-none">&times;</button>
+                      <button onClick={() => removeRoomRow(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-2">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -515,7 +522,10 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                     <option key={m.id} value={m.id}>{m.name} ({m.currency === Currency.USD ? '$' : '₦'}{m.price.toLocaleString()})</option>
                   ))}
                 </select>
-                <button onClick={() => addCharge()} className="px-3 py-1.5 border border-[#C8A862] bg-[#C8A862]/10 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/20 transition-all">+ Add Flexible Charge</button>
+                <button onClick={() => addCharge()} className="flex items-center gap-2 px-3 py-1.5 border border-[#C8A862] bg-[#C8A862]/10 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/20 transition-all">
+                  <Plus className="w-3 h-3" />
+                  Add Flexible Charge
+                </button>
               </div>
             </div>
             {additionalCharges.map((charge, idx) => (
@@ -533,7 +543,9 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                   <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-right" value={charge.price} onChange={(e) => updateCharge(idx, 'price', parseFloat(e.target.value) || 0)} />
                 </div>
                 <div className="col-span-1 text-center">
-                  <button onClick={() => removeCharge(idx)} className="text-red-500 text-2xl leading-none">&times;</button>
+                  <button onClick={() => removeCharge(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-2">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -545,7 +557,10 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
           <section className="space-y-4">
             <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
               <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Accounting & Split Payment</h3>
-              <button onClick={addPaymentRow} className="px-3 py-1.5 border border-green-500/30 text-green-400 rounded text-[9px] font-black uppercase hover:bg-green-500/10 transition-all">+ Add Payment Row</button>
+              <button onClick={addPaymentRow} className="flex items-center gap-2 px-3 py-1.5 border border-green-500/30 text-green-400 rounded text-[9px] font-black uppercase hover:bg-green-500/10 transition-all">
+                <Plus className="w-3 h-3" />
+                Add Payment Row
+              </button>
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-bold text-gray-500 uppercase">Target Settlement Account</label>
@@ -578,7 +593,9 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                 </div>
                 <div className="col-span-1 text-center">
                    {payments.length > 1 && (
-                     <button onClick={() => removePaymentRow(idx)} className="text-red-500 text-2xl leading-none">&times;</button>
+                     <button onClick={() => removePaymentRow(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-2">
+                       <Trash2 className="w-4 h-4" />
+                     </button>
                    )}
                 </div>
               </div>

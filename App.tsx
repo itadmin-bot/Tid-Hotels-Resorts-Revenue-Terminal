@@ -14,7 +14,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [activeView, setActiveView] = useState<'DASHBOARD' | 'ADMIN' | 'PROFORMA'>('DASHBOARD');
+  const [activeView, setActiveView] = useState<'DASHBOARD' | 'ADMIN'>('DASHBOARD');
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
@@ -279,23 +279,26 @@ const App: React.FC = () => {
   if (user && !isVerified) return <AuthScreen needsVerification={true} />;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white flex-col lg:flex-row">
+    <div className="flex h-screen overflow-hidden bg-[#0B1C2D] text-white">
       {/* Mobile Header */}
-      <header className="lg:hidden flex items-center justify-between p-4 bg-[#13263A] border-b border-gray-700/50 no-print">
-        <div className="flex items-center gap-2">
-          <div className="text-[#C8A862] text-xl font-black italic tracking-tighter uppercase truncate max-w-[150px]">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#13263A] border-b border-gray-700/50 flex items-center justify-between px-4 z-40 no-print">
+        <div className="flex flex-col">
+          <span className="text-[#C8A862] font-black italic text-lg leading-none uppercase tracking-tighter">
             {settings?.hotelName || BRAND.name}
-          </div>
+          </span>
+          <span className="text-[8px] text-gray-500 uppercase tracking-widest font-bold">
+            {settings?.hotelSubName || 'Hotels & Resorts'}
+          </span>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(true)}
-          className="p-2 text-gray-400 hover:text-white transition-colors"
+          className="p-2 text-gray-400 hover:text-[#C8A862] transition-colors"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
           </svg>
         </button>
-      </header>
+      </div>
 
       <Sidebar 
         user={userProfile!} 
@@ -308,15 +311,8 @@ const App: React.FC = () => {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
-      
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        {activeView === 'DASHBOARD' ? (
-          <Dashboard user={userProfile!} settings={settings} />
-        ) : activeView === 'PROFORMA' ? (
-          <Dashboard user={userProfile!} settings={settings} initialFilter="PROFORMA" />
-        ) : (
-          <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />
-        )}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-20 lg:pt-16">
+        {activeView === 'DASHBOARD' ? <Dashboard user={userProfile!} settings={settings} /> : <AdminPanel user={userProfile!} isAuthorized={isAdminAuthorized} onAuthorize={() => setIsAdminAuthorized(true)} />}
       </main>
     </div>
   );

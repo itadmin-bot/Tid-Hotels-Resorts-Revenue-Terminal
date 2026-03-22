@@ -10,7 +10,7 @@ import {
   query,
   where
 } from 'firebase/firestore';
-import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
+import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search, Home, BarChart3, Download, RefreshCw, Save, X, Printer, Edit } from 'lucide-react';
 import { db } from '../firebase';
 import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction, Currency } from '../types';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
@@ -340,9 +340,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Master Control Panel • {user.displayName}</p>
         </div>
         <div className="bg-[#13263A] rounded-xl p-1.5 flex border border-gray-700 overflow-x-auto gap-1">
-          {['Rooms', 'Menu', 'Reports', 'Settings', 'Accounts', 'Users', 'Security'].map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-5 py-2 text-[11px] font-black rounded-lg uppercase tracking-widest transition-all shrink-0 ${activeTab === tab ? 'bg-[#C8A862] text-[#0B1C2D] shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-              {tab}
+          {[
+            { id: 'Rooms', icon: Home },
+            { id: 'Menu', icon: Coffee },
+            { id: 'Reports', icon: BarChart3 },
+            { id: 'Settings', icon: Settings },
+            { id: 'Accounts', icon: CreditCard },
+            { id: 'Users', icon: Users },
+            { id: 'Security', icon: Shield }
+          ].map((tab) => (
+            <button 
+              key={tab.id} 
+              onClick={() => setActiveTab(tab.id as any)} 
+              className={`flex items-center gap-2 px-5 py-2 text-[11px] font-black rounded-lg uppercase tracking-widest transition-all shrink-0 ${
+                activeTab === tab.id ? 'bg-[#C8A862] text-[#0B1C2D] shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.id}
             </button>
           ))}
         </div>
@@ -408,8 +423,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                       a.download = `TIDE_AUDIT_${reportUnit}_${reportDate}.csv`;
                       a.click();
                     }}
-                    className="px-6 py-2 bg-blue-600/10 border border-blue-600/30 text-blue-400 rounded-lg text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all h-[38px]"
+                    className="flex items-center gap-2 px-6 py-2 bg-blue-600/10 border border-blue-600/30 text-blue-400 rounded-lg text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all h-[38px]"
                   >
+                    <Download className="w-4 h-4" />
                     Export Data
                   </button>
                   <button 
@@ -449,8 +465,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                       a.download = `TIDE_INVENTORY_${reportUnit}_${new Date().toISOString().split('T')[0]}.csv`;
                       a.click();
                     }}
-                    className="px-6 py-2 bg-green-600/10 border border-green-600/30 text-green-500 rounded-lg text-[10px] font-black uppercase hover:bg-green-600 hover:text-white transition-all h-[38px]"
+                    className="flex items-center gap-2 px-6 py-2 bg-green-600/10 border border-green-600/30 text-green-500 rounded-lg text-[10px] font-black uppercase hover:bg-green-600 hover:text-white transition-all h-[38px]"
                   >
+                    <Download className="w-4 h-4" />
                     Export Inventory
                   </button>
                 </div>
@@ -711,8 +728,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                             printWindow.document.write(html);
                             printWindow.document.close();
                           }}
-                          className="px-4 py-1 bg-[#C8A862] text-[#0B1C2D] text-[10px] font-black uppercase rounded hover:bg-[#B69651] transition-all"
+                          className="flex items-center gap-2 px-4 py-1 bg-[#C8A862] text-[#0B1C2D] text-[10px] font-black uppercase rounded hover:bg-[#B69651] transition-all"
                         >
+                          <Printer className="w-3 h-3" />
                           Print PDF
                         </button>
                       </div>
@@ -781,7 +799,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     onChange={(e) => setRoomSearch(e.target.value)}
                   />
                 </div>
-                <button onClick={() => setShowRoomModal({})} className="px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all shrink-0">+ Add Room</button>
+                <button onClick={() => setShowRoomModal({})} className="flex items-center gap-2 px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all shrink-0">
+                  <Plus className="w-4 h-4" />
+                  Add Room
+                </button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -808,8 +829,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                       <td className="py-5 text-gray-400 text-xs font-black">{r.totalInventory - (r.bookedCount || 0)} / {r.totalInventory} Available</td>
                       <td className="py-5 font-black text-right">{r.currency === Currency.USD ? '$' : '₦'}{r.price.toLocaleString()}</td>
                       <td className="py-5 text-right space-x-3">
-                        <button onClick={() => setShowRoomModal(r)} className="text-blue-400 hover:text-white text-[10px] font-black uppercase tracking-widest">Edit</button>
-                        <button onClick={() => deleteDoc(doc(db, 'rooms', r.id))} className="text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase tracking-widest">Delete</button>
+                        <button onClick={() => setShowRoomModal(r)} className="inline-flex items-center gap-1 text-blue-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors">
+                          <Edit className="w-3 h-3" />
+                          Edit
+                        </button>
+                        <button onClick={() => deleteDoc(doc(db, 'rooms', r.id))} className="inline-flex items-center gap-1 text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-colors">
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -837,7 +864,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     onChange={(e) => setMenuSearch(e.target.value)}
                   />
                 </div>
-                <button onClick={() => setShowMenuModal({})} className="px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all shrink-0">+ Add Item</button>
+                <button onClick={() => setShowMenuModal({})} className="flex items-center gap-2 px-4 py-2 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[10px] font-black uppercase hover:bg-[#C8A862]/10 transition-all shrink-0">
+                  <Plus className="w-4 h-4" />
+                  Add Item
+                </button>
               </div>
             </div>
 
@@ -915,12 +945,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                               </td>
                               <td className="py-5 font-black text-right text-white">{m.currency === Currency.USD ? '$' : '₦'}{m.price.toLocaleString()}</td>
                               <td className="py-5 text-right space-x-3">
-                                <button onClick={() => setShowMenuModal(m)} className="text-blue-400 hover:text-white text-[10px] font-black uppercase tracking-widest">Edit</button>
+                                <button onClick={() => setShowMenuModal(m)} className="inline-flex items-center gap-1 text-blue-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors">
+                                  <Edit className="w-3 h-3" />
+                                  Edit
+                                </button>
                                 <button onClick={() => {
                                   if(confirm(`Permanently delete ${m.name} from the property network?`)) {
                                     deleteDoc(doc(db, 'menu', m.id));
                                   }
-                                }} className="text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase tracking-widest">Delete</button>
+                                }} className="inline-flex items-center gap-1 text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-colors">
+                                  <Trash2 className="w-3 h-3" />
+                                  Delete
+                                </button>
                               </td>
                             </tr>
                           );
@@ -953,12 +989,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               <section key={acc.type} className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">{acc.label}</h3>
-                  <button onClick={() => handleAddBank(acc.type)} className="px-3 py-1.5 bg-[#C8A862]/10 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[9px] font-black uppercase hover:bg-[#C8A862]/20 transition-all">+ Add Account</button>
+                  <button onClick={() => handleAddBank(acc.type)} className="flex items-center gap-2 px-3 py-1.5 bg-[#C8A862]/10 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[9px] font-black uppercase hover:bg-[#C8A862]/20 transition-all">
+                    <Plus className="w-3 h-3" />
+                    Add Account
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {(settings[acc.type] || []).map((bank, i) => (
                     <div key={i} className="bg-[#0B1C2D] border border-gray-700/50 rounded-2xl p-6 space-y-4 relative group hover:border-[#C8A862]/30 transition-all">
-                      <button onClick={() => handleRemoveBank(acc.type, i)} className="absolute top-4 right-4 text-red-500/50 hover:text-red-500 text-[9px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity">Delete</button>
+                      <button onClick={() => handleRemoveBank(acc.type, i)} className="absolute top-4 right-4 flex items-center gap-1 text-red-500/50 hover:text-red-500 text-[9px] font-black uppercase opacity-0 group-hover:opacity-100 transition-all">
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <label className="text-[9px] font-black text-gray-600 uppercase">Institution</label>
@@ -1051,13 +1093,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Active Property Taxes</p>
-                  <button onClick={handleAddTax} className="px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[9px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">+ Add New Tax</button>
+                  <button onClick={handleAddTax} className="flex items-center gap-2 px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded-lg text-[9px] font-black uppercase hover:bg-[#C8A862]/10 transition-all">
+                    <Plus className="w-3 h-3" />
+                    Add New Tax
+                  </button>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(settings.taxes || []).map((tax, i) => (
                     <div key={tax.id} className="bg-[#0B1C2D] border border-gray-700/50 rounded-2xl p-5 space-y-4 relative group hover:border-[#C8A862]/30 transition-all">
-                      <button onClick={() => handleRemoveTax(i)} className="absolute top-4 right-4 text-red-500/50 hover:text-red-500 text-[10px] font-black">&times;</button>
+                      <button onClick={() => handleRemoveTax(i)} className="absolute top-4 right-4 text-red-500/50 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <label className="text-[9px] font-black text-gray-600 uppercase">Tax Label</label>
@@ -1166,9 +1213,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                             <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Admin Access</span>
                             <button 
                               onClick={() => toggleUserRole(u)}
-                              className={`w-10 h-5 rounded-full relative transition-all ${u.role === UserRole.ADMIN ? 'bg-purple-600' : 'bg-gray-800'}`}
+                              className={`w-10 h-5 rounded-full relative transition-all flex items-center ${u.role === UserRole.ADMIN ? 'bg-purple-600' : 'bg-gray-800'}`}
                             >
-                              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${u.role === UserRole.ADMIN ? 'left-6' : 'left-1'}`}></div>
+                              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all flex items-center justify-center ${u.role === UserRole.ADMIN ? 'left-6' : 'left-1'}`}>
+                                {u.role === UserRole.ADMIN && <Shield className="w-2 h-2 text-purple-600" />}
+                              </div>
                             </button>
                           </div>
                         </td>
@@ -1197,7 +1246,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                       {showSecurityCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  <button onClick={handleUpdateMasterCode} disabled={loading} className="px-8 py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg uppercase text-xs tracking-widest hover:bg-[#B69651] transition-all disabled:opacity-50 shadow-xl">Update Key</button>
+                  <button onClick={handleUpdateMasterCode} disabled={loading} className="flex items-center gap-2 px-8 py-4 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg uppercase text-xs tracking-widest hover:bg-[#B69651] transition-all disabled:opacity-50 shadow-xl">
+                    <Shield className="w-5 h-5" />
+                    Update Key
+                  </button>
                 </div>
               </div>
               <div className="bg-[#C8A862]/10 border border-[#C8A862]/20 p-5 rounded-2xl">
@@ -1257,8 +1309,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={showRoomModal.bookedCount || 0} onChange={(e) => setShowRoomModal({...showRoomModal, bookedCount: Number(e.target.value)})} />
               </div>
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setShowRoomModal(null)} className="flex-1 py-4 border border-gray-700 text-gray-500 rounded-lg uppercase text-[10px] font-black">Cancel</button>
-                <button type="submit" className="flex-1 py-4 bg-[#C8A862] text-black rounded-lg uppercase text-[10px] font-black">Save Inventory</button>
+                <button type="button" onClick={() => setShowRoomModal(null)} className="flex-1 flex items-center justify-center gap-2 py-4 border border-gray-700 text-gray-500 rounded-lg uppercase text-[10px] font-black hover:bg-white/5 transition-all">
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+                <button type="submit" className="flex-1 flex items-center justify-center gap-2 py-4 bg-[#C8A862] text-black rounded-lg uppercase text-[10px] font-black hover:bg-[#B69651] transition-all">
+                  <Save className="w-4 h-4" />
+                  Save Inventory
+                </button>
               </div>
             </form>
           </div>
@@ -1339,8 +1397,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 </div>
               </div>
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setShowMenuModal(null)} className="flex-1 py-4 border border-gray-700 text-gray-500 rounded-lg uppercase text-[10px] font-black">Cancel</button>
-                <button type="submit" className="flex-1 py-4 bg-[#C8A862] text-black rounded-lg uppercase text-[10px] font-black">Commit Record</button>
+                <button type="button" onClick={() => setShowMenuModal(null)} className="flex-1 flex items-center justify-center gap-2 py-4 border border-gray-700 text-gray-500 rounded-lg uppercase text-[10px] font-black hover:bg-white/5 transition-all">
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+                <button type="submit" className="flex-1 flex items-center justify-center gap-2 py-4 bg-[#C8A862] text-black rounded-lg uppercase text-[10px] font-black hover:bg-[#B69651] transition-all">
+                  <Save className="w-4 h-4" />
+                  Commit Record
+                </button>
               </div>
             </form>
           </div>

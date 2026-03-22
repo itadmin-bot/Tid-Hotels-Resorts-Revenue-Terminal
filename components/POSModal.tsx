@@ -1,4 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  Search, 
+  Plus, 
+  Minus, 
+  X, 
+  Trash2, 
+  CheckCircle2, 
+  ChevronDown,
+  CreditCard,
+  DollarSign,
+  ArrowRight
+} from 'lucide-react';
 import { collection, addDoc, onSnapshot, doc, writeBatch, increment, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { 
@@ -260,7 +272,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
         <div className="bg-[#13263A] w-full max-w-md rounded-2xl border border-gray-700 p-8 text-center space-y-6">
           <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
-             <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">TRANSACTION SYNCED</h2>
           <button onClick={onClose} className="w-full py-4 bg-[#C8A862] text-[#0B1C2D] font-bold rounded-xl uppercase text-xs tracking-widest">Done</button>
@@ -335,7 +347,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
 
             <div className="relative">
               <input type="text" placeholder="SEARCH MENU CATALOG..." className="w-full bg-[#13263A] border border-white/10 rounded-2xl py-4 px-12 text-sm text-white font-bold tracking-widest uppercase focus:outline-none focus:border-[#C8A862]/50 transition-all placeholder:text-gray-700" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              <svg className="w-5 h-5 text-gray-700 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <Search className="w-5 h-5 text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
@@ -365,7 +377,7 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                   </div>
                   <div className="mt-6 flex items-end justify-between">
                     <div className="text-lg font-black text-white">{item.currency === Currency.USD ? '$' : '₦'}{item.price.toLocaleString()}</div>
-                    {!isOut && <div className="w-10 h-10 rounded-2xl bg-[#C8A862]/10 border border-[#C8A862]/20 flex items-center justify-center text-[#C8A862] group-hover:bg-[#C8A862] group-hover:text-[#0B1C2D] transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4"></path></svg></div>}
+                    {!isOut && <div className="w-10 h-10 rounded-2xl bg-[#C8A862]/10 border border-[#C8A862]/20 flex items-center justify-center text-[#C8A862] group-hover:bg-[#C8A862] group-hover:text-[#0B1C2D] transition-all"><Plus className="w-5 h-5" /></div>}
                   </div>
                 </button>
               );
@@ -377,7 +389,9 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
         <div className="flex-[2] bg-[#13263A] flex flex-col overflow-hidden shadow-[-20px_0_40px_rgba(0,0,0,0.3)]">
           <div className="p-8 border-b border-white/5 flex justify-between items-center text-white bg-white/[0.01]">
             <h3 className="text-sm font-black uppercase tracking-[0.3em]">MANIFEST SUMMARY</h3>
-            <button onClick={onClose} className="text-gray-500 hover:text-white transition-all text-3xl font-light">&times;</button>
+            <button onClick={onClose} className="text-gray-500 hover:text-white transition-all">
+              <X className="w-6 h-6" />
+            </button>
           </div>
           
           <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide">
@@ -416,11 +430,17 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                         <div className="text-[10px] text-gray-500 font-bold mt-0.5">{c.item.currency === Currency.USD ? '$' : '₦'}{c.item.price.toLocaleString()}</div>
                       </div>
                   <div className="flex items-center gap-2 bg-[#0B1C2D] rounded-xl p-1 border border-white/5">
-                    <button onClick={() => updateQuantity(c.item.id, c.quantity - 1)} className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-gray-400 transition-colors">-</button>
+                    <button onClick={() => updateQuantity(c.item.id, c.quantity - 1)} className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-gray-400 transition-colors">
+                      <Minus className="w-3 h-3" />
+                    </button>
                     <span className="text-[11px] font-black w-6 text-center text-white">{c.quantity}</span>
-                    <button onClick={() => updateQuantity(c.item.id, c.quantity + 1)} className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-gray-400 transition-colors">+</button>
+                    <button onClick={() => updateQuantity(c.item.id, c.quantity + 1)} className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-gray-400 transition-colors">
+                      <Plus className="w-3 h-3" />
+                    </button>
                   </div>
-                  <button onClick={() => removeFromCart(c.item.id)} className="text-red-500/20 hover:text-red-500 transition-all p-1 text-xl leading-none">&times;</button>
+                  <button onClick={() => removeFromCart(c.item.id)} className="text-red-500/20 hover:text-red-500 transition-all p-1">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
               {cart.length === 0 && (
@@ -442,7 +462,10 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center px-1">
                     <h4 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">SPLIT SETTLEMENT</h4>
-                    <button onClick={addPaymentRow} className="text-[10px] font-black text-white uppercase tracking-widest hover:text-[#C8A862] transition-colors font-bold">+ Split</button>
+                    <button onClick={addPaymentRow} className="flex items-center gap-1 text-[10px] font-black text-[#C8A862] uppercase tracking-widest hover:text-white transition-colors">
+                      <Plus className="w-3 h-3" />
+                      Split
+                    </button>
                   </div>
                   <div className="space-y-3">
                     {payments.map((p, idx) => (
@@ -454,15 +477,17 @@ const POSModal: React.FC<POSModalProps> = ({ user, onClose, existingTransaction 
                             <option value={SettlementMethod.CASH}>CASH</option>
                             <option value={SettlementMethod.TRANSFER}>TRANSFER</option>
                           </select>
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600">
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                             <ChevronDown className="w-4 h-4" />
                           </div>
                         </div>
                         <div className="w-32 bg-[#0B1C2D]/50 border border-white/10 rounded-2xl p-1">
                           <input type="number" className="w-full bg-transparent p-4 text-sm font-black text-white text-right outline-none placeholder:text-gray-700" placeholder="0" value={p.amount || ''} onChange={(e) => updatePayment(idx, 'amount', parseFloat(e.target.value) || 0)} />
                         </div>
                         {payments.length > 1 && (
-                          <button onClick={() => removePaymentRow(idx)} className="text-red-500/50 hover:text-red-500 transition-colors text-2xl leading-none px-1">&times;</button>
+                          <button onClick={() => removePaymentRow(idx)} className="text-red-500/30 hover:text-red-500 transition-colors p-2">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     ))}

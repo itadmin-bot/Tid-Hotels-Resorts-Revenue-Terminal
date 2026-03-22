@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, onSnapshot, collection, writeBatch, increment } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { Calendar, Plus, Trash2, Receipt, Save, X } from 'lucide-react';
+import { Calendar, Plus, Trash2, Receipt, Save, X, Edit, Trash } from 'lucide-react';
 import { 
   Transaction, 
   SettlementStatus, 
@@ -499,7 +499,9 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-3xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors text-3xl flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10">
+            <X className="w-8 h-8" />
+          </button>
         </div>
 
         {/* Content Area */}
@@ -590,7 +592,9 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                       ))}
                     </select>
                     {items.length > 1 && (
-                      <button onClick={() => removeItem(idx)} className="text-red-500/50 hover:text-red-500 transition-colors px-2">&times;</button>
+                      <button onClick={() => removeItem(idx)} className="text-red-500/50 hover:text-red-500 transition-colors px-2 flex items-center justify-center">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
                   <div className="grid grid-cols-12 gap-2">
@@ -658,9 +662,11 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                       onChange={(e) => updatePaymentLine(idx, 'amount', parseFloat(e.target.value) || 0)} 
                     />
                   </div>
-                  <div className="col-span-1 text-center">
+                  <div className="col-span-1 text-center flex items-center justify-center">
                     {newPayments.length > 1 && (
-                      <button onClick={() => removePaymentLine(idx)} className="text-red-500/40 hover:text-red-500 transition-colors text-xl">&times;</button>
+                      <button onClick={() => removePaymentLine(idx)} className="text-red-500/40 hover:text-red-500 transition-colors flex items-center justify-center w-8 h-8 rounded-full hover:bg-red-500/10">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -761,15 +767,15 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                                     setEditingPaymentIdx(actualIdx !== undefined ? actualIdx : null);
                                     setEditedPaymentAmount(p.amount);
                                   }}
-                                  className="text-[8px] font-black text-[#C8A862] uppercase hover:underline"
+                                  className="text-[8px] font-black text-[#C8A862] uppercase hover:underline flex items-center gap-0.5"
                                 >
-                                  Edit
+                                  <Edit className="w-2 h-2" /> Edit
                                 </button>
                                 <button 
                                   onClick={() => handleDeletePayment(actualIdx!)}
                                   className="text-[8px] font-black text-red-500 uppercase hover:underline flex items-center gap-0.5"
                                 >
-                                  <X className="w-2 h-2" /> Remove
+                                  <Trash2 className="w-2 h-2" /> Remove
                                 </button>
                               </>
                             )}
@@ -777,15 +783,15 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                               <div className="flex flex-col gap-1">
                                 <button 
                                   onClick={() => handleEditPayment(actualIdx!)}
-                                  className="text-[8px] font-black text-green-500 uppercase hover:underline"
+                                  className="text-[8px] font-black text-green-500 uppercase hover:underline flex items-center gap-0.5"
                                 >
-                                  Save
+                                  <Save className="w-2 h-2" /> Save
                                 </button>
                                 <button 
                                   onClick={() => setEditingPaymentIdx(null)}
-                                  className="text-[8px] font-black text-red-500 uppercase hover:underline"
+                                  className="text-[8px] font-black text-red-500 uppercase hover:underline flex items-center gap-0.5"
                                 >
-                                  Cancel
+                                  <X className="w-2 h-2" /> Cancel
                                 </button>
                               </div>
                             )}
