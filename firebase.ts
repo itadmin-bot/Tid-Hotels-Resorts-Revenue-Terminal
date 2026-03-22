@@ -28,9 +28,6 @@ export const db = initializeFirestore(app, {
     tabManager: persistentMultipleTabManager(),
     cacheSizeBytes: CACHE_SIZE_UNLIMITED
   }),
-  // Force long polling and disable fetch streams to mitigate transport errors in restricted environments
-  experimentalForceLongPolling: true,
-  experimentalAutoDetectLongPolling: false,
 });
 
 export const googleProvider = new GoogleAuthProvider();

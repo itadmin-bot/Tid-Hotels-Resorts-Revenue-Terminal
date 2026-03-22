@@ -8,8 +8,8 @@ import { BRAND } from '@/constants';
 interface SidebarProps {
   user: UserProfile;
   settings: AppSettings | null;
-  activeView: 'DASHBOARD' | 'ADMIN';
-  onViewChange: (view: 'DASHBOARD' | 'ADMIN') => void;
+  activeView: 'DASHBOARD' | 'ADMIN' | 'PROFORMA';
+  onViewChange: (view: 'DASHBOARD' | 'ADMIN' | 'PROFORMA') => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -37,20 +37,17 @@ const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewCha
       {/* Mobile Overlay */}
       {isOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 no-print"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
 
-      <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        flex flex-col w-64 bg-[#13263A] border-r border-gray-700/50 p-6 no-print
-        transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        <div className="flex items-center justify-between mb-10">
+      <aside className={`fixed inset-y-0 left-0 z-50 lg:static lg:flex flex-col w-64 bg-[#13263A] border-r border-gray-700/50 p-6 no-print transition-transform duration-300 overflow-y-auto ${
+        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
+        <div className="flex justify-between items-center mb-10">
           <div>
-            <h1 className="text-2xl font-bold text-[#C8A862] italic tracking-tighter uppercase truncate">
+            <h1 className="text-2xl font-bold text-[#C8A862] italic tracking-tighter uppercase truncate max-w-[180px]">
               {settings?.hotelName || BRAND.name}
             </h1>
             <p className="text-[10px] text-gray-500 uppercase tracking-widest">
@@ -76,6 +73,16 @@ const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewCha
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
           Dashboard
+        </button>
+
+        <button 
+          onClick={() => onViewChange('PROFORMA')}
+          className={`w-full flex items-center gap-3 px-4 py-3 font-bold rounded-lg transition-all ${
+            activeView === 'PROFORMA' ? 'bg-[#C8A862] text-[#0B1C2D]' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          Proforma Invoices
         </button>
 
         {user.role === UserRole.ADMIN && (

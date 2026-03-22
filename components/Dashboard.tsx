@@ -15,9 +15,10 @@ import ManageTransactionModal from './ManageTransactionModal';
 interface DashboardProps {
   user: UserProfile;
   settings: AppSettings | null;
+  initialFilter?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, settings, initialFilter }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showPOS, setShowPOS] = useState(false);
@@ -28,12 +29,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   const [managingId, setManagingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [unitFilter, setUnitFilter] = useState<string>('ALL');
+  const [unitFilter, setUnitFilter] = useState<string>(initialFilter || 'ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (initialFilter) {
+      setUnitFilter(initialFilter);
+    }
+  }, [initialFilter]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -290,7 +297,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
           <div className="flex gap-2">
             <button onClick={() => setShowPOS(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Walk-In POS</button>
             <button onClick={() => setShowFolio(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Reservation Entry</button>
-            <button onClick={() => setShowProforma(true)} className="px-5 py-2.5 bg-[#C8A862] text-[#0B1C2D] font-black rounded-lg hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-lg">Proforma Invoice</button>
           </div>
         </div>
 

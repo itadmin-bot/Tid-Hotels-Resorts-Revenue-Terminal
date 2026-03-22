@@ -95,7 +95,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             <div className="text-[8pt] font-bold text-gray-700 mb-2">
               RECEIPT NO: {transaction.reference}<br/>
               EMAIL: reservations@tidehotelgroup.com | TAX IDENTIFICATION NUMBER: 31329087-0001<br/>
-              PHONE: +2349111111314
+              PHONE: +9111111314
             </div>
             <div className="bg-gray-200 py-1 font-black uppercase tracking-[0.2em] text-[11pt]">
               PROFORMA INVOICE
@@ -301,7 +301,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             <div style={{fontSize: '10px', fontWeight: 'bold', marginBottom: '4mm', color: '#333'}}>
               RECEIPT NO: {transaction.reference}<br/>
               EMAIL: reservations@tidehotelgroup.com | TAX IDENTIFICATION NUMBER: 31329087-0001<br/>
-              PHONE: +2349111111314
+              PHONE: +9111111314
             </div>
             <div className="invoice-title-box">PROFORMA INVOICE</div>
           </div>

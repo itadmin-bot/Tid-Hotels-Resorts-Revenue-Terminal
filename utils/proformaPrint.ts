@@ -94,7 +94,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
       <div style="font-size: 10px; font-weight: bold; margin-bottom: 4mm; color: #333;">
         RECEIPT NO: ${transaction.reference}<br/>
         EMAIL: reservations@tidehotelgroup.com | TAX IDENTIFICATION NUMBER: 31329087-0001<br/>
-        PHONE: +2349111111314
+        PHONE: +9111111314
       </div>
       <div class="invoice-title-box">PROFORMA INVOICE</div>
     </div>
