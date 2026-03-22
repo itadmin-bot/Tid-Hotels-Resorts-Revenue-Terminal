@@ -91,6 +91,11 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
     <div class="header">
       <div class="hotel-name"><span>TIDÉ</span> HOTELS & RESORTS</div>
       <div class="hotel-addr">38 S.O Williams Street, Off Anthony Enahoro Street, Abuja</div>
+      <div style="font-size: 10px; font-weight: bold; margin-bottom: 4mm; color: #333;">
+        RECEIPT NO: ${transaction.reference}<br/>
+        EMAIL: reservations@tidehotelgroup.com | TAX IDENTIFICATION NUMBER: 31329087-0001<br/>
+        PHONE: +2349111111314
+      </div>
       <div class="invoice-title-box">PROFORMA INVOICE</div>
     </div>
 
@@ -115,7 +120,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
           <th>QTY</th>
           <th>RATE (${currencySymbol})</th>
           <th>DISC. RATE (${currencySymbol})</th>
-          <th>TOTAL ({currencySymbol})</th>
+          <th>TOTAL (${currencySymbol})</th>
         </tr>
       </thead>
       <tbody>
@@ -123,6 +128,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
       </tbody>
     </table>
 
+    ${!transaction.excludeFoodFromProforma ? `
     <div class="section-title">Food & Beverage Requirement</div>
     <table class="table">
       <thead>
@@ -141,6 +147,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
         ${foodRows}
       </tbody>
     </table>
+    ` : ''}
 
     <div class="totals-box">
       <div class="totals-table">

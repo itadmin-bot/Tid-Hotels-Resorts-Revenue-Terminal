@@ -92,6 +92,11 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             <div className="text-[8pt] font-bold uppercase tracking-widest text-gray-600 mb-1">
               38 S.O Williams Street, Off Anthony Enahoro Street, Abuja
             </div>
+            <div className="text-[8pt] font-bold text-gray-700 mb-2">
+              RECEIPT NO: {transaction.reference}<br/>
+              EMAIL: reservations@tidehotelgroup.com | TAX IDENTIFICATION NUMBER: 31329087-0001<br/>
+              PHONE: +2349111111314
+            </div>
             <div className="bg-gray-200 py-1 font-black uppercase tracking-[0.2em] text-[11pt]">
               PROFORMA INVOICE
             </div>
@@ -162,45 +167,47 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
           </div>
 
           {/* Food & Beverage Table */}
-          <div className="mb-6">
-            <div className="bg-gray-100 px-2 py-1 text-[8pt] font-black uppercase tracking-widest mb-2 border-l-4 border-[#C8A862]">
-              FOOD & BEVERAGE REQUIREMENT
-            </div>
-            <table className="w-full border-collapse text-[8pt]">
-              <thead>
-                <tr className="bg-gray-50 uppercase font-bold text-center border border-black">
-                  <th className="border border-black p-1 w-8">#</th>
-                  <th className="border border-black p-1">START DATE</th>
-                  <th className="border border-black p-1">END DATE</th>
-                  <th className="border border-black p-1"># DAYS</th>
-                  <th className="border border-black p-1">Description</th>
-                  <th className="border border-black p-1">QTY</th>
-                  <th className="border border-black p-1">DURATION</th>
-                  <th className="border border-black p-1">UNIT RATE</th>
-                  <th className="border border-black p-1">DISCOUNTED RATE</th>
-                  <th className="border border-black p-1">TOTAL</th>
-                  <th className="border border-black p-1">COMMENT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transaction.proformaFood?.map((item, idx) => (
-                  <tr key={idx} className="text-center">
-                    <td className="border border-black p-1">{(transaction.proformaRooms?.length || 0) + idx + 1}</td>
-                    <td className="border border-black p-1">{item.startDate}</td>
-                    <td className="border border-black p-1">{item.endDate}</td>
-                    <td className="border border-black p-1">{item.noOfDays}</td>
-                    <td className="border border-black p-1 text-left">{item.description}</td>
-                    <td className="border border-black p-1">{item.qty}</td>
-                    <td className="border border-black p-1">{item.duration}</td>
-                    <td className="border border-black p-1 text-right">{currencySymbol}{item.unitRate.toLocaleString()}</td>
-                    <td className="border border-black p-1 text-right">{currencySymbol}{item.discountedRate.toLocaleString()}</td>
-                    <td className="border border-black p-1 text-right font-bold">{currencySymbol}{item.total.toLocaleString()}</td>
-                    <td className="border border-black p-1 text-left text-[7pt]">{item.comment}</td>
+          {!transaction.excludeFoodFromProforma && (
+            <div className="mb-6">
+              <div className="bg-gray-100 px-2 py-1 text-[8pt] font-black uppercase tracking-widest mb-2 border-l-4 border-[#C8A862]">
+                FOOD & BEVERAGE REQUIREMENT
+              </div>
+              <table className="w-full border-collapse text-[8pt]">
+                <thead>
+                  <tr className="bg-gray-50 uppercase font-bold text-center border border-black">
+                    <th className="border border-black p-1 w-8">#</th>
+                    <th className="border border-black p-1">START DATE</th>
+                    <th className="border border-black p-1">END DATE</th>
+                    <th className="border border-black p-1"># DAYS</th>
+                    <th className="border border-black p-1">Description</th>
+                    <th className="border border-black p-1">QTY</th>
+                    <th className="border border-black p-1">DURATION</th>
+                    <th className="border border-black p-1">UNIT RATE</th>
+                    <th className="border border-black p-1">DISCOUNTED RATE</th>
+                    <th className="border border-black p-1">TOTAL</th>
+                    <th className="border border-black p-1">COMMENT</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {transaction.proformaFood?.map((item, idx) => (
+                    <tr key={idx} className="text-center">
+                      <td className="border border-black p-1">{(transaction.proformaRooms?.length || 0) + idx + 1}</td>
+                      <td className="border border-black p-1">{item.startDate}</td>
+                      <td className="border border-black p-1">{item.endDate}</td>
+                      <td className="border border-black p-1">{item.noOfDays}</td>
+                      <td className="border border-black p-1 text-left">{item.description}</td>
+                      <td className="border border-black p-1">{item.qty}</td>
+                      <td className="border border-black p-1">{item.duration}</td>
+                      <td className="border border-black p-1 text-right">{currencySymbol}{item.unitRate.toLocaleString()}</td>
+                      <td className="border border-black p-1 text-right">{currencySymbol}{item.discountedRate.toLocaleString()}</td>
+                      <td className="border border-black p-1 text-right font-bold">{currencySymbol}{item.total.toLocaleString()}</td>
+                      <td className="border border-black p-1 text-left text-[7pt]">{item.comment}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Totals */}
           <div className="flex justify-end mb-6">
@@ -291,6 +298,11 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
           <div className="header">
             <div className="hotel-name"><span>TIDÉ</span> HOTELS & RESORTS</div>
             <div className="hotel-addr">38 S.O Williams Street, Off Anthony Enahoro Street, Abuja</div>
+            <div style={{fontSize: '10px', fontWeight: 'bold', marginBottom: '4mm', color: '#333'}}>
+              RECEIPT NO: {transaction.reference}<br/>
+              EMAIL: reservations@tidehotelgroup.com | TAX IDENTIFICATION NUMBER: 31329087-0001<br/>
+              PHONE: +2349111111314
+            </div>
             <div className="invoice-title-box">PROFORMA INVOICE</div>
           </div>
 
@@ -335,35 +347,39 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
             </tbody>
           </table>
 
-          <div className="section-title">Food & Beverage Requirement</div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th style={{width: '30px'}}>#</th>
-                <th>START DATE</th>
-                <th style={{width: '40%'}}>DESCRIPTION</th>
-                <th>QTY</th>
-                <th>DURATION</th>
-                <th>RATE ({currencySymbol})</th>
-                <th>DISC. RATE ({currencySymbol})</th>
-                <th>TOTAL ({currencySymbol})</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transaction.proformaFood?.map((item, idx) => (
-                <tr key={idx}>
-                  <td>{(transaction.proformaRooms?.length || 0) + idx + 1}</td>
-                  <td>{item.startDate}</td>
-                  <td className="text-left">{item.description}</td>
-                  <td>{item.qty}</td>
-                  <td>{item.duration}</td>
-                  <td className="text-right">{currencySymbol}{item.unitRate.toLocaleString()}</td>
-                  <td className="text-right">{currencySymbol}{item.discountedRate.toLocaleString()}</td>
-                  <td className="text-right" style={{fontWeight: 'bold'}}>{currencySymbol}{item.total.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {!transaction.excludeFoodFromProforma && (
+            <>
+              <div className="section-title">Food & Beverage Requirement</div>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{width: '30px'}}>#</th>
+                    <th>START DATE</th>
+                    <th style={{width: '40%'}}>DESCRIPTION</th>
+                    <th>QTY</th>
+                    <th>DURATION</th>
+                    <th>RATE ({currencySymbol})</th>
+                    <th>DISC. RATE ({currencySymbol})</th>
+                    <th>TOTAL ({currencySymbol})</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transaction.proformaFood?.map((item, idx) => (
+                    <tr key={idx}>
+                      <td>{(transaction.proformaRooms?.length || 0) + idx + 1}</td>
+                      <td>{item.startDate}</td>
+                      <td className="text-left">{item.description}</td>
+                      <td>{item.qty}</td>
+                      <td>{item.duration}</td>
+                      <td className="text-right">{currencySymbol}{item.unitRate.toLocaleString()}</td>
+                      <td className="text-right">{currencySymbol}{item.discountedRate.toLocaleString()}</td>
+                      <td className="text-right" style={{fontWeight: 'bold'}}>{currencySymbol}{item.total.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
 
           <div className="totals-box">
             <div className="totals-table">

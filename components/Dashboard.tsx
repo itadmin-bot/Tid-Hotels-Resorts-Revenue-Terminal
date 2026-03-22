@@ -98,6 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
       // Unit Filtering
       if (unitFilter !== 'ALL') {
         if (unitFilter === 'FOLIO' && t.type !== 'FOLIO') return false;
+        if (unitFilter === 'PROFORMA' && t.type !== 'PROFORMA') return false;
         if (unitFilter === 'ZENZA' && t.unit !== UnitType.ZENZA) return false;
         if (unitFilter === 'WHISPERS' && t.unit !== UnitType.WHISPERS) return false;
       }
@@ -322,6 +323,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
               <option value="ZENZA">Zenza Unit</option>
               <option value="WHISPERS">Whispers Unit</option>
               <option value="FOLIO">Folios</option>
+              <option value="PROFORMA">Proforma Invoices</option>
             </select>
           </div>
           <div className="flex-1 min-w-[150px] space-y-1">

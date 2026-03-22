@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, Menu as MenuIcon, Coffee, Search } from 'lucide-react';
 import { db } from '../firebase';
-import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction } from '../types';
+import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction, Currency } from '../types';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 
 interface AdminPanelProps {
@@ -247,6 +247,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       name: showRoomModal.name || '',
       type: showRoomModal.type || 'Standard',
       price: Number(showRoomModal.price) || 0,
+      currency: showRoomModal.currency || Currency.NGN,
       totalInventory: currentTotal + addition,
       bookedCount: Number(showRoomModal.bookedCount) || 0
     };
@@ -270,6 +271,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
       name: showMenuModal.name || '',
       description: showMenuModal.description || '',
       price: Number(showMenuModal.price) || 0,
+      currency: showMenuModal.currency || Currency.NGN,
       category: showMenuModal.category || 'General',
       unit: showMenuModal.unit || 'ALL',
       initialStock: currentInitialStock + restock,
@@ -384,13 +386,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                         const unitMatch = reportUnit === 'ALL' || t.unit === reportUnit;
                         return dateMatch && unitMatch;
                       });
-                      const headers = ['Reference', 'Time', 'Type', 'Unit', 'Guest', 'Total', 'Paid', 'Balance', 'Method', 'Cashier'];
+                      const headers = ['Reference', 'Time', 'Type', 'Unit', 'Guest', 'Currency', 'Total', 'Paid', 'Balance', 'Method', 'Cashier'];
                       const rows = dailyTx.map(t => [
                         t.reference,
                         new Date(t.createdAt).toLocaleTimeString(),
                         t.type,
                         t.unit || t.preparedBy || t.cashierName || 'FOLIO',
                         t.guestName,
+                        t.currency || Currency.NGN,
                         t.totalAmount,
                         t.paidAmount,
                         t.balance,
@@ -411,7 +414,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   </button>
                   <button 
                     onClick={() => {
-                      const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Par Stock', 'Min Order (Par)', 'Min Order (Total)', 'Audit Status', 'Price (N)', 'Total Item Revenue (N)'];
+                      const headers = ['Item Name', 'Category', 'Revenue Unit', 'Initial Stock', 'Number of Sold Items', 'Current Remaining Stock', 'Reorder Level', 'Par Stock', 'Min Order (Par)', 'Min Order (Total)', 'Audit Status', 'Currency', 'Price', 'Total Item Revenue'];
                       const itemsToExport = menuItems.filter(m => {
                         if (reportUnit === 'ALL') return true;
                         return m.unit === reportUnit || m.unit === 'ALL';
@@ -433,6 +436,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           m.minOrderLevelPar || 0,
                           m.minOrderLevelTotal || 0,
                           status,
+                          m.currency || Currency.NGN,
                           m.price,
                           sold * m.price
                         ];
@@ -455,22 +459,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
 
             {(() => {
               const dailyTx = transactions.filter(t => formatToLocalDate(t.createdAt) === reportDate && t.type !== 'PROFORMA');
-              const gross = dailyTx.reduce((acc, t) => acc + Number(Math.max(t.totalAmount || 0, t.paidAmount || 0)), 0);
-              const outstanding = dailyTx.reduce((acc, t) => acc + Number(t.balance || 0), 0);
-              const settled = gross - outstanding;
-              const tax = dailyTx.reduce((acc, t) => acc + Number(t.taxAmount || 0), 0);
-              const sc = dailyTx.reduce((acc, t) => acc + Number(t.serviceCharge || 0), 0);
-              const net = gross - tax - sc;
+              
+              const totalsByCurrency = dailyTx.reduce((acc, t) => {
+                const curr = t.currency || Currency.NGN;
+                if (!acc[curr]) acc[curr] = { gross: 0, tax: 0, sc: 0, outstanding: 0 };
+                acc[curr].gross += Number(Math.max(t.totalAmount || 0, t.paidAmount || 0));
+                acc[curr].tax += Number(t.taxAmount || 0);
+                acc[curr].sc += Number(t.serviceCharge || 0);
+                acc[curr].outstanding += Number(t.balance || 0);
+                return acc;
+              }, {} as Record<string, { gross: number, tax: number, sc: number, outstanding: number }>);
 
               const byMethod = dailyTx.reduce((acc, t) => {
                 const method = t.settlementMethod || 'UNSPECIFIED';
-                acc[method] = (acc[method] || 0) + Number(t.paidAmount || 0);
+                const curr = t.currency || Currency.NGN;
+                const key = `${method} (${curr})`;
+                acc[key] = (acc[key] || 0) + Number(t.paidAmount || 0);
                 return acc;
               }, {} as Record<string, number>);
 
               const byUnit = dailyTx.reduce((acc, t) => {
                 const unit = t.unit || t.preparedBy || t.cashierName || 'FOLIO';
-                acc[unit] = (acc[unit] || 0) + Number(Math.max(t.totalAmount || 0, t.paidAmount || 0));
+                const curr = t.currency || Currency.NGN;
+                const key = `${unit} (${curr})`;
+                acc[key] = (acc[key] || 0) + Number(Math.max(t.totalAmount || 0, t.paidAmount || 0));
                 return acc;
               }, {} as Record<string, number>);
 
@@ -484,22 +496,42 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-[#C8A862]/30 transition-all">
                       <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Gross Revenue</p>
-                      <h3 className="text-2xl font-black text-white">₦{gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                      <div className="space-y-1">
+                        {(Object.entries(totalsByCurrency) as [string, { gross: number, tax: number, sc: number, outstanding: number }][]).map(([curr, data]) => (
+                          <h3 key={curr} className="text-xl font-black text-white">{curr === Currency.USD ? '$' : '₦'}{data.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        ))}
+                        {Object.keys(totalsByCurrency).length === 0 && <h3 className="text-xl font-black text-white">₦0.00</h3>}
+                      </div>
                       <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Total Valuation for {reportDate}</div>
                     </div>
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-blue-500/30 transition-all">
                       <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Tax Liability (VAT)</p>
-                      <h3 className="text-2xl font-black text-blue-400">₦{tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                      <div className="space-y-1">
+                        {(Object.entries(totalsByCurrency) as [string, { gross: number, tax: number, sc: number, outstanding: number }][]).map(([curr, data]) => (
+                          <h3 key={curr} className="text-xl font-black text-blue-400">{curr === Currency.USD ? '$' : '₦'}{data.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        ))}
+                        {Object.keys(totalsByCurrency).length === 0 && <h3 className="text-xl font-black text-blue-400">₦0.00</h3>}
+                      </div>
                       <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Calculated at {((settings?.vat || 0.075) * 100).toFixed(1)}%</div>
                     </div>
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-purple-500/30 transition-all">
                       <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Service Charge</p>
-                      <h3 className="text-2xl font-black text-purple-400">₦{sc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                      <div className="space-y-1">
+                        {(Object.entries(totalsByCurrency) as [string, { gross: number, tax: number, sc: number, outstanding: number }][]).map(([curr, data]) => (
+                          <h3 key={curr} className="text-xl font-black text-purple-400">{curr === Currency.USD ? '$' : '₦'}{data.sc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        ))}
+                        {Object.keys(totalsByCurrency).length === 0 && <h3 className="text-xl font-black text-purple-400">₦0.00</h3>}
+                      </div>
                       <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Calculated at {((settings?.serviceCharge || 0.10) * 100).toFixed(1)}%</div>
                     </div>
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 group hover:border-green-500/30 transition-all">
                       <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Net Revenue</p>
-                      <h3 className="text-2xl font-black text-green-400">₦{net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                      <div className="space-y-1">
+                        {(Object.entries(totalsByCurrency) as [string, { gross: number, tax: number, sc: number, outstanding: number }][]).map(([curr, data]) => (
+                          <h3 key={curr} className="text-xl font-black text-green-400">{curr === Currency.USD ? '$' : '₦'}{(data.gross - data.tax - data.sc).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        ))}
+                        {Object.keys(totalsByCurrency).length === 0 && <h3 className="text-xl font-black text-green-400">₦0.00</h3>}
+                      </div>
                       <div className="mt-2 text-[8px] text-gray-600 font-bold uppercase tracking-tighter">Gross minus Taxes & Charges</div>
                     </div>
                   </div>
@@ -508,10 +540,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 space-y-4">
                       <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30 pb-2">Settlement Channels</h3>
                       <div className="space-y-3">
-                        {Object.entries(byMethod).map(([method, amount]) => (
-                          <div key={method} className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-gray-400 uppercase">{method}</span>
-                            <span className="text-xs font-black text-white">₦{amount.toLocaleString()}</span>
+                        {Object.entries(byMethod).map(([methodKey, amount]) => (
+                          <div key={methodKey} className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-gray-400 uppercase">{methodKey}</span>
+                            <span className="text-xs font-black text-white">{methodKey.includes('(USD)') ? '$' : '₦'}{amount.toLocaleString()}</span>
                           </div>
                         ))}
                         {Object.keys(byMethod).length === 0 && <p className="text-[10px] text-gray-600 italic">No settlements recorded</p>}
@@ -521,10 +553,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     <div className="bg-[#0B1C2D] p-6 rounded-2xl border border-gray-700/50 space-y-4">
                       <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30 pb-2">Unit Performance</h3>
                       <div className="space-y-3">
-                        {Object.entries(byUnit).map(([unit, amount]) => (
-                          <div key={unit} className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-gray-400 uppercase">{unit} POS</span>
-                            <span className="text-xs font-black text-white">₦{amount.toLocaleString()}</span>
+                        {Object.entries(byUnit).map(([unitKey, amount]) => (
+                          <div key={unitKey} className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-gray-400 uppercase">{unitKey} POS</span>
+                            <span className="text-xs font-black text-white">{unitKey.includes('(USD)') ? '$' : '₦'}{amount.toLocaleString()}</span>
                           </div>
                         ))}
                         {Object.keys(byUnit).length === 0 && <p className="text-[10px] text-gray-600 italic">No unit activity recorded</p>}
@@ -566,7 +598,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                               <td className="py-3 text-gray-500">{formatToLocalTime(t.createdAt)}</td>
                               <td className="py-3 text-gray-500 uppercase font-bold">{t.type}</td>
                               <td className="py-3 text-gray-400 uppercase">{t.guestName}</td>
-                              <td className="py-3 text-right font-black">₦{t.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="py-3 text-right font-black">{t.currency === Currency.USD ? '$' : '₦'}{t.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td className="py-3 text-right">
                                 <span className={`px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase ${
                                   t.status === 'PAID' || t.status === 'SETTLED' ? 'bg-green-500/10 text-green-400' : 
@@ -759,7 +791,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     <th className="pb-4">Name</th>
                     <th className="pb-4">Type</th>
                     <th className="pb-4">Inventory</th>
-                    <th className="pb-4 text-right">Rate (₦)</th>
+                    <th className="pb-4 text-right">Rate</th>
                     <th className="pb-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -774,7 +806,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                       <td className="py-5 font-bold text-white uppercase">{r.name}</td>
                       <td className="py-5 text-gray-400 text-xs uppercase">{r.type}</td>
                       <td className="py-5 text-gray-400 text-xs font-black">{r.totalInventory - (r.bookedCount || 0)} / {r.totalInventory} Available</td>
-                      <td className="py-5 font-black text-right">{r.price.toLocaleString()}</td>
+                      <td className="py-5 font-black text-right">{r.currency === Currency.USD ? '$' : '₦'}{r.price.toLocaleString()}</td>
                       <td className="py-5 text-right space-x-3">
                         <button onClick={() => setShowRoomModal(r)} className="text-blue-400 hover:text-white text-[10px] font-black uppercase tracking-widest">Edit</button>
                         <button onClick={() => deleteDoc(doc(db, 'rooms', r.id))} className="text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase tracking-widest">Delete</button>
@@ -839,7 +871,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           <th className="pb-4 text-center">Reorder Level</th>
                           <th className="pb-4 text-center">Par Stock</th>
                           <th className="pb-4 text-center">Audit Status</th>
-                          <th className="pb-4 text-right">Price (₦)</th>
+                          <th className="pb-4 text-right">Price</th>
                           <th className="pb-4 text-right">Actions</th>
                         </tr>
                       </thead>
@@ -881,7 +913,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                                   {isBelowPar ? 'ORDER NOW' : 'OK'}
                                 </span>
                               </td>
-                              <td className="py-5 font-black text-right text-white">₦{m.price.toLocaleString()}</td>
+                              <td className="py-5 font-black text-right text-white">{m.currency === Currency.USD ? '$' : '₦'}{m.price.toLocaleString()}</td>
                               <td className="py-5 text-right space-x-3">
                                 <button onClick={() => setShowMenuModal(m)} className="text-blue-400 hover:text-white text-[10px] font-black uppercase tracking-widest">Edit</button>
                                 <button onClick={() => {
@@ -1196,8 +1228,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={showRoomModal.type || ''} onChange={(e) => setShowRoomModal({...showRoomModal, type: e.target.value})} required />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase">Base Rate (₦)</label>
-                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={showRoomModal.price || ''} onChange={(e) => setShowRoomModal({...showRoomModal, price: Number(e.target.value)})} required />
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Base Rate</label>
+                  <div className="flex gap-2">
+                    <input type="number" className="flex-1 bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={showRoomModal.price || ''} onChange={(e) => setShowRoomModal({...showRoomModal, price: Number(e.target.value)})} required />
+                    <select 
+                      className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-[#C8A862] font-black outline-none"
+                      value={showRoomModal.currency || Currency.NGN}
+                      onChange={(e) => setShowRoomModal({...showRoomModal, currency: e.target.value as Currency})}
+                    >
+                      <option value={Currency.NGN}>NGN (₦)</option>
+                      <option value={Currency.USD}>USD ($)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1238,8 +1280,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase">Price (₦)</label>
-                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" value={showMenuModal.price || ''} onChange={(e) => setShowMenuModal({...showMenuModal, price: Number(e.target.value)})} required />
+                  <label className="text-[9px] font-black text-gray-500 uppercase">Price</label>
+                  <div className="flex gap-2">
+                    <input type="number" className="flex-1 bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white font-black" value={showMenuModal.price || ''} onChange={(e) => setShowMenuModal({...showMenuModal, price: Number(e.target.value)})} required />
+                    <select 
+                      className="bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-[#C8A862] font-black outline-none"
+                      value={showMenuModal.currency || Currency.NGN}
+                      onChange={(e) => setShowMenuModal({...showMenuModal, currency: e.target.value as Currency})}
+                    >
+                      <option value={Currency.NGN}>NGN (₦)</option>
+                      <option value={Currency.USD}>USD ($)</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-gray-500 uppercase">Total Stocked (Edit Direct)</label>

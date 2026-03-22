@@ -47,6 +47,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
   
   const [appliedTaxes, setAppliedTaxes] = useState<TaxConfig[]>([]);
   const [isTaxInclusive, setIsTaxInclusive] = useState<boolean>(existingTransaction?.isTaxInclusive ?? true);
+  const [excludeFood, setExcludeFood] = useState<boolean>(existingTransaction?.excludeFoodFromProforma ?? false);
 
   const [roomItems, setRoomItems] = useState<ProformaRoomItem[]>(existingTransaction?.proformaRooms || [{
     startDate: formatToLocalDate(Date.now()),
@@ -130,6 +131,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
       setFoodItems(existingTransaction.proformaFood || []);
       setPayments([{ method: SettlementMethod.TRANSFER, amount: existingTransaction.paidAmount || 0 }]);
       setIsTaxInclusive(existingTransaction.isTaxInclusive ?? true);
+      setExcludeFood(existingTransaction.excludeFoodFromProforma ?? false);
       
       if (existingTransaction.appliedTaxes) {
         setAppliedTaxes(existingTransaction.appliedTaxes);
@@ -249,7 +251,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
     }
   };
 
-  const subtotal = roomItems.reduce((acc, item) => acc + item.total, 0) + foodItems.reduce((acc, item) => acc + item.total, 0);
+  const subtotal = roomItems.reduce((acc, item) => acc + item.total, 0) + (excludeFood ? 0 : foodItems.reduce((acc, item) => acc + item.total, 0));
   
   // DYNAMIC TAX CALCULATION (Matching Folio/POS logic)
   // Calculate total percentage rate and total fixed amount
@@ -299,12 +301,12 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
           price: item.unitRate * item.noOfDays,
           total: item.total
         })),
-        ...foodItems.map(item => ({
+        ...(excludeFood ? [] : foodItems.map(item => ({
           description: item.description,
           quantity: item.qty,
           price: item.unitRate,
           total: item.total
-        }))
+        })))
       ];
 
       const txData = {
@@ -319,7 +321,8 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
         eventPeriod: customer.eventPeriod,
         currency,
         proformaRooms: roomItems,
-        proformaFood: foodItems,
+        proformaFood: excludeFood ? [] : foodItems,
+        excludeFoodFromProforma: excludeFood,
         items: transactionItems,
         preparedBy: customer.preparedBy,
         generatorEmail: customer.generatorEmail,
@@ -534,55 +537,72 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
           </section>
 
           {/* Food & Beverage Table */}
-          <section className="space-y-4">
-            <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
-              <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Food & Beverage Requirement</h3>
-              <button onClick={addFoodRow} className="px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10">+ Add Food Row</button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="text-gray-500 uppercase text-[9px] font-black border-b border-gray-700/30">
-                    <th className="p-2">Start Date</th>
-                    <th className="p-2">Select Item</th>
-                    <th className="p-2">Description</th>
-                    <th className="p-2">Qty</th>
-                    <th className="p-2">Duration</th>
-                    <th className="p-2">Rate</th>
-                    <th className="p-2">Disc. Rate</th>
-                    <th className="p-2">Total</th>
-                    <th className="p-2"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700/30">
-                  {foodItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="p-1"><input type="date" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full text-[10px]" value={item.startDate} onChange={(e) => updateFoodItem(idx, 'startDate', e.target.value)} /></td>
-                      <td className="p-1">
-                        <select className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full text-[10px]" onChange={(e) => handleMenuSelect(idx, e.target.value)}>
-                          <option value="">-- Select --</option>
-                          {menuCatalog.map(m => <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()})</option>)}
-                        </select>
-                      </td>
-                      <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full" value={item.description} onChange={(e) => updateFoodItem(idx, 'description', e.target.value)} /></td>
-                      <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-12 text-center" value={item.qty} onChange={(e) => updateFoodItem(idx, 'qty', parseInt(e.target.value) || 0)} /></td>
-                      <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20" value={item.duration || ''} onChange={(e) => updateFoodItem(idx, 'duration', e.target.value)} /></td>
-                      <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.unitRate} onChange={(e) => updateFoodItem(idx, 'unitRate', parseFloat(e.target.value) || 0)} /></td>
-                      <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.discountedRate} onChange={(e) => updateFoodItem(idx, 'discountedRate', parseFloat(e.target.value) || 0)} /></td>
-                      <td className="p-1 text-right font-black">{currencySymbol}{item.total.toLocaleString()}</td>
-                      <td className="p-1 text-center"><button onClick={() => removeFoodRow(idx)} className="text-red-500">&times;</button></td>
+          {!excludeFood && (
+            <section className="space-y-4">
+              <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
+                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Food & Beverage Requirement</h3>
+                <button onClick={addFoodRow} className="px-3 py-1.5 border border-[#C8A862]/30 text-[#C8A862] rounded text-[9px] font-black uppercase hover:bg-[#C8A862]/10">+ Add Food Row</button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="text-gray-500 uppercase text-[9px] font-black border-b border-gray-700/30">
+                      <th className="p-2">Start Date</th>
+                      <th className="p-2">Select Item</th>
+                      <th className="p-2">Description</th>
+                      <th className="p-2">Qty</th>
+                      <th className="p-2">Duration</th>
+                      <th className="p-2">Rate</th>
+                      <th className="p-2">Disc. Rate</th>
+                      <th className="p-2">Total</th>
+                      <th className="p-2"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700/30">
+                    {foodItems.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="p-1"><input type="date" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full text-[10px]" value={item.startDate} onChange={(e) => updateFoodItem(idx, 'startDate', e.target.value)} /></td>
+                        <td className="p-1">
+                          <select className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full text-[10px]" onChange={(e) => handleMenuSelect(idx, e.target.value)}>
+                            <option value="">-- Select --</option>
+                            {menuCatalog.map(m => <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()})</option>)}
+                          </select>
+                        </td>
+                        <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-full" value={item.description} onChange={(e) => updateFoodItem(idx, 'description', e.target.value)} /></td>
+                        <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-12 text-center" value={item.qty} onChange={(e) => updateFoodItem(idx, 'qty', parseInt(e.target.value) || 0)} /></td>
+                        <td className="p-1"><input className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20" value={item.duration || ''} onChange={(e) => updateFoodItem(idx, 'duration', e.target.value)} /></td>
+                        <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.unitRate} onChange={(e) => updateFoodItem(idx, 'unitRate', parseFloat(e.target.value) || 0)} /></td>
+                        <td className="p-1"><input type="number" className="bg-[#0B1C2D] border border-gray-700 rounded p-1 w-20 text-right" value={item.discountedRate} onChange={(e) => updateFoodItem(idx, 'discountedRate', parseFloat(e.target.value) || 0)} /></td>
+                        <td className="p-1 text-right font-black">{currencySymbol}{item.total.toLocaleString()}</td>
+                        <td className="p-1 text-center"><button onClick={() => removeFoodRow(idx)} className="text-red-500">&times;</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           {/* Settlement Section */}
           <section className="space-y-4">
             <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
               <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Settlement & Tax Control</h3>
               <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2 bg-[#0B1C2D] px-3 py-1.5 rounded-lg border border-gray-700">
+                  <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Food Section:</span>
+                  <button 
+                    onClick={() => setExcludeFood(false)}
+                    className={`px-2 py-1 rounded text-[8px] font-black uppercase transition-all ${!excludeFood ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    Show
+                  </button>
+                  <button 
+                    onClick={() => setExcludeFood(true)}
+                    className={`px-2 py-1 rounded text-[8px] font-black uppercase transition-all ${excludeFood ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    Hide
+                  </button>
+                </div>
                 <div className="flex items-center gap-2 bg-[#0B1C2D] px-3 py-1.5 rounded-lg border border-gray-700">
                   <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Tax Mode:</span>
                   <button 

@@ -149,6 +149,7 @@ export interface Transaction {
   isDeleted?: boolean;
   appliedTaxes?: TaxConfig[];
   isTaxInclusive?: boolean;
+  excludeFoodFromProforma?: boolean;
   createdAt: number;
   updatedAt: number;
   roomDetails?: {
