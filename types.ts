@@ -108,6 +108,7 @@ export interface TransactionPayment {
   amount: number;
   currency: Currency;
   timestamp: number;
+  settledAt?: number; // Explicit date picked by user
   editLogs?: PaymentEditLog[];
 }
 

@@ -54,7 +54,11 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
   const [items, setItems] = useState<TransactionItem[]>(transaction.items || []);
   
   // Multi-payment / Split Payment Management
-  const [newPayments, setNewPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.CARD, amount: 0 }]);
+  const [newPayments, setNewPayments] = useState<Partial<TransactionPayment>[]>([{ 
+    method: SettlementMethod.CARD, 
+    amount: 0,
+    settledAt: 0
+  }]);
   
   const [discount, setDiscount] = useState<number>(transaction.discountAmount || 0);
   const [currency, setCurrency] = useState<Currency>(transaction.currency || Currency.NGN);
@@ -62,6 +66,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
   const [isSaving, setIsSaving] = useState(false);
   const [editingPaymentIdx, setEditingPaymentIdx] = useState<number | null>(null);
   const [editedPaymentAmount, setEditedPaymentAmount] = useState<number>(0);
+  const [editedPaymentDate, setEditedPaymentDate] = useState<number>(0);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showSettleModal, setShowSettleModal] = useState(false);
 
@@ -200,7 +205,11 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
 
   // Split Payment Actions
   const addPaymentLine = () => {
-    setNewPayments([...newPayments, { method: SettlementMethod.CARD, amount: 0 }]);
+    setNewPayments([...newPayments, { 
+      method: SettlementMethod.CARD, 
+      amount: 0,
+      settledAt: 0
+    }]);
   };
 
   const removePaymentLine = (idx: number) => {
@@ -288,6 +297,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
       updatedPayments[idx] = {
         ...updatedPayments[idx],
         amount: editedPaymentAmount,
+        settledAt: editedPaymentDate,
         editLogs: [...(updatedPayments[idx].editLogs || []), editLog]
       };
 
@@ -366,6 +376,12 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
       return;
     }
 
+    // Enforce settlement date selection
+    if (paymentsToProcess.some(p => (p.amount || 0) > 0 && !p.settledAt)) {
+      alert('SETTLEMENT ERROR: Please select a settlement date for all payments being recorded.');
+      return;
+    }
+
     setIsSaving(true);
     const batch = writeBatch(db);
     try {
@@ -379,7 +395,8 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
             method: p.method || SettlementMethod.CARD,
             amount: p.amount,
             currency: currency,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            settledAt: p.settledAt || Date.now()
           });
         }
       });
@@ -642,7 +659,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
             <div className="space-y-4">
               {newPayments.map((p, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-[#0B1C2D] p-4 rounded-xl border border-gray-700/50 shadow-inner">
-                  <div className="col-span-6">
+                  <div className="col-span-4">
                     <label className="text-[8px] font-black text-gray-600 uppercase mb-1 block">Payment Method</label>
                     <select 
                       className="w-full bg-[#13263A] border border-gray-700 rounded-lg p-3 text-[11px] font-black text-white uppercase tracking-widest outline-none focus:border-[#C8A862]" 
@@ -652,7 +669,19 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                       {Object.values(SettlementMethod).map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
-                  <div className="col-span-5">
+                  <div className="col-span-4">
+                    <label className="text-[8px] font-black text-gray-600 uppercase mb-1 block">Settlement Date</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500" />
+                      <input 
+                        type="date"
+                        className={`w-full bg-[#13263A] border rounded-lg p-3 pl-8 text-[11px] font-black text-white outline-none transition-all ${!p.settledAt && (p.amount || 0) > 0 ? 'border-red-500/50 focus:border-red-500' : 'border-gray-700 focus:border-[#C8A862]'}`}
+                        value={p.settledAt ? new Date(p.settledAt).toISOString().split('T')[0] : ''}
+                        onChange={(e) => updatePaymentLine(idx, 'settledAt', e.target.value ? new Date(e.target.value).getTime() : 0)}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-3">
                     <label className="text-[8px] font-black text-gray-600 uppercase mb-1 block">Amount to Record ({currencySymbol})</label>
                     <input 
                       type="number" 
@@ -736,11 +765,22 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                       <div key={i} className="bg-black/20 p-3 rounded-xl border border-gray-800/50 hover:border-gray-700 transition-colors space-y-2">
                         <div className="grid grid-cols-12 gap-2 items-center">
                           <div className="col-span-4 flex flex-col">
-                            <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Settlement Method</span>
-                            <span className="text-[10px] text-white font-black uppercase tracking-tight">{p.method}</span>
+                            <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Settlement Date</span>
+                            {isEditing ? (
+                              <input 
+                                type="date"
+                                className="bg-[#0B1C2D] border border-[#C8A862] rounded p-1 text-[10px] text-white outline-none w-full"
+                                value={new Date(editedPaymentDate || p.settledAt || p.timestamp).toISOString().split('T')[0]}
+                                onChange={(e) => setEditedPaymentDate(new Date(e.target.value).getTime())}
+                              />
+                            ) : (
+                              <span className="text-[10px] text-white font-black uppercase tracking-tight">
+                                {formatToLocalDate(p.settledAt || p.timestamp)}
+                              </span>
+                            )}
                           </div>
                           <div className="col-span-4 flex flex-col">
-                            <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Transaction Timestamp</span>
+                            <span className="text-[8px] text-gray-600 font-black uppercase tracking-tighter">System Recorded At</span>
                             <span className="text-[10px] text-gray-400 font-medium">
                               {formatToLocalDate(p.timestamp)} {formatToLocalTime(p.timestamp)}
                             </span>
@@ -766,6 +806,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                                   onClick={() => {
                                     setEditingPaymentIdx(actualIdx !== undefined ? actualIdx : null);
                                     setEditedPaymentAmount(p.amount);
+                                    setEditedPaymentDate(p.settledAt || p.timestamp);
                                   }}
                                   className="text-[8px] font-black text-[#C8A862] uppercase hover:underline flex items-center gap-0.5"
                                 >

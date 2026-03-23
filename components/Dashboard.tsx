@@ -152,8 +152,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
 
   const downloadReport = () => {
     // Adding 'Payment Method' and explicit 'Transaction Date' for enhanced compliance
-    const headers = ['Reference', 'Transaction Date', 'Time', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Cashier'];
+    const headers = ['Reference', 'Transaction Date', 'Time', 'Type', 'Unit', 'Source', 'Guest', 'Items Sold', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Payment Method', 'Settlement Date', 'Cashier'];
     const rows = filteredTransactions.map(t => {
+      // Find the latest settlement date from payments
+      const latestSettlement = t.payments && t.payments.length > 0
+        ? [...t.payments].sort((a, b) => (b.settledAt || b.timestamp) - (a.settledAt || a.timestamp))[0]
+        : null;
+      
+      const settlementDateStr = latestSettlement 
+        ? formatToLocalDate(latestSettlement.settledAt || latestSettlement.timestamp)
+        : 'N/A';
+
       return [
         `"${t.reference}"`,
         formatToLocalDate(t.createdAt),
@@ -168,6 +177,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
         t.balance,
         t.status,
         t.settlementMethod || 'N/A', // Payment Method correctly mapped
+        settlementDateStr,
         `"${t.cashierName}"`
       ];
     });

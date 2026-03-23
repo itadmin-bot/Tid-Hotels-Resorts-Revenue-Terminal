@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { Transaction, SettlementMethod, SettlementStatus, Currency } from '@/types';
-import { X, CreditCard, Banknote, Landmark, Monitor, CheckCircle2 } from 'lucide-react';
+import { X, CreditCard, Banknote, Landmark, Monitor, CheckCircle2, Calendar } from 'lucide-react';
 
 interface SettleBillModalProps {
   transaction: Transaction;
@@ -13,6 +13,7 @@ interface SettleBillModalProps {
 const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose, onSuccess }) => {
   const [amount, setAmount] = useState<number>(transaction.balance);
   const [method, setMethod] = useState<SettlementMethod>(SettlementMethod.CARD);
+  const [settledAt, setSettledAt] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const currencySymbol = transaction.currency === Currency.USD ? '$' : '₦';
 
@@ -29,6 +30,11 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
 
     if (amount > transaction.balance) {
       alert('OVERPAYMENT ERROR: Payment amount cannot exceed the outstanding balance.');
+      return;
+    }
+
+    if (!settledAt) {
+      alert('SETTLEMENT ERROR: Please select the date the payment was made.');
       return;
     }
 
@@ -55,7 +61,8 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
           amount,
           method,
           currency: transaction.currency || Currency.NGN,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          settledAt: settledAt
         };
 
         const updatedPayments = [...(data.payments || []), newPayment];
@@ -99,6 +106,19 @@ const SettleBillModal: React.FC<SettleBillModalProps> = ({ transaction, onClose,
           </div>
 
           <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Settlement Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input 
+                  type="date" 
+                  className={`w-full bg-[#0B1C2D] border rounded-xl p-4 pl-12 text-sm font-black text-white outline-none transition-all ${!settledAt ? 'border-red-500/50 focus:border-red-500' : 'border-gray-700 focus:border-[#C8A862]'}`}
+                  value={settledAt ? new Date(settledAt).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setSettledAt(e.target.value ? new Date(e.target.value).getTime() : 0)}
+                />
+              </div>
+            </div>
+
             <div>
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Settlement Amount</label>
               <div className="relative">
