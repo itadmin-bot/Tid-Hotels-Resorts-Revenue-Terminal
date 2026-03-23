@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw, Eye, Settings, CheckCircle2 } from 'lucide-react';
+import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw, Eye, Settings, CheckCircle2, MoreVertical, X as CloseIcon } from 'lucide-react';
 import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem, AppSettings, Currency } from '../types';
 import { BRAND } from '../constants';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
@@ -34,6 +34,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
   const [sortField, setSortField] = useState<keyof Transaction>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setOpenActionMenuId(null);
+    if (openActionMenuId) {
+      window.addEventListener('click', handleClickOutside);
+    }
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, [openActionMenuId]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -491,7 +500,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                     {sortField === 'status' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th className="px-6 py-5 text-right min-w-[350px]">Actions</th>
+                <th className="px-6 py-5 text-right min-w-[100px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/30">
@@ -552,53 +561,83 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                       {t.status}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-right">
-                    <div className="flex items-center justify-end gap-2 overflow-x-auto no-scrollbar pb-1">
-                      {t.status !== SettlementStatus.PAID && (
-                        <button 
-                          onClick={() => setManagingId(t.id)} 
-                          className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all animate-pulse"
-                        >
-                          <CheckCircle2 className="w-3 h-3" />
-                          Settle
-                        </button>
-                      )}
-                      {t.type === 'POS' && (
-                        <button 
-                          onClick={() => { setPosEditingId(t.id); setShowPOS(true); }} 
-                          className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all"
-                        >
-                          <Plus className="w-3 h-3" />
-                          POS Add
-                        </button>
-                      )}
-                      {t.type === 'PROFORMA' && (
-                        <button 
-                          onClick={() => { setProformaEditingId(t.id); setShowProforma(true); }} 
-                          className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/20 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all"
-                        >
-                          <Settings className="w-3 h-3" />
-                          Edit
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => setManagingId(t.id)} 
-                        className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
+                  <td className="px-6 py-5 text-right relative">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenActionMenuId(openActionMenuId === t.id ? null : t.id);
+                      }}
+                      className={`p-2 rounded-lg transition-all border ${openActionMenuId === t.id ? 'bg-[#C8A862] text-[#0B1C2D] border-[#C8A862]' : 'bg-gray-800/50 text-gray-400 border-gray-700 hover:border-[#C8A862] hover:text-[#C8A862]'}`}
+                    >
+                      {openActionMenuId === t.id ? <CloseIcon className="w-5 h-5" /> : <MoreVertical className="w-5 h-5" />}
+                    </button>
+
+                    {openActionMenuId === t.id && (
+                      <div 
+                        className="absolute right-6 top-14 z-[60] bg-[#13263A] border border-gray-700 rounded-xl shadow-2xl p-2 min-w-[200px] flex flex-col gap-1 animate-in fade-in zoom-in duration-200"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Settings className="w-3 h-3" />
-                        Manage
-                      </button>
-                      <button onClick={() => setViewingId(t.id)} className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">
-                        <Eye className="w-3 h-3" />
-                        {t.type === 'PROFORMA' ? 'Invoice' : 'Receipt'}
-                      </button>
-                      {user.role === UserRole.ADMIN && (
-                        <button onClick={() => handleDelete(t)} className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-red-900/20 text-red-400 border border-red-500/20 hover:bg-red-900/40 rounded transition-all">
-                          <Trash2 className="w-3 h-3" />
-                          Delete
+                        <div className="px-3 py-2 border-b border-gray-700/50 mb-1">
+                          <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Transaction Actions</p>
+                        </div>
+                        
+                        {t.status !== SettlementStatus.PAID && (
+                          <button 
+                            onClick={() => { setManagingId(t.id); setOpenActionMenuId(null); }} 
+                            className="flex items-center gap-3 w-full px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-green-400 hover:bg-green-500/10 rounded-lg transition-all"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Settle Payment
+                          </button>
+                        )}
+
+                        {t.type === 'POS' && (
+                          <button 
+                            onClick={() => { setPosEditingId(t.id); setShowPOS(true); setOpenActionMenuId(null); }} 
+                            className="flex items-center gap-3 w-full px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add to POS
+                          </button>
+                        )}
+
+                        {t.type === 'PROFORMA' && (
+                          <button 
+                            onClick={() => { setProformaEditingId(t.id); setShowProforma(true); setOpenActionMenuId(null); }} 
+                            className="flex items-center gap-3 w-full px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#C8A862] hover:bg-[#C8A862]/10 rounded-lg transition-all"
+                          >
+                            <Settings className="w-4 h-4" />
+                            Edit Proforma
+                          </button>
+                        )}
+
+                        <button 
+                          onClick={() => { setManagingId(t.id); setOpenActionMenuId(null); }} 
+                          className="flex items-center gap-3 w-full px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/5 rounded-lg transition-all"
+                        >
+                          <Settings className="w-4 h-4" />
+                          Manage Record
                         </button>
-                      )}
-                    </div>
+
+                        <button 
+                          onClick={() => { setViewingId(t.id); setOpenActionMenuId(null); }} 
+                          className="flex items-center gap-3 w-full px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#C8A862] hover:bg-[#C8A862]/10 rounded-lg transition-all"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View {t.type === 'PROFORMA' ? 'Invoice' : 'Receipt'}
+                        </button>
+
+                        {user.role === UserRole.ADMIN && (
+                          <button 
+                            onClick={() => { handleDelete(t); setOpenActionMenuId(null); }} 
+                            className="flex items-center gap-3 w-full px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-red-400 hover:bg-red-500/10 rounded-lg transition-all mt-1 border-t border-gray-700/50 pt-3"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete Record
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
