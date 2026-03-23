@@ -287,16 +287,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
             <h1 className="text-2xl font-black text-white uppercase tracking-tight">LEDGER DASHBOARD</h1>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Management System • Online</p>
           </div>
-          <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-            <button onClick={() => setShowPOS(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
+          <div className="flex overflow-x-auto no-scrollbar gap-3 mt-4 md:mt-0 pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+            <button onClick={() => setShowPOS(true)} className="flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
               <Plus className="w-5 h-5" />
               Walk-In POS
             </button>
-            <button onClick={() => setShowFolio(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
+            <button onClick={() => setShowFolio(true)} className="flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
               <Calendar className="w-5 h-5" />
               Reservation Entry
             </button>
-            <button onClick={() => setShowProforma(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
+            <button onClick={() => setShowProforma(true)} className="flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#C8A862] text-[#0B1C2D] font-black rounded-xl hover:bg-[#B69651] transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-[#A68642] active:border-b-0 active:translate-y-1">
               <Receipt className="w-5 h-5" />
               Proforma Invoice
             </button>
@@ -466,32 +466,32 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-gray-700/50 bg-[#0B1C2D]/50 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('reference')}>
+                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors min-w-[180px]" onClick={() => handleSort('reference')}>
                   <div className="flex items-center gap-2">
                     Origin/Ref
                     {sortField === 'reference' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('guestName')}>
+                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors min-w-[200px]" onClick={() => handleSort('guestName')}>
                   <div className="flex items-center gap-2">
                     Guest & Operator
                     {sortField === 'guestName' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th className="px-6 py-5">Items Sold</th>
-                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('totalAmount')}>
+                <th className="px-6 py-5 min-w-[150px]">Items Sold</th>
+                <th className="px-6 py-5 cursor-pointer hover:text-white transition-colors min-w-[150px]" onClick={() => handleSort('totalAmount')}>
                   <div className="flex items-center gap-2">
                     Financial Summary
                     {sortField === 'totalAmount' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th className="px-6 py-5 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>
+                <th className="px-6 py-5 text-center cursor-pointer hover:text-white transition-colors min-w-[100px]" onClick={() => handleSort('status')}>
                   <div className="flex items-center gap-2 justify-center">
                     Status
                     {sortField === 'status' && (sortOrder === 'asc' ? <Plus className="w-3 h-3 rotate-45" /> : <Plus className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th className="px-6 py-5 text-right">Actions</th>
+                <th className="px-6 py-5 text-right min-w-[350px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/30">
@@ -552,12 +552,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                       {t.status}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-right space-x-2">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-6 py-5 text-right">
+                    <div className="flex items-center justify-end gap-2 overflow-x-auto no-scrollbar pb-1">
                       {t.status !== SettlementStatus.PAID && (
                         <button 
                           onClick={() => setManagingId(t.id)} 
-                          className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all animate-pulse"
+                          className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all animate-pulse"
                         >
                           <CheckCircle2 className="w-3 h-3" />
                           Settle
@@ -566,7 +566,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                       {t.type === 'POS' && (
                         <button 
                           onClick={() => { setPosEditingId(t.id); setShowPOS(true); }} 
-                          className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all"
+                          className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-green-900/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white rounded transition-all"
                         >
                           <Plus className="w-3 h-3" />
                           POS Add
@@ -575,7 +575,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                       {t.type === 'PROFORMA' && (
                         <button 
                           onClick={() => { setProformaEditingId(t.id); setShowProforma(true); }} 
-                          className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/20 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all"
+                          className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/20 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all"
                         >
                           <Settings className="w-3 h-3" />
                           Edit
@@ -583,17 +583,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
                       )}
                       <button 
                         onClick={() => setManagingId(t.id)} 
-                        className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
+                        className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-blue-900/20 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded transition-all"
                       >
                         <Settings className="w-3 h-3" />
                         Manage
                       </button>
-                      <button onClick={() => setViewingId(t.id)} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">
+                      <button onClick={() => setViewingId(t.id)} className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-[#C8A862]/10 text-[#C8A862] border border-[#C8A862]/20 hover:bg-[#C8A862] hover:text-black rounded transition-all">
                         <Eye className="w-3 h-3" />
                         {t.type === 'PROFORMA' ? 'Invoice' : 'Receipt'}
                       </button>
                       {user.role === UserRole.ADMIN && (
-                        <button onClick={() => handleDelete(t)} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-red-900/20 text-red-400 border border-red-500/20 hover:bg-red-900/40 rounded transition-all">
+                        <button onClick={() => handleDelete(t)} className="flex-none flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-red-900/20 text-red-400 border border-red-500/20 hover:bg-red-900/40 rounded transition-all">
                           <Trash2 className="w-3 h-3" />
                           Delete
                         </button>
