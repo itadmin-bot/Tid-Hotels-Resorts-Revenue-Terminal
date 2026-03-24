@@ -26,6 +26,12 @@ export enum Currency {
   USD = 'USD'
 }
 
+export enum ReceiptTitle {
+  PROFORMA_INVOICE = 'PROFORMA INVOICE',
+  RECEIPT = 'RECEIPT',
+  INVOICE = 'INVOICE'
+}
+
 export interface BankAccount {
   bank: string;
   accountNumber: string;
@@ -148,6 +154,7 @@ export interface Transaction {
   cashierName: string;
   preparedBy?: string;
   generatorEmail?: string;
+  receiptTitle?: ReceiptTitle;
   isDeleted?: boolean;
   appliedTaxes?: TaxConfig[];
   isTaxInclusive?: boolean;

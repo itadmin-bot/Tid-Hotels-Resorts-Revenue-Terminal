@@ -93,8 +93,7 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
       <div class="hotel-addr">38 S.O Williams Street, Off Anthony Enahoro Street, Abuja</div>
       <div style="font-size: 10px; font-weight: bold; margin-bottom: 4mm; color: #333;">
         RECEIPT NO: ${transaction.reference}<br/>
-        EMAIL: reservations@tidehotelgroup.com | TAX IDENTIFICATION NUMBER: 31329087-0001<br/>
-        PHONE: +2349111111314
+        TIN: 31329087-0001 | EMAIL: reservations@tidehotelgroup.com | TEL: +2349111111314
       </div>
       <div class="invoice-title-box">PROFORMA INVOICE</div>
     </div>

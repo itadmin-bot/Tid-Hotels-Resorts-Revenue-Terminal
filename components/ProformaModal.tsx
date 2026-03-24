@@ -20,7 +20,8 @@ import {
   MenuItem,
   Room,
   TaxConfig,
-  Currency
+  Currency,
+  ReceiptTitle
 } from '@/types';
 import ProformaPreview from '@/components/ProformaPreview';
 
@@ -76,6 +77,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
 
   const [payments, setPayments] = useState<Partial<TransactionPayment>[]>([{ method: SettlementMethod.TRANSFER, amount: existingTransaction?.paidAmount || 0 }]);
   const [currency, setCurrency] = useState<Currency>(existingTransaction?.currency || Currency.NGN);
+  const [receiptTitle, setReceiptTitle] = useState<ReceiptTitle>(existingTransaction?.receiptTitle || (existingTransaction?.type === 'PROFORMA' ? ReceiptTitle.PROFORMA_INVOICE : ReceiptTitle.RECEIPT));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -341,6 +343,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
         createdBy: user.uid,
         userId: user.uid,
         cashierName: user.displayName,
+        receiptTitle,
         createdAt: existingTransaction?.createdAt || Date.now(),
         updatedAt: Date.now()
       };
@@ -487,6 +490,35 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   onChange={(e) => setCustomer({...customer, generatorEmail: e.target.value})} 
                   required
                 />
+              </div>
+            </div>
+          </section>
+
+          {/* Document Configuration */}
+          <section className="space-y-6">
+            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-2">Document Configuration</h3>
+            <div className="bg-[#0B1C2D] p-4 rounded-xl border border-gray-700 space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-[9px] font-bold text-gray-500 uppercase">Document Title on Receipt</label>
+                <div className="flex gap-2">
+                  {[
+                    { id: ReceiptTitle.PROFORMA_INVOICE, label: 'Proforma Invoice' },
+                    { id: ReceiptTitle.RECEIPT, label: 'Receipt' },
+                    { id: ReceiptTitle.INVOICE, label: 'Invoice' }
+                  ].map((title) => (
+                    <button
+                      key={title.id}
+                      onClick={() => setReceiptTitle(title.id)}
+                      className={`flex-1 py-3 px-4 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all border ${
+                        receiptTitle === title.id
+                          ? 'bg-[#C8A862] border-[#C8A862] text-black shadow-lg shadow-[#C8A862]/20'
+                          : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500'
+                      }`}
+                    >
+                      {title.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </section>

@@ -12,9 +12,30 @@ interface ReceiptPreviewProps {
   onClose: () => void;
 }
 
-const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose }) => {
+const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction: initialTransaction, onClose }) => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [transaction, setTransaction] = useState<Transaction>(initialTransaction);
   const isPos = transaction.type === 'POS';
+
+  useEffect(() => {
+    // Listen for real-time updates to the transaction if it's a PROFORMA or FOLIO (Reservation)
+    if (transaction.type === 'PROFORMA' || transaction.type === 'FOLIO') {
+      const unsub = onSnapshot(doc(db, 'transactions', transaction.id), (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as Transaction;
+          setTransaction(prev => ({
+            ...prev,
+            paidAmount: data.paidAmount,
+            balance: data.balance,
+            payments: data.payments,
+            status: data.status,
+            receiptTitle: data.receiptTitle || prev.receiptTitle
+          }));
+        }
+      });
+      return () => unsub();
+    }
+  }, [transaction.id, transaction.type]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -257,7 +278,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
                       <p className="text-xs text-gray-600 max-w-[300px] leading-relaxed uppercase">{settings.hotelAddress}</p>
                     </div>
                     <div className="text-right">
-                      <h2 className="text-2xl font-black uppercase mb-4 tracking-tight">Reservation Folio</h2>
+                      <h2 className="text-2xl font-black uppercase mb-4 tracking-tight">{transaction.receiptTitle || (transaction.type === 'PROFORMA' ? 'Proforma Invoice' : 'Reservation Folio')}</h2>
                       <div className="space-y-1 text-xs font-bold uppercase">
                         <p><span className="text-gray-400">Reference:</span> {transaction.reference}</p>
                         {transaction.orderReference && <p><span className="text-gray-400">Order Ref:</span> {transaction.orderReference}</p>}
@@ -460,7 +481,7 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction, onClose })
               <div className="hotel-addr uppercase">{settings.hotelAddress}</div>
             </div>
             <div className="invoice-meta">
-              <div className="invoice-title">Reservation Folio</div>
+              <div className="invoice-title">{transaction.receiptTitle || (transaction.type === 'PROFORMA' ? 'Proforma Invoice' : 'Reservation Folio')}</div>
               <div className="meta-row uppercase">Ref: {transaction.reference}</div>
               {transaction.orderReference && <div className="meta-row uppercase">Order Ref: {transaction.orderReference}</div>}
               <div className="meta-row uppercase">Date: {formatDate(transaction.createdAt)} {formatTime(transaction.createdAt)}</div>

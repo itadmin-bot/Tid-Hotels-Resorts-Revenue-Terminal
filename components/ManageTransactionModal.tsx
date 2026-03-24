@@ -14,7 +14,8 @@ import {
   Room,
   UserProfile,
   UserRole,
-  Currency
+  Currency,
+  ReceiptTitle
 } from '@/types';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
 import SettleBillModal from '@/components/SettleBillModal';
@@ -63,6 +64,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
   const [discount, setDiscount] = useState<number>(transaction.discountAmount || 0);
   const [currency, setCurrency] = useState<Currency>(transaction.currency || Currency.NGN);
   const [selectedBank, setSelectedBank] = useState<BankAccount | undefined>(transaction.selectedBank);
+  const [receiptTitle, setReceiptTitle] = useState<ReceiptTitle>(transaction.receiptTitle || ReceiptTitle.RECEIPT);
   const [isSaving, setIsSaving] = useState(false);
   const [editingPaymentIdx, setEditingPaymentIdx] = useState<number | null>(null);
   const [editedPaymentAmount, setEditedPaymentAmount] = useState<number>(0);
@@ -92,6 +94,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
             checkOut: data.roomDetails?.checkOut || '',
             nights: data.roomDetails?.nights || 1
           });
+          setReceiptTitle(data.receiptTitle || ReceiptTitle.RECEIPT);
         }
       }
     });
@@ -449,6 +452,7 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
         balance: finalBalance,
         status: finalStatus,
         selectedBank: selectedBank || null,
+        receiptTitle,
         updatedAt: Date.now()
       };
 
@@ -546,6 +550,25 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                   <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#C8A862] outline-none" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </div>
               </div>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-700/50 pb-2">Document Configuration</h3>
+            <div className="flex flex-wrap gap-3">
+              {[ReceiptTitle.PROFORMA_INVOICE, ReceiptTitle.RECEIPT, ReceiptTitle.INVOICE].map((title) => (
+                <button
+                  key={title}
+                  onClick={() => setReceiptTitle(title)}
+                  className={`px-6 py-3 text-[10px] font-black uppercase rounded-xl border transition-all flex-1 min-w-[140px] ${
+                    receiptTitle === title 
+                      ? 'bg-[#C8A862] text-black border-[#C8A862] shadow-lg shadow-[#C8A862]/20' 
+                      : 'bg-[#0B1C2D] text-gray-500 border-gray-700 hover:border-gray-500'
+                  }`}
+                >
+                  {title}
+                </button>
+              ))}
             </div>
           </section>
 
