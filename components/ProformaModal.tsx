@@ -24,6 +24,7 @@ import {
   ReceiptTitle
 } from '@/types';
 import ProformaPreview from '@/components/ProformaPreview';
+import HorizontalScrollArea from '@/components/HorizontalScrollArea';
 
 interface ProformaModalProps {
   user: UserProfile;
@@ -532,7 +533,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                 Add Room Row
               </button>
             </div>
-            <div className="overflow-x-auto">
+            <HorizontalScrollArea>
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="text-gray-500 uppercase text-[9px] font-black border-b border-gray-700/30">
@@ -574,7 +575,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   ))}
                 </tbody>
               </table>
-            </div>
+            </HorizontalScrollArea>
           </section>
 
           {/* Food & Beverage Table */}
@@ -587,7 +588,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                   Add Food Row
                 </button>
               </div>
-              <div className="overflow-x-auto">
+            <HorizontalScrollArea>
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="text-gray-500 uppercase text-[9px] font-black border-b border-gray-700/30">
@@ -627,7 +628,7 @@ const ProformaModal: React.FC<ProformaModalProps> = ({ user, onClose, existingTr
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </HorizontalScrollArea>
             </section>
           )}
 

@@ -14,6 +14,7 @@ import { Eye, EyeOff, Lock, Plus, Trash2, Settings, Users, Shield, CreditCard, M
 import { db } from '../firebase';
 import { Room, AppSettings, UserProfile, UserRole, MenuItem, BankAccount, UnitType, TaxConfig, Transaction, Currency } from '../types';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
+import HorizontalScrollArea from './HorizontalScrollArea';
 
 interface AdminPanelProps {
   user: UserProfile;
@@ -596,7 +597,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
 
                   <div className="space-y-4">
                     <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30 pb-2">Daily Transaction Log</h3>
-                    <div className="overflow-x-auto">
+                    <HorizontalScrollArea>
                       <table className="w-full text-left">
                         <thead>
                           <tr className="text-[9px] text-gray-600 uppercase tracking-widest">
@@ -634,7 +635,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                           )}
                         </tbody>
                       </table>
-                    </div>
+                    </HorizontalScrollArea>
                   </div>
 
                   <div className="space-y-4 pt-8 border-t border-gray-700/30">
@@ -805,7 +806,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                 </button>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <HorizontalScrollArea>
               <table className="w-full text-left">
                 <thead>
                   <tr className="text-[10px] text-gray-500 uppercase tracking-widest border-b border-gray-700/50 pb-4">
@@ -842,7 +843,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                   ))}
                 </tbody>
               </table>
-            </div>
+            </HorizontalScrollArea>
           </div>
         )}
 
@@ -891,7 +892,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                     </h3>
                     <span className="px-2 py-0.5 bg-gray-800 rounded text-[9px] font-black text-gray-500">{groupItems.length} Items</span>
                   </div>
-                  <div className="overflow-x-auto">
+                  <HorizontalScrollArea>
                     <table className="w-full text-left">
                       <thead>
                         <tr className="text-[10px] text-gray-500 uppercase tracking-widest border-b border-gray-700/30">
@@ -963,7 +964,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, isAuthorized, onAuthorize
                         })}
                       </tbody>
                     </table>
-                  </div>
+                  </HorizontalScrollArea>
                 </div>
               );
             })}

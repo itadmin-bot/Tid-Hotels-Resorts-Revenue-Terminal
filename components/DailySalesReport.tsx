@@ -4,6 +4,7 @@ import { db } from '@/firebase';
 import { Transaction, SettlementMethod, UnitType, Currency } from '@/types';
 import { Calendar, Download, TrendingUp, CreditCard, Banknote, Landmark, FileText } from 'lucide-react';
 import { formatToLocalDate, formatToLocalTime, getDayRange } from '@/utils/dateUtils';
+import HorizontalScrollArea from '@/components/HorizontalScrollArea';
 
 interface DailySalesReportProps {
   onManage?: (transaction: Transaction) => void;
@@ -230,7 +231,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                 </h3>
                 <span className="px-3 py-1 bg-gray-800 rounded-full text-[9px] font-black text-gray-400 uppercase">{transactions.length} Records</span>
               </div>
-              <div className="overflow-x-auto">
+            <HorizontalScrollArea>
                 <table className="w-full text-left">
                   <thead>
                     <tr className="text-[9px] text-gray-500 uppercase tracking-widest border-b border-gray-700/30">
@@ -285,7 +286,7 @@ const DailySalesReport: React.FC<DailySalesReportProps> = ({ onManage }) => {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </HorizontalScrollArea>
             </div>
 
             <div className="space-y-8">

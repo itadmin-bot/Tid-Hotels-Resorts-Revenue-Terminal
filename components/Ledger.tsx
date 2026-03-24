@@ -4,6 +4,7 @@ import { db } from '@/firebase';
 import { LedgerEntry, LedgerType, UserProfile, AppSettings, Currency } from '@/types';
 import { BRAND } from '@/constants';
 import { Plus, Minus, TrendingUp, TrendingDown, DollarSign, Tag, FileText, Trash2, PieChart, BarChart3 } from 'lucide-react';
+import HorizontalScrollArea from '@/components/HorizontalScrollArea';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart as RePieChart, Pie } from 'recharts';
 
 interface LedgerProps {
@@ -308,7 +309,7 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
             <div className="w-2 h-2 rounded-full bg-[#C8A862] animate-pulse"></div>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <HorizontalScrollArea>
           <table className="w-full text-left">
             <thead>
               <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-700/30">
@@ -374,7 +375,7 @@ const Ledger: React.FC<LedgerProps> = ({ user, settings }) => {
               )}
             </tbody>
           </table>
-        </div>
+        </HorizontalScrollArea>
       </div>
 
       {/* Add Entry Modal */}
