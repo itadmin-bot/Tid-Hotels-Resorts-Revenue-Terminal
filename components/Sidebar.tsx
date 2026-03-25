@@ -4,7 +4,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/firebase';
 import { UserProfile, UserRole, AppSettings } from '@/types';
 import { BRAND } from '@/constants';
-import { LayoutDashboard, Settings, LogOut, X, Clock, User } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, X, Clock, User, Utensils } from 'lucide-react';
 
 interface SidebarProps {
   user: UserProfile;
@@ -76,6 +76,16 @@ const Sidebar: React.FC<SidebarProps> = ({ user, settings, activeView, onViewCha
           <LayoutDashboard className={`w-5 h-5 ${activeView === 'DASHBOARD' ? 'text-[#0B1C2D]' : 'text-[#C8A862]'}`} />
           Dashboard
         </button>
+
+        <a 
+          href="https://tide-hotels-resorts-menu.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center gap-3 px-4 py-3 font-bold rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-all"
+        >
+          <Utensils className="w-5 h-5 text-[#C8A862]" />
+          Ordering Menu
+        </a>
 
         {user.role === UserRole.ADMIN && (
           <button 

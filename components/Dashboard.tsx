@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw, Eye, Settings, CheckCircle2, MoreVertical, X as CloseIcon } from 'lucide-react';
+import { Calendar, Plus, Trash2, Receipt, Search, Download, Filter, RefreshCw, Eye, Settings, CheckCircle2, MoreVertical, X as CloseIcon, Utensils } from 'lucide-react';
 import { Transaction, UserProfile, UserRole, SettlementStatus, SettlementMethod, UnitType, MenuItem, AppSettings, Currency } from '../types';
 import { BRAND } from '../constants';
 import { formatToLocalDate, formatToLocalTime } from '@/utils/dateUtils';
@@ -319,6 +319,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
               <Receipt className="w-5 h-5" />
               Proforma Invoice
             </button>
+            <a 
+              href="https://tide-hotels-resorts-menu.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-none flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white font-black rounded-xl hover:bg-purple-700 transition-all text-xs uppercase tracking-widest shadow-xl border-b-4 border-purple-800 active:border-b-0 active:translate-y-1"
+            >
+              <Utensils className="w-5 h-5" />
+              Menu Ordering
+            </a>
           </div>
         </div>
 
