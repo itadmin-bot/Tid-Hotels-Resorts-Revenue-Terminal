@@ -11,6 +11,7 @@ import ProformaModal from './ProformaModal';
 import ReceiptPreview from './ReceiptPreview';
 import ProformaPreview from './ProformaPreview';
 import ManageTransactionModal from './ManageTransactionModal';
+import HorizontalScrollArea from './HorizontalScrollArea';
 
 interface DashboardProps {
   user: UserProfile;
@@ -490,7 +491,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
           </div>
         </div>
 
-        <div className="overflow-x-auto bg-[#13263A] rounded-2xl border border-gray-700/50 shadow-2xl">
+        <HorizontalScrollArea>
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-gray-700/50 bg-[#0B1C2D]/50 text-[10px] font-black uppercase tracking-widest text-gray-500">
@@ -665,7 +666,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings }) => {
           {filteredTransactions.length === 0 && (
             <div className="p-20 text-center text-gray-600 uppercase text-[11px] font-black tracking-[0.5em] italic">No Matching Revenue Records Found</div>
           )}
-        </div>
+        </HorizontalScrollArea>
       </div>
 
       {showPOS && <POSModal user={user} existingTransaction={posEditingTransaction || undefined} onClose={() => { setShowPOS(false); setPosEditingId(null); }} />}

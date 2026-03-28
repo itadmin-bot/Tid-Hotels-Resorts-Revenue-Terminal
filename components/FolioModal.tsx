@@ -18,6 +18,8 @@ import {
   Currency
 } from '@/types';
 import ReceiptPreview from '@/components/ReceiptPreview';
+import HorizontalScrollArea from '@/components/HorizontalScrollArea';
+import { ReceiptTitle } from '@/types';
 
 interface RoomBooking {
   roomId: string;
@@ -49,6 +51,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
   const [currency, setCurrency] = useState<Currency>(Currency.NGN);
   const [targetBank, setTargetBank] = useState<BankAccount | 'ALL' | null>(null);
   const [discount, setDiscount] = useState(0);
+  const [receiptTitle, setReceiptTitle] = useState<ReceiptTitle>(ReceiptTitle.RECEIPT);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedTransaction, setSavedTransaction] = useState<Transaction | null>(null);
 
@@ -324,6 +327,7 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
       const txData = {
         reference: `RES-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         type: 'FOLIO',
+        receiptTitle,
         source: 'App',
         guestName: guest.name,
         orderReference,
@@ -399,19 +403,32 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
           <section className="space-y-4">
             <div className="flex justify-between items-center border-b border-gray-700/50 pb-2">
               <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Guest Identity</h3>
-              <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700/50">
-                <button 
-                  onClick={() => setCurrency(Currency.NGN)} 
-                  className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.NGN ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
-                >
-                  NGN (₦)
-                </button>
-                <button 
-                  onClick={() => setCurrency(Currency.USD)} 
-                  className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.USD ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
-                >
-                  USD ($)
-                </button>
+              <div className="flex gap-2">
+                <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700/50">
+                  {Object.values(ReceiptTitle).map((title) => (
+                    <button
+                      key={title}
+                      onClick={() => setReceiptTitle(title)}
+                      className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${receiptTitle === title ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                    >
+                      {title}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex bg-[#0B1C2D] p-1 rounded-lg border border-gray-700/50">
+                  <button 
+                    onClick={() => setCurrency(Currency.NGN)} 
+                    className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.NGN ? 'bg-[#C8A862] text-black' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    NGN (₦)
+                  </button>
+                  <button 
+                    onClick={() => setCurrency(Currency.USD)} 
+                    className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-all ${currency === Currency.USD ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    USD ($)
+                  </button>
+                </div>
               </div>
             </div>
             <div className="space-y-4">
@@ -528,27 +545,31 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                 </button>
               </div>
             </div>
-            {additionalCharges.map((charge, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-3 items-end bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 relative group">
-                <div className="col-span-6 space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">Description</label>
-                  <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={charge.description} onChange={(e) => updateCharge(idx, 'description', e.target.value)} placeholder="Charge description" />
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">Qty</label>
-                  <input type="number" min="1" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-center" value={charge.quantity} onChange={(e) => updateCharge(idx, 'quantity', parseInt(e.target.value) || 1)} />
-                </div>
-                <div className="col-span-3 space-y-1">
-                  <label className="text-[9px] font-bold text-gray-500 uppercase">Price ({currencySymbol})</label>
-                  <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-right" value={charge.price} onChange={(e) => updateCharge(idx, 'price', parseFloat(e.target.value) || 0)} />
-                </div>
-                <div className="col-span-1 text-center">
-                  <button onClick={() => removeCharge(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-2">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+            <HorizontalScrollArea>
+              <div className="space-y-4 min-w-[600px]">
+                {additionalCharges.map((charge, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-3 items-end bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 relative group">
+                    <div className="col-span-6 space-y-1">
+                      <label className="text-[9px] font-bold text-gray-500 uppercase">Description</label>
+                      <input className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white" value={charge.description} onChange={(e) => updateCharge(idx, 'description', e.target.value)} placeholder="Charge description" />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <label className="text-[9px] font-bold text-gray-500 uppercase">Qty</label>
+                      <input type="number" min="1" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-center" value={charge.quantity} onChange={(e) => updateCharge(idx, 'quantity', parseInt(e.target.value) || 1)} />
+                    </div>
+                    <div className="col-span-3 space-y-1">
+                      <label className="text-[9px] font-bold text-gray-500 uppercase">Price ({currencySymbol})</label>
+                      <input type="number" className="w-full bg-[#0B1C2D] border border-gray-700 rounded-lg p-3 text-sm text-white text-right" value={charge.price} onChange={(e) => updateCharge(idx, 'price', parseFloat(e.target.value) || 0)} />
+                    </div>
+                    <div className="col-span-1 text-center">
+                      <button onClick={() => removeCharge(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-2">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </HorizontalScrollArea>
             {additionalCharges.length === 0 && (
               <p className="text-[10px] text-gray-600 italic text-center py-2">No additional charges added</p>
             )}
@@ -578,28 +599,32 @@ const FolioModal: React.FC<FolioModalProps> = ({ user, onClose }) => {
                 ))}
               </select>
             </div>
-            {payments.map((p, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 items-center">
-                <div className="col-span-6">
-                   <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={p.method} onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}>
-                    <option value={SettlementMethod.TRANSFER}>Transfer</option>
-                    <option value={SettlementMethod.CARD}>Card</option>
-                    <option value={SettlementMethod.POS}>POS</option>
-                    <option value={SettlementMethod.CASH}>Cash</option>
-                  </select>
-                </div>
-                <div className="col-span-5">
-                   <input type="number" placeholder="Amount" className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white text-right" value={p.amount || ''} onChange={(e) => updatePayment(idx, 'amount', parseFloat(e.target.value) || 0)} />
-                </div>
-                <div className="col-span-1 text-center">
-                   {payments.length > 1 && (
-                     <button onClick={() => removePaymentRow(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-2">
-                       <Trash2 className="w-4 h-4" />
-                     </button>
-                   )}
-                </div>
+            <HorizontalScrollArea>
+              <div className="space-y-3 min-w-[600px]">
+                {payments.map((p, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-3 bg-[#0B1C2D]/50 p-4 rounded-xl border border-gray-700/30 items-center">
+                    <div className="col-span-6">
+                      <select className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white" value={p.method} onChange={(e) => updatePayment(idx, 'method', e.target.value as SettlementMethod)}>
+                        <option value={SettlementMethod.TRANSFER}>Transfer</option>
+                        <option value={SettlementMethod.CARD}>Card</option>
+                        <option value={SettlementMethod.POS}>POS</option>
+                        <option value={SettlementMethod.CASH}>Cash</option>
+                      </select>
+                    </div>
+                    <div className="col-span-5">
+                      <input type="number" placeholder="Amount" className="w-full bg-[#0B1C2D] border border-gray-700 rounded p-3 text-sm text-white text-right" value={p.amount || ''} onChange={(e) => updatePayment(idx, 'amount', parseFloat(e.target.value) || 0)} />
+                    </div>
+                    <div className="col-span-1 text-center">
+                      {payments.length > 1 && (
+                        <button onClick={() => removePaymentRow(idx)} className="text-red-500/50 hover:text-red-500 transition-colors p-2">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </HorizontalScrollArea>
           </section>
         </div>
 

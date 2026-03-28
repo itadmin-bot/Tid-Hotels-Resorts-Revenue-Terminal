@@ -375,6 +375,31 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction: initialTra
                     </div>
                   </div>
 
+                  {/* Payment History Section */}
+                  {transaction.payments && transaction.payments.length > 0 && (
+                    <div className="mt-8">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-1 mb-3">Payment History</h3>
+                      <table className="w-full text-[10px]">
+                        <thead>
+                          <tr className="text-left text-gray-400 uppercase">
+                            <th className="py-1">Date</th>
+                            <th className="py-1">Method</th>
+                            <th className="py-1 text-right">Amount ({currencySymbol})</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {transaction.payments.map((p, i) => (
+                            <tr key={i}>
+                              <td className="py-2">{formatDate(p.settledAt || p.timestamp)}</td>
+                              <td className="py-2 uppercase font-bold">{p.method}</td>
+                              <td className="py-2 text-right font-black">{p.amount.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
                   <div className="mt-20 pt-10 border-t border-gray-100 flex gap-8">
                     <div className="flex-1">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Official Settlement Channels</h4>
@@ -455,6 +480,30 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction: initialTra
             <span>TOTAL:</span>
             <span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span>
           </div>
+          {(transaction.type === 'PROFORMA' || transaction.type === 'FOLIO') && (
+            <div style={{ marginBottom: '3mm' }}>
+              <div className="item-row uppercase bold" style={{ fontSize: '10px', color: '#16a34a' }}>
+                <span>PAID:</span>
+                <span>{currencySymbol}{transaction.paidAmount.toLocaleString()}</span>
+              </div>
+              <div className="item-row uppercase bold" style={{ fontSize: '10px', color: '#dc2626', borderTop: '1px dashed #000', paddingTop: '1mm' }}>
+                <span>BALANCE:</span>
+                <span>{currencySymbol}{transaction.balance.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+          {/* Payment History for Thermal Print */}
+          {(transaction.type === 'PROFORMA' || transaction.type === 'FOLIO') && transaction.payments && transaction.payments.length > 0 && (
+            <div style={{ marginTop: '4mm', marginBottom: '4mm' }}>
+              <div className="bold uppercase" style={{ fontSize: '9px', borderBottom: '1px solid #000', paddingBottom: '0.5mm', marginBottom: '1mm' }}>Payment History</div>
+              {transaction.payments.map((p, i) => (
+                <div key={i} className="item-row" style={{ fontSize: '9px' }}>
+                  <span className="uppercase">{p.method}</span>
+                  <span style={{ textAlign: 'right' }} className="bold">{currencySymbol}{p.amount.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{marginBottom: '3mm'}}>
             {taxesToDisplay.map(tax => (
               <div key={tax.id} className="item-row uppercase bold" style={{fontSize: '10px'}}>
@@ -544,6 +593,31 @@ const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ transaction: initialTra
             <div className="total-row uppercase" style={{fontSize: '14px', color: '#008000'}}><span>Amount Paid:</span> <span className="bold">{currencySymbol}{transaction.paidAmount.toLocaleString()}</span></div>
             <div className="total-row uppercase" style={{fontSize: '16px', color: 'red', borderTop: '1px solid #eee', marginTop: '2mm', paddingTop: '2mm'}}><span>Outstanding:</span> <span>{currencySymbol}{transaction.balance.toLocaleString()}</span></div>
           </div>
+
+          {/* Payment History for Print */}
+          {transaction.payments && transaction.payments.length > 0 && (
+            <div style={{marginTop: '8mm'}}>
+              <div className="section-title">Payment History</div>
+              <table className="table" style={{marginBottom: '4mm'}}>
+                <thead>
+                  <tr>
+                    <th style={{textAlign: 'left', fontSize: '8px'}}>Date</th>
+                    <th style={{textAlign: 'left', fontSize: '8px'}}>Method</th>
+                    <th style={{textAlign: 'right', fontSize: '8px'}}>Amount ({currencySymbol})</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transaction.payments.map((p, i) => (
+                    <tr key={i}>
+                      <td style={{textAlign: 'left', fontSize: '9px'}}>{formatDate(p.settledAt || p.timestamp)}</td>
+                      <td style={{textAlign: 'left', fontSize: '9px'}} className="bold uppercase">{p.method}</td>
+                      <td style={{textAlign: 'right', fontSize: '9px'}} className="bold">{p.amount.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="footer">
             <div className="bank-list">

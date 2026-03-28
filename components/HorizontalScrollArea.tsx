@@ -52,7 +52,7 @@ const HorizontalScrollArea: React.FC<HorizontalScrollAreaProps> = ({ children, c
       {showLeft && (
         <button
           onClick={() => scroll('left')}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full text-white shadow-xl md:hidden flex items-center justify-center active:scale-95 transition-all"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/80 backdrop-blur-md border border-[#C8A862]/30 rounded-full text-[#C8A862] shadow-2xl flex items-center justify-center active:scale-95 transition-all hover:bg-[#C8A862] hover:text-black"
           aria-label="Scroll left"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -70,7 +70,7 @@ const HorizontalScrollArea: React.FC<HorizontalScrollAreaProps> = ({ children, c
       {showRight && (
         <button
           onClick={() => scroll('right')}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full text-white shadow-xl md:hidden flex items-center justify-center active:scale-95 transition-all"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/80 backdrop-blur-md border border-[#C8A862]/30 rounded-full text-[#C8A862] shadow-2xl flex items-center justify-center active:scale-95 transition-all hover:bg-[#C8A862] hover:text-black"
           aria-label="Scroll right"
         >
           <ChevronRight className="w-4 h-4" />

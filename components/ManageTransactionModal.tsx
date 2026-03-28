@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, onSnapshot, collection, writeBatch, increment } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { Calendar, Plus, Trash2, Receipt, Save, X, Edit, Trash } from 'lucide-react';
+import HorizontalScrollArea from '@/components/HorizontalScrollArea';
 import { 
   Transaction, 
   SettlementStatus, 
@@ -617,49 +618,51 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                 </div>
               </div>
             </div>
-            <div className="space-y-3">
-              {items.map((item, idx) => (
-                <div key={idx} className="bg-[#0B1C2D]/50 p-3 rounded-lg border border-gray-700/50 space-y-2 group">
-                  <div className="flex gap-2">
-                    <select 
-                      className="bg-[#0B1C2D] border border-gray-700 rounded p-2 text-[10px] text-gray-400 flex-1 outline-none focus:border-[#C8A862]"
-                      onChange={(e) => handleMenuSelect(idx, e.target.value)}
-                      defaultValue=""
-                    >
-                      <option value="" disabled>-- Select Stocked Menu Item --</option>
-                      {availableStockCatalog.map(m => (
-                        <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()}) - {m.initialStock - (m.soldCount || 0)} left</option>
-                      ))}
-                    </select>
-                    {items.length > 1 && (
-                      <button onClick={() => removeItem(idx)} className="text-red-500/50 hover:text-red-500 transition-colors px-2 flex items-center justify-center">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+            <HorizontalScrollArea>
+              <div className="space-y-3 min-w-[600px]">
+                {items.map((item, idx) => (
+                  <div key={idx} className="bg-[#0B1C2D]/50 p-3 rounded-lg border border-gray-700/50 space-y-2 group">
+                    <div className="flex gap-2">
+                      <select 
+                        className="bg-[#0B1C2D] border border-gray-700 rounded p-2 text-[10px] text-gray-400 flex-1 outline-none focus:border-[#C8A862]"
+                        onChange={(e) => handleMenuSelect(idx, e.target.value)}
+                        defaultValue=""
+                      >
+                        <option value="" disabled>-- Select Stocked Menu Item --</option>
+                        {availableStockCatalog.map(m => (
+                          <option key={m.id} value={m.id}>{m.name} ({currencySymbol}{m.price.toLocaleString()}) - {m.initialStock - (m.soldCount || 0)} left</option>
+                        ))}
+                      </select>
+                      {items.length > 1 && (
+                        <button onClick={() => removeItem(idx)} className="text-red-500/50 hover:text-red-500 transition-colors px-2 flex items-center justify-center">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-12 gap-2">
+                      <input 
+                        className="col-span-12 md:col-span-7 bg-[#0B1C2D] border border-gray-800 rounded p-2 text-xs text-white"
+                        value={item.description}
+                        onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                        placeholder="Item Description"
+                      />
+                      <input 
+                        type="number"
+                        className="col-span-6 md:col-span-2 bg-[#0B1C2D] border border-gray-800 rounded p-2 text-xs text-white text-center"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(idx, 'quantity', parseInt(e.target.value) || 0)}
+                      />
+                      <input 
+                        type="number"
+                        className="col-span-6 md:col-span-3 bg-[#0B1C2D] border border-gray-800 rounded p-2 text-xs text-[#C8A862] font-black text-right"
+                        value={item.price}
+                        onChange={(e) => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-12 gap-2">
-                    <input 
-                      className="col-span-12 md:col-span-7 bg-[#0B1C2D] border border-gray-800 rounded p-2 text-xs text-white"
-                      value={item.description}
-                      onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      placeholder="Item Description"
-                    />
-                    <input 
-                      type="number"
-                      className="col-span-6 md:col-span-2 bg-[#0B1C2D] border border-gray-800 rounded p-2 text-xs text-white text-center"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(idx, 'quantity', parseInt(e.target.value) || 0)}
-                    />
-                    <input 
-                      type="number"
-                      className="col-span-6 md:col-span-3 bg-[#0B1C2D] border border-gray-800 rounded p-2 text-xs text-[#C8A862] font-black text-right"
-                      value={item.price}
-                      onChange={(e) => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </HorizontalScrollArea>
           </section>
 
           <section className="space-y-4 bg-[#0B1C2D]/30 p-6 rounded-2xl border border-gray-700/30">
@@ -779,8 +782,9 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                   <label className="text-[10px] font-black text-[#C8A862] uppercase tracking-[0.2em]">Verified Payment History</label>
                   <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{transaction.payments.length} Records Found</span>
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                  {[...transaction.payments].sort((a, b) => b.timestamp - a.timestamp).map((p, i) => {
+                <HorizontalScrollArea>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar min-w-[600px]">
+                    {[...transaction.payments].sort((a, b) => b.timestamp - a.timestamp).map((p, i) => {
                     const actualIdx = transaction.payments?.findIndex(origP => origP.timestamp === p.timestamp);
                     const isEditing = editingPaymentIdx === actualIdx;
 
@@ -877,9 +881,10 @@ const ManageTransactionModal: React.FC<ManageTransactionModalProps> = ({ user, t
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </section>
+              </HorizontalScrollArea>
+            </div>
+          )}
+        </section>
         </div>
 
         {/* Footer */}

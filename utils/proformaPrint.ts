@@ -156,8 +156,32 @@ export const printProformaInvoice = (transaction: Transaction, settings: AppSett
         </div>
         ${taxRows}
         <div class="total-row grand-total"><span>GRAND TOTAL</span><span>${currencySymbol}${transaction.totalAmount.toLocaleString()}</span></div>
+        <div class="total-row" style="color: #16a34a; font-weight: 900"><span>AMOUNT PAID</span><span>${currencySymbol}${transaction.paidAmount.toLocaleString()}</span></div>
+        <div class="total-row" style="color: #dc2626; font-weight: 900; border-top: 1px solid #000"><span>BALANCE DUE</span><span>${currencySymbol}${transaction.balance.toLocaleString()}</span></div>
       </div>
     </div>
+
+    ${transaction.payments && transaction.payments.length > 0 ? `
+    <div class="section-title">Payment History</div>
+    <table class="table" style="margin-bottom: 6mm">
+      <thead>
+        <tr>
+          <th style="text-align: left">DATE</th>
+          <th style="text-align: left">METHOD</th>
+          <th style="text-align: right">AMOUNT (${currencySymbol})</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${transaction.payments.map(p => `
+          <tr>
+            <td style="text-align: left">${new Date(p.settledAt || p.timestamp).toLocaleDateString()}</td>
+            <td style="text-align: left" class="bold uppercase">${p.method}</td>
+            <td style="text-align: right" class="bold">${p.amount.toLocaleString()}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : ''}
 
     <div class="notes">
       <div class="notes-title">Note:</div>

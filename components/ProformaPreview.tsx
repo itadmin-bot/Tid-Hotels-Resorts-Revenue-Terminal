@@ -1,4 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/firebase';
 import { Transaction, AppSettings, BankAccount, Currency } from '@/types';
 import { BRAND } from '@/constants';
 import { Printer, Download, X } from 'lucide-react';
@@ -11,10 +13,28 @@ interface ProformaPreviewProps {
   onClose: () => void;
 }
 
-const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings, onClose }) => {
+const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction: initialTransaction, settings, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [transaction, setTransaction] = useState<Transaction>(initialTransaction);
   const currencySymbol = transaction.currency === Currency.USD ? '$' : '₦';
+
+  useEffect(() => {
+    // Listen for real-time updates to the transaction
+    const unsub = onSnapshot(doc(db, 'transactions', transaction.id), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() as Transaction;
+        setTransaction(prev => ({
+          ...prev,
+          paidAmount: data.paidAmount,
+          balance: data.balance,
+          payments: data.payments,
+          status: data.status
+        }));
+      }
+    });
+    return () => unsub();
+  }, [transaction.id]);
 
   const handlePrint = () => {
     printProformaInvoice(transaction, settings);
@@ -97,7 +117,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
               TIN: 31329087-0001 | EMAIL: reservations@tidehotelgroup.com | TEL: +2349111111314
             </div>
             <div className="bg-gray-200 py-1 font-black uppercase tracking-[0.2em] text-[11pt]">
-              PROFORMA INVOICE
+              {transaction.receiptTitle || 'PROFORMA INVOICE'}
             </div>
           </div>
 
@@ -237,8 +257,43 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                 <span className="uppercase">Grand Total</span>
                 <span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span>
               </div>
+              <div className="flex justify-between text-green-600 p-1 font-black border-b border-gray-100">
+                <span className="uppercase">Amount Paid</span>
+                <span>{currencySymbol}{transaction.paidAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-red-600 p-1 font-black">
+                <span className="uppercase">Balance Due</span>
+                <span>{currencySymbol}{transaction.balance.toLocaleString()}</span>
+              </div>
             </div>
           </div>
+
+          {/* Payment History Section */}
+          {transaction.payments && transaction.payments.length > 0 && (
+            <div className="mb-6">
+              <div className="bg-gray-100 px-2 py-1 text-[8pt] font-black uppercase tracking-widest mb-2 border-l-4 border-[#C8A862]">
+                PAYMENT HISTORY
+              </div>
+              <table className="w-full border-collapse text-[8pt]">
+                <thead>
+                  <tr className="bg-gray-50 uppercase font-bold text-center border border-black">
+                    <th className="border border-black p-1">DATE</th>
+                    <th className="border border-black p-1">METHOD</th>
+                    <th className="border border-black p-1 text-right">AMOUNT ({currencySymbol})</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transaction.payments.map((p, i) => (
+                    <tr key={i} className="text-center">
+                      <td className="border border-black p-1">{new Date(p.settledAt || p.timestamp).toLocaleDateString()}</td>
+                      <td className="border border-black p-1 uppercase font-bold">{p.method}</td>
+                      <td className="border border-black p-1 text-right font-black">{p.amount.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="mb-6 text-[7pt] leading-snug">
@@ -301,7 +356,7 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
               RECEIPT NO: {transaction.reference}<br/>
               TIN: 31329087-0001 | EMAIL: reservations@tidehotelgroup.com | TEL: +2349111111314
             </div>
-            <div className="invoice-title-box">PROFORMA INVOICE</div>
+            <div className="invoice-title-box">{transaction.receiptTitle || 'PROFORMA INVOICE'}</div>
           </div>
 
           <div className="section-title">Customer Details</div>
@@ -401,8 +456,35 @@ const ProformaPreview: React.FC<ProformaPreviewProps> = ({ transaction, settings
                 ))
               )}
               <div className="total-row grand-total"><span>GRAND TOTAL</span><span>{currencySymbol}{transaction.totalAmount.toLocaleString()}</span></div>
+              <div className="total-row" style={{color: '#16a34a', fontWeight: '900'}}><span>AMOUNT PAID</span><span>{currencySymbol}{transaction.paidAmount.toLocaleString()}</span></div>
+              <div className="total-row" style={{color: '#dc2626', fontWeight: '900', borderTop: '1px solid #000'}}><span>BALANCE DUE</span><span>{currencySymbol}{transaction.balance.toLocaleString()}</span></div>
             </div>
           </div>
+
+          {/* Payment History for Print */}
+          {transaction.payments && transaction.payments.length > 0 && (
+            <>
+              <div className="section-title">Payment History</div>
+              <table className="table" style={{marginBottom: '6mm'}}>
+                <thead>
+                  <tr>
+                    <th style={{textAlign: 'left'}}>DATE</th>
+                    <th style={{textAlign: 'left'}}>METHOD</th>
+                    <th style={{textAlign: 'right'}}>AMOUNT ({currencySymbol})</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transaction.payments.map((p, i) => (
+                    <tr key={i}>
+                      <td style={{textAlign: 'left'}}>{new Date(p.settledAt || p.timestamp).toLocaleDateString()}</td>
+                      <td style={{textAlign: 'left'}} className="bold uppercase">{p.method}</td>
+                      <td style={{textAlign: 'right'}} className="bold">{p.amount.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
 
           <div className="notes">
             <div className="notes-title">Note:</div>
